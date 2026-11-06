@@ -20,7 +20,8 @@ function P.Build(catalog, context, observed, journal, layer, targets)
         or (layer ~= "visual" and layer ~= "quality") then return nil, "INVALID_INPUT" end
     catalog, context, observed, journal, targets = input.catalog, input.context,
         input.observed, input.journal, input.targets
-    if context.verified ~= true or context.rendererVerified ~= true then return nil, "UNVERIFIED_CLIENT" end
+    if not ns.Catalog.TestContext(context)
+        and (context.verified ~= true or context.rendererVerified ~= true) then return nil, "UNVERIFIED_CLIENT" end
     local affected, count = {}, 0
     for key in pairs(targets) do
         if type(key) ~= "string" then return nil, "INVALID_KEY" end
@@ -36,6 +37,7 @@ function P.Build(catalog, context, observed, journal, layer, targets)
     for key in pairs(journal.entries) do participating[key] = true end
     -- Check both directions, including another layer's already-owned tier/child.
     for key in pairs(participating) do
+        if ns.Catalog.TestContext(context) and key ~= "Brightness" then return nil, "TEST_KEY_EXCLUDED:" .. key end
         local descriptor = catalog[key]
         if not ns.Catalog.Admitted(descriptor, context) then return nil, "UNADMITTED_KEY:" .. key end
         for _, conflict in ipairs(descriptor.conflicts) do

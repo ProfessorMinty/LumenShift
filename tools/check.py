@@ -29,12 +29,15 @@ def check():
         assert not path.is_symlink()
         source = path.read_text(encoding="utf-8")
         code = re.sub(r"(?m)^\s*--.*$", "", source)
-        assert not forbidden.search(code), f"Forbidden runtime API/token in {entry}"
-        if entry not in {"Core/ReadOnly.lua", "Core/Bootstrap.lua"}:
+        inspected = re.sub(r"\bSetCVar\b", "", code) if entry == "Core/WriteBoundary.lua" else code
+        assert not forbidden.search(inspected), f"Forbidden runtime API/token in {entry}"
+        if entry not in {"Core/ReadOnly.lua", "Core/Bootstrap.lua", "Core/WriteBoundary.lua"}:
             assert not re.search(r"\b(_G|C_CVar)\b", source), f"Native API boundary leak: {entry}"
     boundary = (RUNTIME / "Core/WriteBoundary.lua").read_text()
-    assert 'return nil, "PHASE_01A_READ_ONLY"' in boundary
-    print(f"STRUCTURAL PASS: {len(entries)} Lua modules, exact TOC paths, versions, zero writer references")
+    assert boundary.count(".SetCVar") == 2, "Only availability inspection and the single native call are allowed"
+    assert boundary.count('ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, "Brightness", target)') == 1
+    assert 'function B.Request() return nil, "TEST_NOT_ENABLED" end' in boundary
+    print(f"STRUCTURAL PASS: {len(entries)} Lua modules, exact TOC paths, versions, one Brightness-only write boundary")
     return entries
 
 

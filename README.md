@@ -2,9 +2,9 @@
 
 **A Northern Lights Labs project: visual modes and advanced graphics controls for World of Warcraft: Forever.**
 
-> **Status: Phase 01A — diagnostic foundation, unreleased.** The addon source provides read-only diagnostics and pure planning/recovery models. Graphics writes and preset activation are disabled. **Intended release channel: CurseForge (World of Warcraft: Forever), pending compliance, native testing and approval.**
+> **Status: Phase 01B — controlled Brightness experiment, unreleased.** Graphics writes are locked until an explicit preview/confirmation. Startup and diagnostics never write. **Native write/restoration acceptance is still unrun. Intended release channel: CurseForge (World of Warcraft: Forever), pending compliance, native testing and approval.**
 
-Read the [implementation architecture](docs/11-PHASE-01A-FOUNDATION.md) and [test results / local diagnostic installation guide](docs/12-PHASE-01A-VALIDATION.md). Source is in [addon/LumenShift](addon/LumenShift). `/lumenshift` and `/ls` display diagnostics only. Arctic's [in-game smoke-test reports](docs/14-CLIENT-SMOKE-RESULTS.md) now confirm loading and readable diagnostics on **1.60.1, build 70790, interface 16001**. Persistence, graphics writes and restoration remain untested; this is not a general compatibility or release certification.
+Read the [engine architecture and mock results](docs/15-PHASE-01B-ENGINE.md), [installation and controlled acceptance steps](docs/16-BRIGHTNESS-ACCEPTANCE.md), and [owner-gated merge sequence](docs/17-MERGE-SEQUENCE.md). Source is in [addon/LumenShift](addon/LumenShift). Bare `/lumenshift` and `/ls` display diagnostics. `/ls on`, `/ls off` and `/ls restore` only preview; `/ls confirm TOKEN` is the explicit test write, and `/ls verify` performs a later read. Arctic's [Phase 01A smoke reports](docs/14-CLIENT-SMOKE-RESULTS.md) confirm loading and readable diagnostics on **1.60.1, build 70790, interface 16001**. That evidence does not certify the new engine, persistence or restoration.
 
 LumenShift is a proposed, accessible visual-preset addon combining a fast radial mode wheel, a full configuration panel, immersive audiovisual effects, and carefully validated graphics-console-variable (CVar) management.
 
@@ -18,7 +18,7 @@ The user's existing graphics preferences are the **baseline**. Switching modes s
 
 ## Current decisions
 - **Primary target:** World of Warcraft: Forever. Do not assume untested Retail parity.
-- **Stage gate:** Phase 01A is authorized. Phase 01B, graphics writes and publication require separate approval.
+- **Stage gate:** Phase 01B implementation is authorized. Native graphics tests, PR merges, Phase 02 and publication require separate approval.
 - **No hidden or magical shaders:** addon UI textures are overlays, not post-processing LUTs or true night vision.
 - **Safety first:** opt-in changes; capture original CVar state; verify readback; reversible restoration; respect protected/reload-only settings and combat restrictions.
 - **No automatic quality downgrade** merely because a color/exposure mode was selected.
@@ -26,7 +26,7 @@ The user's existing graphics preferences are the **baseline**. Switching modes s
 - **Original or properly licensed** audio, icons and visual assets only.
 
 ## Where Codex should work
-- **Phase 00 review:** [Findings, open gates and approval decisions](docs/09-PHASE-00-FINDINGS.md) · [Read-only client checks](docs/10-CLIENT-VALIDATION.md). Preserved research; Phase 01A authorization is recorded in [11](docs/11-PHASE-01A-FOUNDATION.md). Live-client validation is still open.
+- **Phase 00 review:** [Findings, open gates and approval decisions](docs/09-PHASE-00-FINDINGS.md) · [Read-only client checks](docs/10-CLIENT-VALIDATION.md). Preserved research; the current Phase 01B scope is recorded in [15](docs/15-PHASE-01B-ENGINE.md). Live-client validation is still open.
 - **Repository:** https://github.com/ProfessorMinty/LumenShift
 - **Clone:** https://github.com/ProfessorMinty/LumenShift.git
 - **Kickoff:** [CODEX-START-HERE.md](CODEX-START-HERE.md)
@@ -35,7 +35,7 @@ The user's existing graphics preferences are the **baseline**. Switching modes s
 ## Start here (for Codex)
 1. Read [AGENTS.md](AGENTS.md) completely.
 2. Read [docs/00-PROJECT-BRIEF.md](docs/00-PROJECT-BRIEF.md).
-3. Read the historical work order in [docs/01-PHASE-00-RESEARCH.md](docs/01-PHASE-00-RESEARCH.md), then follow the current Phase 01A scope in [docs/11-PHASE-01A-FOUNDATION.md](docs/11-PHASE-01A-FOUNDATION.md).
+3. Read the historical work order in [docs/01-PHASE-00-RESEARCH.md](docs/01-PHASE-00-RESEARCH.md), the [Phase 01A foundation](docs/11-PHASE-01A-FOUNDATION.md), then follow the current scope in [docs/15-PHASE-01B-ENGINE.md](docs/15-PHASE-01B-ENGINE.md).
 4. Use [docs/02-CVAR-REGISTER.md](docs/02-CVAR-REGISTER.md) as a hypothesis register, **not** a list of confirmed safe settings.
 5. Follow [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md), [docs/04-UX-DESIGN.md](docs/04-UX-DESIGN.md), [docs/05-TEST-PLAN.md](docs/05-TEST-PLAN.md) and [docs/06-ROADMAP.md](docs/06-ROADMAP.md).
 6. Record sourced findings and unresolved questions in [docs/07-EVIDENCE-AND-DECISIONS.md](docs/07-EVIDENCE-AND-DECISIONS.md).
@@ -48,7 +48,7 @@ We plan to distribute a **free, unobfuscated, policy-compliant addon via CurseFo
 An earlier **v0.1.0-alpha** demonstration exists outside this repository. It had six modes, a clickable wheel, a settings pane and synthesized sound effects; it was **not tested inside WoW**. Treat it as a UX and behavior reference, not authoritative, production-ready code. Do not claim it is already in this repo or rebuild it without approval.
 
 ## Development workflow
-Work on a dedicated implementation branch based on the Phase 00 research. Validate source/TOC structure and Lua 5.1 mocks before review; see [12](docs/12-PHASE-01A-VALIDATION.md). Keep simulated and live results separate. Do not install into a game folder, enable graphics writes, merge automatically or publish a release as part of Phase 01A.
+Work on a dedicated implementation branch based on PR #3 while its predecessors remain unmerged. Validate source/TOC structure and Lua 5.1 mocks before review; see [15](docs/15-PHASE-01B-ENGINE.md). Keep simulated and live results separate. Do not install into the owner's game, execute native graphics tests, merge automatically or publish a release under implementation-only authorization.
 
 ## Source starting points
 - [Blizzard UI Add-On Development Policy (official forum post)](https://eu.forums.blizzard.com/en/wow/t/wow-user-interface-add-on-development-policy/1642/1)
@@ -60,4 +60,4 @@ Work on a dedicated implementation branch based on the Phase 00 research. Valida
 These references are evidence leads. Codex must compare their dates/builds with the user's installed client.
 
 ---
-**Maintainer:** Northern Lights Labs · **Product name:** LumenShift · **Stage:** Phase 01A, diagnostic-only source.
+**Maintainer:** Northern Lights Labs · **Product name:** LumenShift · **Stage:** Phase 01B, controlled-test source; native writes unverified.

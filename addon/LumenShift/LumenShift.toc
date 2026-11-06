@@ -1,11 +1,11 @@
 ## Interface: 16001
 ## Title: LumenShift
-## Notes: Forever diagnostic foundation. Graphics writes disabled.
+## Notes: Forever Brightness experiment. Writes require explicit preview confirmation.
 ## Author: Northern Lights Labs
-## Version: 0.1.0-dev.1
+## Version: 0.1.0-dev.2
 ## SavedVariables: LumenShiftDB
 ## X-Website: https://github.com/ProfessorMinty/LumenShift
-## X-LumenShift-Phase: 01A
+## X-LumenShift-Phase: 01B
 
 Core/Namespace.lua
 Core/Value.lua

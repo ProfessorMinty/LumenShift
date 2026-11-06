@@ -9,9 +9,9 @@
 - **Current tracking issue:** https://github.com/ProfessorMinty/LumenShift/issues/1
 - **Target game:** World of Warcraft: Forever, live client (NOT assumed identical to Classic Era or Retail)
 - **Intended distribution:** CurseForge for World of Warcraft, Forever game flavor after approval, compatibility tests and moderation.
-- **Current authorization:** Phase 01A, foundation and read-only diagnostics, explicitly approved 2026-11-06. See [current architecture](docs/11-PHASE-01A-FOUNDATION.md) and [validation / installation handoff](docs/12-PHASE-01A-VALIDATION.md).
+- **Current authorization:** Phase 01B, Brightness-only reversible engine implementation, explicitly approved 2026-11-06. See [current architecture and tests](docs/15-PHASE-01B-ENGINE.md), [controlled-test handoff](docs/16-BRIGHTNESS-ACCEPTANCE.md) and [merge sequence](docs/17-MERGE-SEQUENCE.md).
 
-The Phase 00 work order below is preserved as history. Its implementation hold was superseded by Arctic's explicit Phase 01A approval. Only the diagnostic foundation, schema, pure state/planning models and mocks are authorized. Graphics writes, live effects, installed-game changes, release packaging/publication and Phase 01B remain outside scope. Do not merge PRs automatically. Keep Issue #1 open pending client validation.
+The Phase 00 work order below is preserved as history. Its implementation hold was superseded by Arctic's Phase 01A and then Phase 01B implementation approvals. Only the Brightness test engine may use the single native writing boundary, after an explicit preview/confirmation; all other settings remain read-only. Native graphics tests still need separate owner approval. Live effects, installed-game changes by the agent, release packaging/publication and Phase 02 remain outside scope. Do not merge PRs automatically. Keep Issue #1 open pending client validation. Native version/interface and diagnostic reads are already recorded in docs/14; do not request another launcher verification.
 
 If Codex is not working in a clone of **ProfessorMinty/LumenShift**, STOP and open/clone that repository. Don't create a parallel LumenShift workspace or choose another repository by similar name. Verify origin with a local Git read-only command. Do not clone or mutate other projects without authorization.
 
