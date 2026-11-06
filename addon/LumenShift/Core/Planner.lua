@@ -3,7 +3,7 @@ local P, V = {}, ns.Value
 ns.Planner = P
 
 local function safeObservation(item)
-    return type(item) == "table" and item.code == "OK" and V.Raw(item.raw)
+    return type(item) == "table" and item.code == "OK" and V.Number(item.raw) ~= nil
         and item.flagsCode == "OK" and type(item.flags) == "table"
         and item.flags.secure == false and item.flags.readOnly == false
         and item.flags.locked == false
@@ -51,10 +51,16 @@ function P.Build(catalog, context, observed, journal, layer, targets)
         if record and (record.state ~= "owned" or record.signature ~= context.signature
             or record.descriptorVersion ~= descriptor.version
             or current.raw ~= record.lastVerifiedRaw) then return nil, "OWNERSHIP_CONFLICT:" .. key end
+        -- A new capture or retained original must be restorable in the admitted domain.
+        local originalRaw = record and record.originalRaw or current.raw
+        local originalNumber = V.Number(originalRaw)
+        if not originalNumber or originalNumber < descriptor.min or originalNumber > descriptor.max then
+            return nil, "UNSAFE_BASELINE:" .. key
+        end
         local release = targets[key] == nil
         local targetRaw
         if release then
-            targetRaw = record.originalRaw
+            targetRaw = originalRaw
         else
             local target = targets[key]
             if not V.Finite(target) or target < descriptor.min or target > descriptor.max then
@@ -75,7 +81,7 @@ function P.Build(catalog, context, observed, journal, layer, targets)
             local epoch = record and record.epoch or nextEpoch
             if not record then nextEpoch = nextEpoch + 1 end
             byKey[key] = { key = key, beforeRaw = current.raw, targetRaw = targetRaw,
-                originalRaw = record and record.originalRaw or current.raw,
+                originalRaw = originalRaw,
                 epoch = epoch, layer = layer, descriptorVersion = descriptor.version,
                 signature = context.signature, release = release, write = not equal,
                 numericEquivalent = descriptor.numericEquivalent }

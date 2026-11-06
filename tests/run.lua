@@ -84,11 +84,13 @@ end
 local function simulate(ns, journal, proposed, seen, priorState)
     local tx = assert(ns.Recovery.Begin(journal, proposed, 1, priorState or "BASELINE"))
     for i, op in ipairs(proposed.operations) do
-        tx = assert(ns.Recovery.Before(tx, 1, i, seen[op.key], false))
-        eq(tx.pendingIndex, i)
-        -- Only this test harness changes an in-memory fixture. No native API call.
-        seen[op.key] = observation(op.targetRaw)
-        tx = assert(ns.Recovery.Observe(tx, 1, i, true, seen[op.key].raw))
+        if op.write then
+            tx = assert(ns.Recovery.Before(tx, 1, i, seen[op.key], false))
+            eq(tx.pendingIndex, i)
+            -- Only this test harness changes an in-memory fixture. No native API call.
+            seen[op.key] = observation(op.targetRaw)
+            tx = assert(ns.Recovery.Observe(tx, 1, i, true, seen[op.key].raw))
+        else tx = assert(ns.Recovery.ReleaseObserved(tx, 1, i, seen[op.key], false)) end
     end
     return assert(ns.Recovery.Verify(tx, 1, seen))
 end
@@ -530,6 +532,156 @@ test("Controller restore preserves another layer's active state", function()
     eq(ns.Controller.Reduce(c, "verified", 0), nil)
     eq(ns.Controller.Reduce(c, "verifiedOtherLayer", 1).state, "ACTIVE")
     eq(ns.Controller.Reduce(c, "verified", 1).state, "BASELINE")
+end)
+
+test("M06 planner rejects falsely OK nonnumeric observations before capture", function()
+    local ns = fixture().ns
+    for _, raw in ipairs({ "not-a-number", "NaN", "inf", "1e999", "--52" }) do
+        local seen, j = observations(raw), ns.Store.EmptyJournal()
+        local p, code = ns.Planner.Build(catalog(), context, seen, j, "visual", { Brightness = 75 })
+        eq(p, nil); eq(code, "UNSAFE_OBSERVATION:Brightness")
+        eq(next(j.entries), nil); eq(j.nextEpoch, 1); eq(seen.Brightness.raw, raw)
+    end
+end)
+
+local function noSetterRelease()
+    local f, seen = fixture(), observations()
+    local ns, j = f.ns, f.ns.Store.EmptyJournal()
+    local quality = simulate(ns, j, plan(ns, j, seen, "quality", { MockDetail = 90 }), seen)
+    local active = simulate(ns, quality.journal, plan(ns, quality.journal, seen, "visual", { Brightness = 75 }), seen, "ACTIVE")
+    local returned = simulate(ns, active.journal, plan(ns, active.journal, seen, "visual", { Brightness = 52 }), seen, "ACTIVE")
+    return f, seen, returned.journal, plan(ns, returned.journal, seen, "visual", {})
+end
+
+test("M03 owned value at exact original releases through observations only", function()
+    local f, seen, j, p = noSetterRelease()
+    local ns = f.ns
+    eq(j.entries.Brightness.originalRaw, "52"); eq(j.entries.Brightness.lastVerifiedRaw, "52")
+    eq(#p.operations, 1); eq(p.operations[1].release, true); eq(p.operations[1].write, false)
+    -- This path must not even claim a synthetic setter result, let alone call a native writer.
+    ns.Recovery.Observe = function() error("NO_SETTER_RESULT_ALLOWED") end
+    local tx = assert(ns.Recovery.Begin(j, p, 9, "ACTIVE"))
+    tx = assert(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, false))
+    eq(#tx.attempts, 0); eq(#tx.releases, 1); eq(tx.pendingIndex, nil)
+    eq(tx.state, "AWAITING_VERIFICATION"); eq(tx.journal.entries.Brightness, nil)
+    tx = assert(ns.Recovery.Verify(tx, 9, seen))
+    eq(tx.state, "VERIFIED"); eq(seen.Brightness.raw, "52")
+    eq(j.entries.Brightness.originalRaw, "52")
+    eq(tx.journal.entries.MockDetail.originalRaw, "40"); eq(seen.MockDetail.raw, "90")
+    local throughHarness = simulate(ns, j, p, seen, "ACTIVE")
+    eq(#throughHarness.attempts, 0); eq(throughHarness.state, "VERIFIED"); f.zero()
+end)
+
+test("M06 planner refuses unrestorable new and retained numeric baselines", function()
+    local ns = fixture().ns
+    for _, raw in ipairs({ "-1", "101", string.rep("9", 64) }) do
+        local seen, j = observations(raw), ns.Store.EmptyJournal()
+        local p, code = ns.Planner.Build(catalog(), context, seen, j, "visual", { Brightness = 75 })
+        eq(p, nil); eq(code, "UNSAFE_BASELINE:Brightness"); eq(next(j.entries), nil)
+    end
+    local seen, j = observations(), ns.Store.EmptyJournal()
+    local active = simulate(ns, j, plan(ns, j, seen, "visual", { Brightness = 75 }), seen)
+    for _, raw in ipairs({ "not-a-number", "-1", "101" }) do
+        local journal = ns.Value.Copy(active.journal)
+        journal.entries.Brightness.originalRaw = raw
+        for _, targets in ipairs({ { Brightness = 80 }, {} }) do
+            local p, code = ns.Planner.Build(catalog(), context, seen, journal, "visual", targets)
+            eq(p, nil); eq(code, "UNSAFE_BASELINE:Brightness")
+            eq(journal.entries.Brightness.originalRaw, raw)
+        end
+    end
+end)
+
+test("M03 no-setter release rejects setter routing, stale IDs and duplicate results", function()
+    local f, seen, j, p = noSetterRelease()
+    local ns = f.ns
+    local tx = assert(ns.Recovery.Begin(j, p, 9, "ACTIVE"))
+    local result, code = ns.Recovery.Before(tx, 9, 1, seen.Brightness, false)
+    eq(result, nil); eq(code, "OBSERVATION_RELEASE_REQUIRED"); eq(tx.pendingIndex, nil)
+    local forgedPending = ns.Value.Copy(tx); forgedPending.pendingIndex = 1
+    result, code = ns.Recovery.Observe(forgedPending, 9, 1, true, "52")
+    eq(result, nil); eq(code, "OBSERVATION_RELEASE_REQUIRED")
+    eq(ns.Recovery.ReleaseObserved(tx, 8, 1, seen.Brightness, false), nil)
+    eq(ns.Recovery.ReleaseObserved(tx, 9, 2, seen.Brightness, false), nil)
+    tx = assert(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, false))
+    eq(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, false), nil)
+    eq(#tx.attempts, 0); eq(#tx.releases, 1); f.zero()
+end)
+
+test("M03 no-setter release refuses fresh drift, missing reads and restricted flags", function()
+    local f, seen, j, p = noSetterRelease()
+    local ns = f.ns
+    local restricted = observation("52"); restricted.flags.readOnly = true
+    local cases = { observation("63"), observation("not-a-number"), {}, restricted }
+    for _, current in ipairs(cases) do
+        local tx = assert(ns.Recovery.Begin(j, p, 9, "ACTIVE"))
+        tx = assert(ns.Recovery.ReleaseObserved(tx, 9, 1, current, false))
+        eq(tx.state, "ROLLING_BACK"); eq(#tx.attempts, 0); eq(#tx.releases, 0)
+        eq(tx.journal.entries.Brightness.state, "conflict")
+        eq(tx.journal.entries.Brightness.originalRaw, "52")
+    end
+    local tx = assert(ns.Recovery.Begin(j, p, 9, "ACTIVE"))
+    tx = assert(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, true))
+    eq(tx.state, "DEFERRED"); eq(#tx.releases, 0)
+    eq(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, false), nil)
+    eq(j.entries.Brightness.state, "owned"); f.zero()
+end)
+
+test("M03 late drift after no-setter release retains recovery without compensation", function()
+    local f, seen, j, p = noSetterRelease()
+    local ns = f.ns
+    for _, current in ipairs({ observation("63"), {} }) do
+        local tx = assert(ns.Recovery.Begin(j, p, 9, "ACTIVE"))
+        tx = assert(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, false))
+        local changed = ns.Value.Copy(seen); changed.Brightness = current
+        tx = assert(ns.Recovery.Verify(tx, 9, changed)); eq(tx.state, "ROLLING_BACK")
+        eq(tx.journal.entries.Brightness.originalRaw, "52")
+        tx = assert(ns.Recovery.RollbackPlan(tx, changed))
+        eq(#tx.attempts, 0); eq(#tx.rollback, 0)
+        eq(ns.Recovery.FinishRollback(tx).state, "PARTIAL_ERROR")
+        eq(tx.journal.entries.Brightness.state, "conflict")
+        eq(changed.Brightness.raw, current.raw)
+    end
+    f.zero()
+end)
+
+test("M08 mixed rollback never compensates an observation-only release", function()
+    local ns = fixture().ns
+    for _, drift in ipairs({ false, true }) do
+        local seen, j = observations(), ns.Store.EmptyJournal()
+        local active = simulate(ns, j, plan(ns, j, seen, "visual", { Brightness = 75, Contrast = 70 }), seen)
+        local returned = simulate(ns, active.journal, plan(ns, active.journal, seen, "visual", { Brightness = 75, Contrast = 60 }), seen, "ACTIVE")
+        local p = plan(ns, returned.journal, seen, "visual", {})
+        eq(p.operations[1].key, "Contrast"); eq(p.operations[1].write, false)
+        eq(p.operations[2].key, "Brightness"); eq(p.operations[2].write, true)
+        local tx = assert(ns.Recovery.Begin(returned.journal, p, 9, "ACTIVE"))
+        tx = assert(ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Contrast, false))
+        tx = assert(ns.Recovery.Before(tx, 9, 2, seen.Brightness, false))
+        seen.Brightness = observation("52")
+        tx = assert(ns.Recovery.Observe(tx, 9, 2, false, "52"))
+        if drift then seen.Contrast = observation("63") end
+        local rollback = assert(ns.Recovery.RollbackPlan(tx, seen))
+        eq(#rollback.rollback, 1); eq(rollback.rollback[1].key, "Brightness")
+        tx = compensate(ns, tx, seen)
+        eq(tx.state, drift and "PARTIAL_ERROR" or "ACTIVE")
+        eq(tx.journal.entries.Contrast.originalRaw, "60")
+        eq(tx.journal.entries.Contrast.state, drift and "conflict" or "owned")
+        eq(seen.Contrast.raw, drift and "63" or "60"); eq(seen.Brightness.raw, "75")
+    end
+end)
+
+test("M03 numeric equivalence alone cannot take the exact-original no-setter path", function()
+    local ns, seen = fixture().ns, observations("052.00")
+    local j = ns.Store.EmptyJournal()
+    local active = simulate(ns, j, plan(ns, j, seen, "visual", { Brightness = 75 }), seen)
+    local returned = simulate(ns, active.journal, plan(ns, active.journal, seen, "visual", { Brightness = 52 }), seen, "ACTIVE")
+    local p = plan(ns, returned.journal, seen, "visual", {})
+    eq(p.operations[1].beforeRaw, "52"); eq(p.operations[1].targetRaw, "052.00")
+    eq(p.operations[1].write, true)
+    local tx = assert(ns.Recovery.Begin(returned.journal, p, 9, "ACTIVE"))
+    local result, code = ns.Recovery.ReleaseObserved(tx, 9, 1, seen.Brightness, false)
+    eq(result, nil); eq(code, "INVALID_OBSERVATION_RELEASE")
+    eq(tx.journal.entries.Brightness.originalRaw, "052.00")
 end)
 
 print(string.format("SIMULATED: %d passed, %d failed (%s); no native game tests", passed, failed, _VERSION))

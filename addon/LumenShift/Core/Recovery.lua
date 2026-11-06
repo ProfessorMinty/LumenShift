@@ -22,7 +22,7 @@ function R.Begin(journal, plan, id, previousState)
     if not ns.Store.ValidateJournal(journal) or type(plan) ~= "table"
         or not V.Finite(id) or id < 1 or id % 1 ~= 0 then return nil, "INVALID_TRANSACTION" end
     local tx = V.Copy({ journal = journal, prior = journal, plan = plan, id = id,
-        previousState = previousState, state = "APPLYING", nextIndex = 1, attempts = {} })
+        previousState = previousState, state = "APPLYING", nextIndex = 1, attempts = {}, releases = {} })
     if not tx or type(tx.plan.operations) ~= "table"
         or (previousState ~= "BASELINE" and previousState ~= "ACTIVE") then return nil, "INVALID_TRANSACTION" end
     -- Plans are internal data from Planner.Build, never deserialized user imports.
@@ -41,7 +41,7 @@ function R.Begin(journal, plan, id, previousState)
     return tx
 end
 
-function R.Before(tx, id, index, current, combat)
+local function prepare(tx, id, index, current, combat)
     if id ~= tx.id or tx.state ~= "APPLYING" or index ~= tx.nextIndex or tx.pendingIndex then
         return nil, "STALE_OR_BUSY"
     end
@@ -58,11 +58,34 @@ function R.Before(tx, id, index, current, combat)
     return nextTx
 end
 
+function R.Before(tx, id, index, current, combat)
+    local nextTx, code = prepare(tx, id, index, current, combat)
+    if not nextTx then return nil, code end
+    if tx.plan.operations[index].write ~= true then return nil, "OBSERVATION_RELEASE_REQUIRED" end
+    return nextTx
+end
+
+-- Release bookkeeping from a fresh observation; no setter result is requested or fabricated.
+function R.ReleaseObserved(tx, id, index, current, combat)
+    local nextTx, code = prepare(tx, id, index, current, combat)
+    if not nextTx then return nil, code end
+    local op = tx.plan.operations[index]
+    if op.release ~= true or op.write ~= false or op.beforeRaw ~= op.originalRaw
+        or op.targetRaw ~= op.originalRaw then return nil, "INVALID_OBSERVATION_RELEASE" end
+    if nextTx.pendingIndex ~= index then return nextTx end -- drift/restriction retains the record
+    nextTx.releases[#nextTx.releases + 1] = { index = index, raw = current.raw }
+    nextTx.journal.entries[op.key], nextTx.pendingIndex = nil, nil
+    nextTx.nextIndex = index + 1
+    if nextTx.nextIndex > #tx.plan.operations then nextTx.state = "AWAITING_VERIFICATION" end
+    return nextTx
+end
+
 -- setterOK/readback are synthetic facts supplied by tests, not native setter calls.
 function R.Observe(tx, id, index, setterOK, raw)
     if id ~= tx.id or tx.state ~= "APPLYING" or tx.pendingIndex ~= index then return nil, "STALE_OR_BUSY" end
     local nextTx, op = V.Copy(tx), tx.plan.operations[index]
     if not nextTx then return nil, "TRANSACTION_LIMIT" end
+    if op.write ~= true then return nil, "OBSERVATION_RELEASE_REQUIRED" end
     local readable = V.Raw(raw)
     nextTx.attempts[#nextTx.attempts + 1] = { index = index, raw = readable and raw or nil }
     nextTx.pendingIndex = nil
@@ -88,13 +111,16 @@ function R.Verify(tx, id, observed)
     if id ~= tx.id or tx.state ~= "AWAITING_VERIFICATION" then return nil, "STALE_OR_INVALID_VERIFY" end
     local nextTx = V.Copy(tx)
     if not nextTx then return nil, "TRANSACTION_LIMIT" end
-    for _, attempt in ipairs(tx.attempts) do
-        local op = tx.plan.operations[attempt.index]
-        local current = observed[op.key]
-        if not ns.Planner.SafeObservation(current) or current.raw ~= attempt.raw then
-            nextTx.state, nextTx.reason = "ROLLING_BACK", "LATE_DRIFT_OR_RESTRICTION"
-            if nextTx.journal.entries[op.key] then nextTx.journal.entries[op.key].state = "conflict" end
-            return nextTx
+    for _, observations in ipairs({ tx.attempts, tx.releases }) do
+        for _, item in ipairs(observations) do
+            local op = tx.plan.operations[item.index]
+            local current = observed[op.key]
+            if not ns.Planner.SafeObservation(current) or current.raw ~= item.raw then
+                nextTx.state, nextTx.reason = "ROLLING_BACK", "LATE_DRIFT_OR_RESTRICTION"
+                if op.write == false then nextTx.journal.entries[op.key] = V.Copy(tx.prior.entries[op.key]) end
+                if nextTx.journal.entries[op.key] then nextTx.journal.entries[op.key].state = "conflict" end
+                return nextTx
+            end
         end
     end
     nextTx.state = "VERIFIED"
@@ -106,11 +132,11 @@ function R.RollbackPlan(tx, observed)
     local nextTx = V.Copy(tx)
     if not nextTx then return nil, "TRANSACTION_LIMIT" end
     nextTx.rollback, nextTx.unresolved = {}, {}
-    local attempted = {}
+    local processed = {}
     for i = #tx.attempts, 1, -1 do
         local attempt = tx.attempts[i]
         local op, current = tx.plan.operations[attempt.index], observed[tx.plan.operations[attempt.index].key]
-        attempted[op.key] = true
+        processed[op.key] = true
         if ns.Planner.SafeObservation(current) and current.raw == op.beforeRaw then
             nextTx.journal.entries[op.key] = V.Copy(tx.prior.entries[op.key])
         elseif ns.Planner.SafeObservation(current) and attempt.raw and current.raw == attempt.raw then
@@ -127,8 +153,20 @@ function R.RollbackPlan(tx, observed)
             record.state, record.failure = "failed", nextTx.unresolved[op.key]
         end
     end
+    -- Observation-only releases undo bookkeeping, never schedule a compensating write.
+    for _, release in ipairs(tx.releases) do
+        local op = tx.plan.operations[release.index]
+        local current = observed[op.key]
+        processed[op.key] = true
+        nextTx.journal.entries[op.key] = V.Copy(tx.prior.entries[op.key])
+        if not ns.Planner.SafeObservation(current) or current.raw ~= op.beforeRaw then
+            nextTx.unresolved[op.key] = "RELEASE_CONFLICT_OR_UNREADABLE"
+            nextTx.journal.entries[op.key].state = "conflict"
+            nextTx.journal.entries[op.key].failure = nextTx.unresolved[op.key]
+        end
+    end
     for _, op in ipairs(tx.plan.operations) do
-        if not attempted[op.key] then
+        if not processed[op.key] then
             if tx.journal.entries[op.key] and tx.journal.entries[op.key].state == "conflict" then
                 nextTx.unresolved[op.key] = "CONFLICT_BEFORE_OPERATION"
                 nextTx.journal.entries[op.key].failure = nextTx.unresolved[op.key]

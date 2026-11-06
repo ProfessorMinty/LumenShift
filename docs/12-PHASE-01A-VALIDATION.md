@@ -1,6 +1,6 @@
 # Phase 01A — test evidence and local diagnostic handoff
 
-**Date:** 2026-11-06. **Source version:** 0.1.0-dev.1. **Result:** 30 mock tests passed, 0 failed under stock Lua 5.1, plus syntax and structural checks. **All live-client tests: NOT RUN.** No files were installed into the game, no graphics CVars were written, and no release package was created.
+**Date:** 2026-11-06. **Source version:** 0.1.0-dev.1. **Result after Aurora's review fixes:** 38 mock tests passed, 0 failed under stock Lua 5.1, plus syntax and structural checks. **All live-client tests: NOT RUN.** No files were installed into the game, no graphics CVars were written, and no release package was created.
 
 The runtime structure and API decisions are in [11](11-PHASE-01A-FOUNDATION.md). The Phase 00 [M01–M17 definitions](05-TEST-PLAN.md) remain historical specifications; their earlier NOT RUN status is superseded only for the explicitly simulated coverage below. Native claims remain unverified.
 
@@ -27,10 +27,12 @@ Executed results:
 ```text
 STRUCTURAL PASS: 13 Lua modules, exact TOC paths, versions, zero writer references
 SYNTAX PASS: 14 files under Lua 5.1
-SIMULATED: 30 passed, 0 failed (Lua 5.1); no native game tests
+SIMULATED: 38 passed, 0 failed (Lua 5.1); no native game tests
 ```
 
 The suite includes an additional generated check over all integer starting brightness values 0–100, exact raw `052.00` restoration, and a demonstration that same-value/ABA edits cannot be attributed. Fixtures use fake descriptors/client/renderer for planning and replace all known writer paths with counting traps. Only tests mutate in-memory value tables; no fixture changes a game setting.
+
+The original implementation passed 30 tests. Before applying the review fixes, two new regression tests reproduced the findings: the falsely OK nonnumeric baseline was accepted, and the observation-only release API did not exist (30 passed, 2 failed). After the fixes, the original 30 and eight added regressions pass. Added coverage includes numeric/domain checks for new and retained originals; exact-original release with no setter result; stale/duplicate/routing refusal; fresh read/restriction failures; late drift; mixed rollback without compensation for observation-only releases; and exact raw equality versus numeric equivalence. The successful release test makes the synthetic setter-result method raise if invoked.
 
 ## Coverage and limits
 
@@ -38,10 +40,10 @@ The suite includes an additional generated check over all integer starting brigh
 |---|---|---|
 | M01 | PASS: initial load, unrelated/duplicate ADDON_LOADED, reconnect, both aliases and command arguments; zero writer/sound calls | Actual addon load, chat registration and name collision checks |
 | M02 | PASS: originals 45, 52, 052.00 survive repeated modes and exact release | Native accepted values, rendering, restoration |
-| M03 | PASS: equal numeric target has no operation or ownership | Native normalization |
+| M03 | PASS: equal unowned target grants no ownership; an owned value at its exact original releases through verified observations with zero setter attempts, including failure cases | Native normalization; no native release executor |
 | M04 | PASS: visual/quality operations and ownership remain independent both directions; all metadata target maps empty | Future populated profiles and native side effects |
 | M05 | PASS: absent APIs/keys, false/nil/error/unexpected/secret values, unavailable access guards, secure/read-only/locked flags, getter drift | Real secret/taint restrictions and actual return tuple |
-| M06 | PASS: NaN/infinity, strings/code payload, tables, unknown keys, missing reads, invalid ranges; no executable imports | Native domains remain unmeasured |
+| M06 | PASS: NaN/infinity, strings/code payload, tables, unknown keys, missing reads, invalid ranges; falsely OK nonnumeric observations and unrestorable new/retained originals refused; no executable imports | Native domains remain unmeasured |
 | M07 | PASS: synthetic success/no-op, clamp, error-after-change, unreadable readback, permitted numeric normalization | Actual setter behavior; no native setter exists in this phase |
 | M08 | PASS: fail each of three ordered operations; reverse compensation to prior active values without replacing originals | Actual dependency/fan-out mapping and rollback execution |
 | M09 | PASS: failed compensation retains journal and PARTIAL_ERROR | Native restrictions/failures during restoration |
@@ -56,17 +58,17 @@ The suite includes an additional generated check over all integer starting brigh
 
 M18 effects/assets is outside Phase 01A. V/W/B graphics/effect/performance tests are NOT RUN and require their own approval. Passing the pure model portions above does not mean a future native executor passes M07–M13 integration tests. The implementation deliberately has no native executor or delay policy.
 
-## Read-only identity checks first
+## Focused diagnostic smoke test
 
-Arctic should use the prioritized shortlist in [10-CLIENT-VALIDATION.md](10-CLIENT-VALIDATION.md). Begin with the actual output of `/dump GetBuildInfo()` after confirming that function exists. Record version, build, date and interface verbatim and the launcher's product label, without account names or full personal installation paths. The owner-confirmed version is 1.60.1.70790; the interface has not been supplied.
+Forever **1.60.1.70790 is already confirmed through the owner's Battle.net launcher**; no further launcher proof is requested. Use [13-DIAGNOSTIC-SMOKE-TEST.md](13-DIAGNOSTIC-SMOKE-TEST.md) for the straightforward installation and command checks. The addon itself reports the native version/build/interface; the interface and getter behavior are the remaining observations, not a reason to repeat launcher confirmation.
 
-Then inspect the availability of C_CVar.GetCVar, GetCVarInfo, GetCVarDefault and AreCVarsLoaded. If present and ready, read Brightness and its seven info results using the guarded commands in doc 10; repeat for Contrast. Do not run setter commands, change Graphics sliders or enable a preset for this check. Capture errors/absence as results. A successful read or a false security flag is not a write test.
+The more detailed guarded probes in [10-CLIENT-VALIDATION.md](10-CLIENT-VALIDATION.md) remain available for targeted follow-up if a diagnostic discrepancy needs investigation. Do not run setter commands, change Graphics sliders or enable a preset for this check. A successful read or a false security flag is not a write test.
 
 ## Optional local diagnostic installation instructions
 
 These are instructions for a maintainer-run test after selecting/approving a test setup. The agent has not installed the addon or changed the user's game. Installing source can create/update LumenShiftDB when the client normally saves; **diagnostic-only refers to graphics settings**, not to the absence of addon configuration storage.
 
-1. Check the actual Forever tuple first. The development TOC currently says **16001**, a candidate supported by prior evidence. If R1 reports another interface, stop and report the mismatch; do not enable “load out of date addons” to claim compatibility. A native load test remains necessary even when it matches.
+1. Use the already-confirmed Forever installation. The development TOC currently says **16001**, a candidate supported by prior evidence. If the client marks it incompatible/out of date or its diagnostic report shows a different interface, stop and report the mismatch; do not enable “load out of date addons” to claim compatibility. No launcher-version reconfirmation is needed.
 2. With the game closed, copy **only** `addon/LumenShift/` from the reviewed implementation commit to the verified Forever AddOns directory. The result must be `World of Warcraft/_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with `Core/` beside the TOC. Do not copy the whole repository, add a wrapper folder, or overwrite Interface/WTF. If a LumenShift folder from an older prototype exists, preserve it separately and use a clean diagnostic test setup; do not mix versions.
 3. Launch the Forever client and enable LumenShift for the test character. Invoke `/lumenshift`, then `/ls`. Both should print the same type of report; neither takes an apply/reset command. Check Brightness and Contrast against the independent read-only probes. Expect `FOREVER_CANDIDATE_UNVERIFIED` for the candidate tuple and zero admitted write capabilities.
 4. Record the reviewed Git commit, tuple, date, addon list and sanitized report. Confirm no unsolicited sound/effect, no native Lua error, no Graphics change, and correct unavailable/unknown reporting. If CVars are not loaded yet, invoke the diagnostic again later. It does not poll or guess.

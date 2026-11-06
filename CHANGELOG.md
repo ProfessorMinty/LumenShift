@@ -7,3 +7,5 @@
 - Add off-client Lua mocks and source/TOC validation. No native game compatibility pass yet.
 - Preserve Phase 00 research. No graphics writes, active presets, effects, assets or release package.
 - No released predecessor schema exists; unknown schemas are preserved and refused, never reset.
+- Address Aurora's review: independently validate numeric/restorable planner baselines and release exact-original ownership through verified observations without a setter result.
+- Add eight regressions (38 total simulated tests) and a focused diagnostic-only installation/smoke-test handoff for the owner-confirmed Forever build.
