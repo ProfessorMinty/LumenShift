@@ -4,15 +4,18 @@
 
 Arctic authorized implementation and mocks, with a separate approval gate for actual in-game graphics tests. No live writes or installed-game changes were performed by the agent. Docs/00–14 retain their historical evidence and scope. [16](16-BRIGHTNESS-ACCEPTANCE.md) is the current user handoff; [17](17-MERGE-SEQUENCE.md) records merge readiness and remaining approval requirements.
 
+**Owner-operated follow-up:** Arctic subsequently completed the first controlled native round trip. [18](18-BRIGHTNESS-CLIENT-RESULTS.md) records the 45 → 75 → 45 readbacks, exact-original release, final BASELINE/zero records and owner-confirmed visual change/restoration. This evidence does not promote the catalog or authorize additional tests automatically.
+
 ## Evidence and admission
 
 | Classification | Evidence and limit |
 |---|---|
 | Verified in-client, owner-observed | [Phase 01A smoke reports](14-CLIENT-SMOKE-RESULTS.md): Forever `1.60.1:70790:16001`, readable Brightness `45`, Contrast `60`, native getters/access guards, all relevant observed flags false. This tested dev.1 diagnostics, not dev.2 writes. |
+| Verified in-client, owner-observed | [Phase 01B result](18-BRIGHTNESS-CLIENT-RESULTS.md): dev.2 Brightness 45 → 75 → exact 45, successful verification messages, ownership released, final BASELINE and zero records. Contrast is 60 in the before/final reports. Arctic separately confirmed both visual changes looked correct. |
 | Source-confirmed for 70790 | [CVar documentation](https://github.com/Gethe/wow-ui-source/blob/eac30af597e5aaa43a60f6675ef5fdcea100375f/Interface/AddOns/Blizzard_APIDocumentationGenerated/CVarDocumentation.lua#L208) declares the namespaced setter and boolean result; restrictions/predicates can prevent a usable result. This is a pinned Blizzard UI-source mirror, not binary verification. |
 | Source-confirmed UI bounds | [Graphics.lua](https://github.com/Gethe/wow-ui-source/blob/eac30af597e5aaa43a60f6675ef5fdcea100375f/Interface/AddOns/Blizzard_SettingsDefinitions_Shared/Graphics.lua#L1564) declares 0–100 UI sliders. These are not measured native limits or a safe-range certification. |
 | Controlled experiment policy | Only Brightness, on the exact observed build/interface, may plan a target of 75 or restoration of a captured original inside the conservative 0–100 UI domain. Descriptor evidence is `CONTROLLED_TEST_01B`, never `VERIFIED_CLIENT`. |
-| Unknown | Native setter behavior, actual rendering, settling interval, exact raw restoration, combat guard result shape in this client, persistence, crash recovery and other machines/renderers. |
+| Unknown | Native adverse setter/recovery paths, measured settling interval, originals other than 45, combat transitions, persistence, crash recovery and other machines/renderers. Successful guard checks on this one path are inferred from source and success messages, not direct API instrumentation. |
 
 The production catalog remains unadmitted. `Catalog.BrightnessExperiment` provides an explicitly separate test context; the planner rejects any other participating key, even a historical recovery entry. Renderer verification is still absent: the test exception permits measurement on this observed setup, not general support. The legacy compatibility string `FOREVER_CANDIDATE_UNVERIFIED` describes write admission; known loading/getter evidence remains valid. Unknown builds cannot enter the test context. No fallback to legacy globals or other writers exists.
 
@@ -79,9 +82,9 @@ The native-boundary mocks call the real executor with a fake `C_CVar.SetCVar`; e
 
 ## Remaining risks and release gates
 
-- Native writes, restoration, render behavior and dev.2 loading are untested. A `true` return and repeated getter values do not prove a visual effect.
+- One owner-operated native write/restoration and visual round trip now passed; see [18](18-BRIGHTNESS-CLIENT-RESULTS.md). Other baselines, native failures, repeated-cycle reliability and broader rendering behavior remain untested. Readbacks alone do not prove a visual effect; the visual result is a separate owner report.
 - Getter checks and setter are not atomic. Same-value external writes, ABA changes and a writer acting inside that gap cannot be reliably attributed. A synchronous clamp and an external change can be indistinguishable; compensation uses observed values and fresh comparison, not a claim of exclusive control.
 - Exact raw restoration may fail if the client canonicalizes a value. It fails closed, retains the original and requires review; it does not silently redefine the baseline.
-- `InCombatLockdown` absence, nil or an unexpected shape refuses the experiment. Native behavior of this guard remains to be observed without changing its strict policy speculatively.
+- `InCombatLockdown` absence, nil or an unexpected shape refuses the experiment. Source plus the successful round trip implies the guard allowed that path; direct result capture and native combat transitions remain untested. Its strict policy is unchanged.
 - SavedVariables can lag in-memory state or be lost on a crash. No immediate persistence or crash-proof restoration claim is made. No automatic on-login recovery is attempted.
 - Other CVar targets, broad preset activation, effects/audio/shaders/radial UI, performance claims, Phase 02, licensing and release packaging are not implemented here. [CurseForge requirements](08-CURSEFORGE-RELEASE.md) remain open: owner-selected license, asset provenance, actual version/flavor tagging, reproducible release packaging, native QA and approval. No release, project or upload was created.

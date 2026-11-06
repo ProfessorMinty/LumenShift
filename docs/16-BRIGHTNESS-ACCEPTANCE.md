@@ -38,13 +38,13 @@ If current Brightness is already 75, refusal `ALREADY_AT_TARGET_NO_OWNERSHIP_CHA
 
 ## Approved live round trip only
 
-After explicit live-test approval, use each newly displayed token. `N` and `M` below are placeholders, not literal commands to paste.
+After explicit live-test approval, use the **exact numbered confirmation command printed by the addon**, including the leading `/`. Enter one command at a time. Do not type `N`, `M` or `TOKEN`, reuse an example number from a guide, or send the command as ordinary chat. If unsure, share the current recovery card before continuing.
 
-1. With a saved, current `/ls on` card, type `/ls confirm N`. This authorizes the displayed Brightness operation and at most one compensating write on a normal on/off failure. It does not grant persistent permission.
+1. With a saved, current `/ls on` card, enter its exact printed confirmation command. This authorizes the displayed Brightness operation and at most one compensating write on a normal on/off failure. It does not grant persistent permission.
 2. Expect `Immediate readback matched`, state `AWAITING_VERIFICATION`, current Brightness numerically 75 and the exact original retained. Observe whether visibility changes as intended and whether anything unexpected occurs. Do not change graphics options, reload, relog or activate another mode during this round trip.
 3. After observing the scene, type `/ls verify`, then `/ls`. Expect `ACTIVE`, current Brightness 75 and the original unchanged. Record the elapsed time between confirmation and verification; no validated settling interval is claimed.
 4. Type `/ls off`. Save/review its new card: target must be the **exact original from step 1**, current must still match the owned value.
-5. Type `/ls confirm M`, using this new token. Expect `AWAITING_VERIFICATION` and the original still retained.
+5. Enter the new confirmation command printed by the `/ls off` card. Expect `AWAITING_VERIFICATION` and the original still retained.
 6. Observe the scene, type `/ls verify`, then `/ls`. Expect the original raw Brightness, `BASELINE`, original `not captured`, zero recovery records and Contrast unchanged throughout. Record visual restoration and any Lua errors separately from readback results.
 
 Both aliases support the same subcommands. Do not use repeated confirmations as a retry loop. A failed command consumes its token. `cancel` never restores an active brightness value.
@@ -54,7 +54,7 @@ Both aliases support the same subcommands. Do not use repeated confirmations as 
 - Stop the normal sequence and capture `/ls` output plus the external recovery card. Do not restart/reload to try to clear the error. The engine makes no background retries.
 - If normal activation/deactivation fails, one permitted compensation may already have attempted to return to the operation's before-value. `AWAITING_VERIFICATION` after failure means `/ls verify` is still needed to confirm that compensation; it is not successful Night Vision activation.
 - `CONFLICT` means a current value was changed or could not be trusted. The engine preserves that current value. Decide whether the saved original is still the setting you want before any recovery write.
-- **Restore My Brightness:** `/ls restore` is a read-only preview. It explicitly displays the current value that would be replaced by the retained original. Only after approving that recovery, save the card and use the new `/ls confirm N`, then `/ls verify`. If current already exactly equals the original, this only releases bookkeeping; no setter runs.
+- **Restore My Brightness:** `/ls restore` is a read-only preview. It explicitly displays the current value that would be replaced by the retained original. Only after approving that recovery, save the card and enter its exact printed confirmation command, then `/ls verify`. If current already exactly equals the original, this only releases bookkeeping; no setter runs.
 - A restore after reload, conflict or uncertain pending state never automatically reapplies the uncertain prior value on failure. A restriction, changed build, invalid baseline or missing API may make automatic recovery unavailable. Preserve the card, stop testing and report the exact diagnostic code. If necessary, manually return Brightness through the game's own graphics controls using the saved original; do not reset all graphics or guess 45.
 - If the journal was lost in a crash, the addon cannot know the original. Use the external card. Deleting the addon or SavedVariables does not undo a persistent CVar change.
 
