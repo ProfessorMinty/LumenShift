@@ -1,6 +1,6 @@
 # Arctic's diagnostic-only smoke test
 
-**Target:** World of Warcraft: Forever **1.60.1.70790**, already confirmed through the owner's Battle.net launcher. **Build:** source version 0.1.0-dev.1 on `feat/phase-01a-foundation`, including the review-fix commit linked on [PR #3](https://github.com/ProfessorMinty/LumenShift/pull/3). **Native test status:** NOT RUN by the agent. No launcher-version reconfirmation is requested.
+**Target:** World of Warcraft: Forever **1.60.1.70790**, already confirmed through the owner's Battle.net launcher. **Build:** source version 0.1.0-dev.1 on `feat/phase-01a-foundation`, including the review-fix commit linked on [PR #3](https://github.com/ProfessorMinty/LumenShift/pull/3). **Native test status:** owner-observed load/readback/repeated-output PASS; [results and limits](14-CLIENT-SMOKE-RESULTS.md). The agent did not run the game. This document preserves the protocol for later reproduction; no launcher-version reconfirmation or immediate rerun is requested.
 
 This checks loading, both slash commands and Brightness/Contrast reporting. It does not activate a visual mode or write graphics settings. The addon may create/update its own LumenShiftDB when the game normally saves; this is separate from graphics CVars.
 
@@ -21,7 +21,7 @@ World of Warcraft/
           Core/                 (13 Lua files)
 ```
 
-5. Launch Forever. At character selection, open **AddOns** and enable **LumenShift** for the test character. If it is absent, check the folder nesting. If it is marked incompatible/out of date, stop and record that result; do not override the compatibility warning. Interface 16001 is still a candidate until this native load check succeeds.
+5. Launch Forever. At character selection, open **AddOns** and enable **LumenShift** for the test character. If it is absent, check the folder nesting. If it is marked incompatible/out of date, stop and record that result; do not override the compatibility warning. Interface 16001 loaded in Arctic's observed 70790 test; other builds require their own validation.
 
 ## Run the smoke test
 
@@ -47,4 +47,4 @@ If either command is unknown, prints another addon's output, reports an error, o
 
 Send the source commit, date, whether LumenShift appeared/enabled, the diagnostic client/interface line, and sanitized outputs from both commands. Mark each item PASS, FAIL or BLOCKED: addon load, `/ls`, `/lumenshift`, Brightness display, Contrast display, stable repeated readings, and any observed Lua/diagnostic error or visual/audio change. Include other enabled addons if a conflict appears; omit account names, character identifiers and full private installation paths.
 
-Stable readings are an observed smoke-test result, not proof of every possible writer/race or persistence behavior. No native pass is recorded until Arctic supplies results. Do not proceed to graphics writes, reload/persistence experiments, Phase 01B, merges or publication from this checklist. Issue #1 remains open.
+Stable readings are an observed smoke-test result, not proof of every possible writer/race or persistence behavior. Arctic's supplied results are recorded in doc 14. Do not proceed to graphics writes, reload/persistence experiments, Phase 01B, merges or publication from this checklist. Issue #1 remains open.

@@ -1,8 +1,8 @@
 # Phase 01A — test evidence and local diagnostic handoff
 
-**Date:** 2026-11-06. **Source version:** 0.1.0-dev.1. **Result after Aurora's review fixes:** 38 mock tests passed, 0 failed under stock Lua 5.1, plus syntax and structural checks. **All live-client tests: NOT RUN.** No files were installed into the game, no graphics CVars were written, and no release package was created.
+**Date:** 2026-11-06. **Source version:** 0.1.0-dev.1. **Result after Aurora's review fixes:** 38 mock tests passed, 0 failed under stock Lua 5.1, plus syntax and structural checks. **Native update:** Arctic installed the diagnostic folder and supplied three matching in-game reports; load/readback/repeated-output checks passed for the observed setup. See [14-CLIENT-SMOKE-RESULTS.md](14-CLIENT-SMOKE-RESULTS.md) for exact evidence and limits. The agent did not install or operate the game. Native write/restoration/persistence tests remain NOT RUN; no release package was created.
 
-The runtime structure and API decisions are in [11](11-PHASE-01A-FOUNDATION.md). The Phase 00 [M01–M17 definitions](05-TEST-PLAN.md) remain historical specifications; their earlier NOT RUN status is superseded only for the explicitly simulated coverage below. Native claims remain unverified.
+The runtime structure and API decisions are in [11](11-PHASE-01A-FOUNDATION.md). The Phase 00 [M01–M17 definitions](05-TEST-PLAN.md) remain historical specifications; their earlier NOT RUN status is superseded for the explicitly simulated coverage below. Native evidence is limited to the separate owner-observed smoke-test record; it does not turn the mock cases into native passes.
 
 ## Reproduce the off-client checks
 
@@ -38,11 +38,11 @@ The original implementation passed 30 tests. Before applying the review fixes, t
 
 | Phase 00 ID | Simulated result and coverage | Native/integration gap |
 |---|---|---|
-| M01 | PASS: initial load, unrelated/duplicate ADDON_LOADED, reconnect, both aliases and command arguments; zero writer/sound calls | Actual addon load, chat registration and name collision checks |
+| M01 | PASS: initial load, unrelated/duplicate ADDON_LOADED, reconnect, both aliases and command arguments; zero writer/sound calls | Native load/repeated diagnostics observed; command attribution and broader collision/lifecycle testing remain limited |
 | M02 | PASS: originals 45, 52, 052.00 survive repeated modes and exact release | Native accepted values, rendering, restoration |
 | M03 | PASS: equal unowned target grants no ownership; an owned value at its exact original releases through verified observations with zero setter attempts, including failure cases | Native normalization; no native release executor |
 | M04 | PASS: visual/quality operations and ownership remain independent both directions; all metadata target maps empty | Future populated profiles and native side effects |
-| M05 | PASS: absent APIs/keys, false/nil/error/unexpected/secret values, unavailable access guards, secure/read-only/locked flags, getter drift | Real secret/taint restrictions and actual return tuple |
+| M05 | PASS: absent APIs/keys, false/nil/error/unexpected/secret values, unavailable access guards, secure/read-only/locked flags, getter drift | Readable getter results observed; native adverse secret/taint/error paths remain untested |
 | M06 | PASS: NaN/infinity, strings/code payload, tables, unknown keys, missing reads, invalid ranges; falsely OK nonnumeric observations and unrestorable new/retained originals refused; no executable imports | Native domains remain unmeasured |
 | M07 | PASS: synthetic success/no-op, clamp, error-after-change, unreadable readback, permitted numeric normalization | Actual setter behavior; no native setter exists in this phase |
 | M08 | PASS: fail each of three ordered operations; reverse compensation to prior active values without replacing originals | Actual dependency/fan-out mapping and rollback execution |
@@ -54,13 +54,13 @@ The original implementation passed 30 tests. Before applying the review fixes, t
 | M14 | PASS: reload/character-style startup preserves records, stale/unknown/build-changed recovery, missing crash journal never captures an active value | Real reload/logout persistence and crash durability unknown |
 | M15 | PASS: valid copy, corrupt/older/newer/cyclic/oversized/metatable/function/profile data refusal, originals retained | No predecessor migrations exist; live save timing unknown |
 | M16 | PASS: layer overlap, tier/child conflicts both directions, dependency closure/order/cycles | Real admitted dependency catalog still empty |
-| M17 | PASS: candidate/unknown build/interface, unknown renderer, unadmitted shipped catalog, unconditional boundary refusal | Actual Forever tuple/renderer acceptance still open |
+| M17 | PASS: candidate/unknown build/interface, unknown renderer, unadmitted shipped catalog, unconditional boundary refusal | Version/build/interface observed; renderer and native write eligibility still open |
 
 M18 effects/assets is outside Phase 01A. V/W/B graphics/effect/performance tests are NOT RUN and require their own approval. Passing the pure model portions above does not mean a future native executor passes M07–M13 integration tests. The implementation deliberately has no native executor or delay policy.
 
 ## Focused diagnostic smoke test
 
-Forever **1.60.1.70790 is already confirmed through the owner's Battle.net launcher**; no further launcher proof is requested. Use [13-DIAGNOSTIC-SMOKE-TEST.md](13-DIAGNOSTIC-SMOKE-TEST.md) for the straightforward installation and command checks. The addon itself reports the native version/build/interface; the interface and getter behavior are the remaining observations, not a reason to repeat launcher confirmation.
+Forever **1.60.1.70790 is confirmed through the owner's Battle.net launcher and subsequent native diagnostics**, which report interface **16001**. No further launcher proof is requested. [13-DIAGNOSTIC-SMOKE-TEST.md](13-DIAGNOSTIC-SMOKE-TEST.md) preserves the installation/command protocol; the observed results are now in doc 14. No repeat of the initial smoke sequence is required merely to restate this evidence.
 
 The more detailed guarded probes in [10-CLIENT-VALIDATION.md](10-CLIENT-VALIDATION.md) remain available for targeted follow-up if a diagnostic discrepancy needs investigation. Do not run setter commands, change Graphics sliders or enable a preset for this check. A successful read or a false security flag is not a write test.
 
@@ -82,7 +82,7 @@ For removal of **this diagnostic-only version**, close the game and remove/disab
 
 ## Remaining approval gates
 
-- Raw current-client identity/interface; native TOC load and command/API behavior; inaccessible-value handling.
+- Broader command/API compatibility and native inaccessible-value/error handling; initial 70790/16001 load and readable diagnostics are now observed.
 - Real SavedVariables lifecycle, schema/update behavior and journal durability limits.
 - Separately authorized Brightness write experiment with actual captured original, exact target, readback/settle/recovery card, conflict and combat tests. No targets become admitted automatically.
 - Native transaction executor, timing/event integration and user recovery choices before Phase 01B acceptance.

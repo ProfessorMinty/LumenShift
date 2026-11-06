@@ -4,7 +4,7 @@
 
 > **Status: Phase 01A — diagnostic foundation, unreleased.** The addon source provides read-only diagnostics and pure planning/recovery models. Graphics writes and preset activation are disabled. **Intended release channel: CurseForge (World of Warcraft: Forever), pending compliance, native testing and approval.**
 
-Read the [implementation architecture](docs/11-PHASE-01A-FOUNDATION.md) and [test results / local diagnostic installation guide](docs/12-PHASE-01A-VALIDATION.md). Source is in [addon/LumenShift](addon/LumenShift). `/lumenshift` and `/ls` display diagnostics only. Owner-confirmed version: **1.60.1.70790**; the actual GetBuildInfo tuple and native addon loading remain unverified. TOC interface **16001 is a candidate**, not a compatibility certification.
+Read the [implementation architecture](docs/11-PHASE-01A-FOUNDATION.md) and [test results / local diagnostic installation guide](docs/12-PHASE-01A-VALIDATION.md). Source is in [addon/LumenShift](addon/LumenShift). `/lumenshift` and `/ls` display diagnostics only. Arctic's [in-game smoke-test reports](docs/14-CLIENT-SMOKE-RESULTS.md) now confirm loading and readable diagnostics on **1.60.1, build 70790, interface 16001**. Persistence, graphics writes and restoration remain untested; this is not a general compatibility or release certification.
 
 LumenShift is a proposed, accessible visual-preset addon combining a fast radial mode wheel, a full configuration panel, immersive audiovisual effects, and carefully validated graphics-console-variable (CVar) management.
 
