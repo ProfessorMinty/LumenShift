@@ -9,7 +9,9 @@
 - **Current tracking issue:** https://github.com/ProfessorMinty/LumenShift/issues/1
 - **Target game:** World of Warcraft: Forever, live client (NOT assumed identical to Classic Era or Retail)
 - **Intended distribution:** CurseForge for World of Warcraft, Forever game flavor after approval, compatibility tests and moderation.
-- **Current authorization:** Phase 00, research and architecture ONLY.
+- **Current authorization:** Phase 01A, foundation and read-only diagnostics, explicitly approved 2026-11-06. See [current architecture](docs/11-PHASE-01A-FOUNDATION.md) and [validation / installation handoff](docs/12-PHASE-01A-VALIDATION.md).
+
+The Phase 00 work order below is preserved as history. Its implementation hold was superseded by Arctic's explicit Phase 01A approval. Only the diagnostic foundation, schema, pure state/planning models and mocks are authorized. Graphics writes, live effects, installed-game changes, release packaging/publication and Phase 01B remain outside scope. Do not merge PRs automatically. Keep Issue #1 open pending client validation.
 
 If Codex is not working in a clone of **ProfessorMinty/LumenShift**, STOP and open/clone that repository. Don't create a parallel LumenShift workspace or choose another repository by similar name. Verify origin with a local Git read-only command. Do not clone or mutate other projects without authorization.
 
@@ -40,7 +42,7 @@ We are not just creating a private proof of concept. The intended result is a cl
 - automated build/lint tests with manual verification and deliberate upload approval.
 **CurseForge is not yet configured and nothing is approved for publication.** Read docs/08-CURSEFORGE-RELEASE.md for source-linked requirements. Do not configure token/webhook, make a CurseForge project or publish anything.
 
-## Stage gate: what you may do now
+## Historical Phase 00 stage gate and first assignment
 Read **AGENTS.md**, **README.md**, **docs/00 through docs/08**, and **reference/ALPHA-PROTOTYPE.md**. Then work through **GitHub Issue #1**.
 
 ### Phase 00 research tasks

@@ -1,0 +1,2 @@
+# Development-only alternative to a standalone Lua 5.1 interpreter; never packaged.
+lupa==2.6
