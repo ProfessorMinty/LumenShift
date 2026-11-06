@@ -2,7 +2,7 @@
 
 **A Northern Lights Labs project: visual modes and advanced graphics controls for World of Warcraft: Forever.**
 
-> **Status: Phase 00 — research and architecture.** This repository is intentionally documentation-first. No addon implementation is approved for this repository yet.
+> **Status: Phase 00 — research and architecture.** This repository is intentionally documentation-first. No addon implementation is approved yet. **Intended release channel: CurseForge (World of Warcraft: Forever), pending compliance, testing and approval.**
 
 LumenShift is a proposed, accessible visual-preset addon combining a fast radial mode wheel, a full configuration panel, immersive audiovisual effects, and carefully validated graphics-console-variable (CVar) management.
 
@@ -23,6 +23,12 @@ The user's existing graphics preferences are the **baseline**. Switching modes s
 - **No automatic indoor detection** in the initial release.
 - **Original or properly licensed** audio, icons and visual assets only.
 
+## Where Codex should work
+- **Repository:** https://github.com/ProfessorMinty/LumenShift
+- **Clone:** https://github.com/ProfessorMinty/LumenShift.git
+- **Kickoff:** [CODEX-START-HERE.md](CODEX-START-HERE.md)
+- **Research tracker:** https://github.com/ProfessorMinty/LumenShift/issues/1
+
 ## Start here (for Codex)
 1. Read [AGENTS.md](AGENTS.md) completely.
 2. Read [docs/00-PROJECT-BRIEF.md](docs/00-PROJECT-BRIEF.md).
@@ -30,6 +36,10 @@ The user's existing graphics preferences are the **baseline**. Switching modes s
 4. Use [docs/02-CVAR-REGISTER.md](docs/02-CVAR-REGISTER.md) as a hypothesis register, **not** a list of confirmed safe settings.
 5. Follow [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md), [docs/04-UX-DESIGN.md](docs/04-UX-DESIGN.md), [docs/05-TEST-PLAN.md](docs/05-TEST-PLAN.md) and [docs/06-ROADMAP.md](docs/06-ROADMAP.md).
 6. Record sourced findings and unresolved questions in [docs/07-EVIDENCE-AND-DECISIONS.md](docs/07-EVIDENCE-AND-DECISIONS.md).
+7. Follow [docs/08-CURSEFORGE-RELEASE.md](docs/08-CURSEFORGE-RELEASE.md) for packaging, policy, licensing, QA and publication rules, even during architectural planning.
+
+## Intended public distribution
+We plan to distribute a **free, unobfuscated, policy-compliant addon via CurseForge**. Proper version/flavor tagging, license selection, asset provenance, accurate screenshots, tested restoration and archive validation are release requirements, not optional polish. No CurseForge project has been created or submission made here. Refer to the [release engineering plan](docs/08-CURSEFORGE-RELEASE.md).
 
 ## Starter prototype
 An earlier **v0.1.0-alpha** demonstration exists outside this repository. It had six modes, a clickable wheel, a settings pane and synthesized sound effects; it was **not tested inside WoW**. Treat it as a UX and behavior reference, not authoritative, production-ready code. Do not claim it is already in this repo or rebuild it without approval.
@@ -38,7 +48,7 @@ An earlier **v0.1.0-alpha** demonstration exists outside this repository. It had
 Phase 00 reports **facts, evidence, unknowns, compatibility tests and architecture proposals**. Present findings for review; do not silently move into implementation. No push/release of code without an approved phase.
 
 ## Source starting points
-- [Blizzard UI Add-On Development Policy](https://us.battle.net/support/en/article/135677)
+- [Blizzard UI Add-On Development Policy (official forum post)](https://eu.forums.blizzard.com/en/wow/t/wow-user-interface-add-on-development-policy/1642/1)
 - [WoW Forever beta API observations](https://github.com/Thunderz96/forever-addon-kit)
 - [Blizzard UI source mirror](https://github.com/Gethe/wow-ui-source)
 - [Forever Graphics addon (third-party example)](https://github.com/drengalis/foreverGraphics)
