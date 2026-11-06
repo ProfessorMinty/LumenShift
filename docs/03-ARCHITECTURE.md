@@ -1,6 +1,6 @@
 # Architecture proposal — Phase 00 review
 
-**Status:** proposed, not approved implementation. **Date:** 2026-11-06. Evidence: [07](07-EVIDENCE-AND-DECISIONS.md); gates: [06](06-ROADMAP.md). All behavior below is a design requirement unless explicitly sourced.
+**Status:** accepted in principle by Arctic's engineering review; implementation not authorized. **Date:** 2026-11-06. Evidence: [07](07-EVIDENCE-AND-DECISIONS.md); gates: [06](06-ROADMAP.md). All behavior below is a design requirement unless explicitly sourced. This review does not establish live-client behavior or authorize any setting writes.
 
 ## Boundaries and alternatives
 

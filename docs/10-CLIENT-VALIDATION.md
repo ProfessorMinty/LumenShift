@@ -2,6 +2,42 @@
 
 **Target reported by Arctic:** 1.60.1.70790. **Date:** 2026-11-06. Every result below is **NOT RUN / Unknown**. These are human-run read-only commands and future test instructions, not addon implementation. Do not change settings, install files, reload/relog, benchmark, or run write experiments under the Phase 00 authorization.
 
+## Immediate handoff — identity, getters and Brightness only
+
+The architecture is accepted in principle. Actual client identity and separate Phase 01A implementation authorization are still required. In an already open Forever session, run each line separately, following these checks. If `/dump` or script execution is refused, stop and report the message; do not change a setting to enable it.
+
+1. Check the function, then capture the complete build tuple only if the first line returns `function`:
+
+```text
+/dump type(GetBuildInfo)
+/dump GetBuildInfo()
+```
+
+2. Check getter availability without invoking any writer:
+
+```text
+/dump C_CVar and type(C_CVar.GetCVar), C_CVar and type(C_CVar.GetCVarInfo)
+/dump C_CVar and type(C_CVar.GetCVarDefault), C_CVar and type(C_CVar.AreCVarsLoaded)
+```
+
+3. Only if the functions above exist, check load readiness. If false, wait for ordinary login completion. If absent or refused, report it and stop this shortlist:
+
+```text
+/dump C_CVar.AreCVarsLoaded()
+```
+
+4. Once ready, read Brightness and its metadata:
+
+```text
+/dump pcall(C_CVar.GetCVar, "Brightness")
+/dump pcall(C_CVar.GetCVarInfo, "Brightness")
+/dump pcall(C_CVar.GetCVarDefault, "Brightness")
+```
+
+Return the exact outputs in this order, including nil/error results, plus the launcher's product label (no account name or full installation path). GetBuildInfo must include version, build, date and interface. The GetCVarInfo output after the initial pcall success flag is: current value, default, account-storage flag, character-storage flag, user-lock flag, secure flag, read-only flag. A successful read does not prove write permission or visible effect.
+
+This shortlist makes no graphics writes, installs nothing and performs no reload/relog. The broader R1–R4 worksheet below remains available for later investigation; no future write experiment is authorized by this handoff.
+
 ## R1 — Identify the actual client
 
 In an already open Forever session, run these individual chat commands. They read values and print locally; they do not send a chat message or change CVars. If script execution is refused, stop and record the refusal; do not enable a setting or bypass it. Do not assume `/dump` exists on every client.

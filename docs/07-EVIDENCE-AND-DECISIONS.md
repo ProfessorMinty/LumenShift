@@ -86,6 +86,8 @@ All URLs were read on the observation date unless expressly marked as inherited 
 | 2026-11-06 | Click wheel first, effects/audio initially off, quality later | Engineering proposal, approval pending |
 | 2026-11-06 | Manual upload first, separate build/publication gates | Engineering proposal, approval pending |
 | 2026-11-06 | No license selected, no alpha import, no CurseForge setup or release | Scope maintained; future decisions unresolved |
+| 2026-11-06 | Engineering review accepts the proposed architecture in principle; Phase 01A is the recommended next implementation scope | Arctic's explicit follow-up; live-client identity and separate implementation authorization remain prerequisites. No proposal above grants permission for live writes |
+| 2026-11-06 | Preserve Phase 00 on `docs/phase-00-research` and open a documentation PR against `main`; do not merge; keep Issue #1 open | Explicit owner authorization, limited to documentation preservation and the read-only client-validation handoff |
 
 Required next evidence: R1 installed tuple and R2–R4 getter/flag results; later authorized W1–W4/V1/B1 outcomes. Required owner decisions are listed in [09](09-PHASE-00-FINDINGS.md). No missing result is silently counted as PASS.
 

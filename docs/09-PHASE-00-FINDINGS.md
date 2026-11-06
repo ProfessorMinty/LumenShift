@@ -1,6 +1,8 @@
 # Phase 00 findings — review package
 
-**Date:** 2026-11-06. **Status:** source investigation and architecture proposal complete for review; live-client acceptance NOT complete. **Authority:** [Issue #1](https://github.com/ProfessorMinty/LumenShift/issues/1). No Phase 01 implementation is authorized.
+**Date:** 2026-11-06. **Status:** engineering review complete; architecture accepted in principle; live-client acceptance NOT complete. **Authority:** [Issue #1](https://github.com/ProfessorMinty/LumenShift/issues/1) and Arctic's review follow-up. No Phase 01 implementation is authorized.
+
+**Review disposition:** preserve the Phase 00 documentation in a PR from `docs/phase-00-research` to `main`, without merging or closing Issue #1. Phase 01A is recommended only after actual client identity verification and explicit implementation authorization. The immediate handoff is the read-only shortlist in [10](10-CLIENT-VALIDATION.md). Acceptance in principle does not turn any untested behavior into a verified fact or authorize installation, CVar writes, effects, release packaging, publishing, or Phase 01B.
 
 ## Executive finding
 
@@ -86,16 +88,16 @@ The latest inspected moderation guidance is dated 2026-10-22. Plan an original *
 | Ownership/rollback state machine | 03 | Proposal ready for review |
 | Independent delta sets | 04 | Proposal ready; non-NV targets intentionally unset |
 | Read-only and future opt-in tests | 05, 10 | Protocols prepared, NOT RUN |
-| Architecture/Phase 01 acceptance | 03, 06 | Proposed; not approved or implemented |
+| Architecture/Phase 01 acceptance | 03, 06 | Architecture accepted in principle; implementation authorization and client gates open |
 | CurseForge flavor/TOC/ZIP/metadata/CI | 08 | Requirements researched; dashboard, legal and QA gates open |
-| Present findings and stop | This review package | Awaiting Arctic's decisions; Issue #1 left open |
+| Present findings and stop | This review package | Engineering review received; documentation PR/handoff authorized; Issue #1 remains open |
 
-## Decisions required from Arctic
+## Remaining gates and decisions after engineering review
 
-1. Approve the proposed architecture and **Phase 01A diagnostic/core scope**, with **Phase 01B writes separately gated** on the read-only results and a specific test plan. Proposed first writer: Brightness only, target 75, restoring the captured value even when it is not 45.
+1. The architecture is accepted in principle. Obtain actual client identity evidence and separately authorize the **Phase 01A diagnostic/core implementation scope**. **Phase 01B writes remain separately gated** on read-only results and a specific test plan. A future first writer is proposed as Brightness only, target 75, restoring the captured value even when it is not 45; no writer is part of Phase 01A.
 2. Approve external-edit-wins conflict handling, no startup reapply/recovery writes, no automatic combat retry, and best-effort orderly-exit restoration only after it has been tested and explicitly enabled.
 3. Confirm `Cinematic` as the display name (older docs use `Cinema`), six eventual concepts, optional effects off initially, and quality profiles deferred to Phase 04.
 4. Defer or choose a license and asset policy before distribution; confirm eventual Northern Lights Labs credit. No license has been selected.
 5. Later, approve an exact client test matrix and separate CurseForge setup/upload steps. Approval of this research is not approval to change live settings or publish.
 
-This is the Phase 00 stopping point. The sourced report can be reviewed now; client-verification checkboxes must stay open until evidence exists.
+This remains the documentation stopping point. Preserve the reviewed research and hand off the read-only checks; client-verification checkboxes stay open until evidence exists. Do not begin implementation until the remaining gate is explicitly approved.

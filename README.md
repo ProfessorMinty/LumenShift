@@ -24,7 +24,7 @@ The user's existing graphics preferences are the **baseline**. Switching modes s
 - **Original or properly licensed** audio, icons and visual assets only.
 
 ## Where Codex should work
-- **Phase 00 review:** [Findings, open gates and approval decisions](docs/09-PHASE-00-FINDINGS.md) · [Read-only client checks](docs/10-CLIENT-VALIDATION.md). Source investigation is complete for review; in-client verification and Phase 01 approval remain pending.
+- **Phase 00 review:** [Findings, open gates and approval decisions](docs/09-PHASE-00-FINDINGS.md) · [Read-only client checks](docs/10-CLIENT-VALIDATION.md). Architecture accepted in principle; live-client identity verification and explicit Phase 01A implementation authorization remain prerequisites.
 - **Repository:** https://github.com/ProfessorMinty/LumenShift
 - **Clone:** https://github.com/ProfessorMinty/LumenShift.git
 - **Kickoff:** [CODEX-START-HERE.md](CODEX-START-HERE.md)

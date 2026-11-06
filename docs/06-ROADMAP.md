@@ -1,9 +1,9 @@
 # LumenShift roadmap and stage gates
 **This is a proposal. No implementation phase begins without Arctic's explicit approval.**
 
-## Phase 00 — Research and architecture (REVIEW PENDING)
+## Phase 00 — Research and architecture (REVIEWED IN PRINCIPLE; VALIDATION OPEN)
 Deliverables: actual Forever client compatibility; CVar evidence register; feasible sound/UI effects; baseline/restore/conflict state machine; UX proposal; test plan; implementation architecture; risk/decisions document.
-Source investigation and proposal are complete for review in [09](09-PHASE-00-FINDINGS.md). Client compatibility acceptance remains open. Exit requires reviewed evidence/unknowns, a separately authorized client validation path and explicit approval of Phase 01 scope. There is currently **no verified safe launch CVar list**. Keep Issue #1 open; do not silently mark its client checks complete.
+Arctic's engineering review accepts the architecture in principle; see [09](09-PHASE-00-FINDINGS.md). Client compatibility acceptance remains open. Phase 01A is recommended, but actual client identity verification and explicit implementation authorization are still prerequisites. There is currently **no verified safe launch CVar list**. Keep Issue #1 open; do not silently mark its client checks complete.
 
 ## Phase 01 — Minimal reversible core
 Deliverables: addon skeleton/TOC, module architecture, capability detection, baseline capture, safe CVar read/write/readback, explicit Restore My Settings, SavedVariables schema, basic slash commands and mock tests. One approved CVar only at first.
