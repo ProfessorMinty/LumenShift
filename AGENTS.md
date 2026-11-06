@@ -1,6 +1,9 @@
 # Codex working agreement — LumenShift
 
-Read README.md and the linked docs before doing work. Northern Lights Labs owns this project.
+Repository: https://github.com/ProfessorMinty/LumenShift (clone URL: https://github.com/ProfessorMinty/LumenShift.git). Northern Lights Labs owns this project. Read README.md, CODEX-START-HERE.md and docs/00 through docs/08 before doing work. Confirm you are in this exact repo, not a similarly named project.
+
+## Distribution requirement
+LumenShift is intended for public publication on **CurseForge for World of Warcraft: Forever**, after explicit owner approval. Plan for transparent, free and unobfuscated Lua code, Blizzard addon-policy compliance, original/licensed assets, proper Forever-specific TOC and CurseForge-compatible ZIP, game-version tagging, consistent license, release notes, QA, and a human-gated publication process. Read docs/08-CURSEFORGE-RELEASE.md. No CurseForge setup, API tokens, uploads or release publishing during Phase 00. Do not decide the license or claim CurseForge approval.
 
 ## Current authorization
 **PHASE 00: RESEARCH + ARCHITECTURE ONLY.** You may create/edit Markdown research reports, evidence records and architectural proposals. Do NOT implement the Lua addon, import an untested alpha as production code, install/deploy files to the game, change graphics settings, publish releases, or advance to another phase without explicit approval. Do not silently change unrelated files.
