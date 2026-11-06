@@ -12,6 +12,24 @@ function C.Get(key) return ns.Value.Copy(candidates[key]) end
 function C.Keys() return ns.Value.Keys(candidates) end
 function C.Snapshot() return ns.Value.Copy(candidates) end
 
+-- An explicit experiment policy, NOT a promotion to the production write catalog.
+function C.TestContext(context)
+    return type(context) == "table" and context.testOnly == true
+        and context.signature == "1.60.1:70790:16001"
+        and context.experiment == "BRIGHTNESS_75_ROUNDTRIP"
+end
+
+function C.BrightnessExperiment(signature)
+    local context = { signature = signature, testOnly = true, experiment = "BRIGHTNESS_75_ROUNDTRIP" }
+    if not C.TestContext(context) then return nil, nil end
+    return { Brightness = {
+        name = "Brightness", layer = "visual", kind = "number", version = 1,
+        evidence = "CONTROLLED_TEST_01B", testOnly = true, admitted = false,
+        signature = signature, scope = "observed_local_test", min = 0, max = 100,
+        settle = "manual_readback_test", numericEquivalent = true, dependencies = {}, conflicts = {},
+    } }, context
+end
+
 local function names(list)
     if type(list) ~= "table" then return false end
     local count = 0
@@ -25,6 +43,17 @@ end
 
 -- Pure predicate for a FUTURE reviewed catalog. No runtime admission/update API.
 function C.Admitted(descriptor, context)
+    if C.TestContext(context) then
+        return type(descriptor) == "table" and descriptor.name == "Brightness"
+            and descriptor.testOnly == true and descriptor.admitted == false
+            and descriptor.evidence == "CONTROLLED_TEST_01B" and descriptor.signature == context.signature
+            and descriptor.scope == "observed_local_test" and descriptor.layer == "visual"
+            and descriptor.kind == "number" and descriptor.version == 1
+            and descriptor.min == 0 and descriptor.max == 100 and descriptor.numericEquivalent == true
+            and descriptor.settle == "manual_readback_test"
+            and names(descriptor.dependencies) and #descriptor.dependencies == 0
+            and names(descriptor.conflicts) and #descriptor.conflicts == 0
+    end
     return type(descriptor) == "table" and type(context) == "table"
         and context.verified == true and context.rendererVerified == true
         and ns.Value.Raw(context.signature) and ns.Value.Raw(context.renderer)

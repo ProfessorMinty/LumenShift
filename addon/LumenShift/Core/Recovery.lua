@@ -80,7 +80,7 @@ function R.ReleaseObserved(tx, id, index, current, combat)
     return nextTx
 end
 
--- setterOK/readback are synthetic facts supplied by tests, not native setter calls.
+-- The boundary (or a mock) supplies setterOK/readback. This model never calls native APIs.
 function R.Observe(tx, id, index, setterOK, raw)
     if id ~= tx.id or tx.state ~= "APPLYING" or tx.pendingIndex ~= index then return nil, "STALE_OR_BUSY" end
     local nextTx, op = V.Copy(tx), tx.plan.operations[index]
