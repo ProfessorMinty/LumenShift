@@ -1,0 +1,22 @@
+## Interface: 16001
+## Title: LumenShift
+## Notes: Forever diagnostic foundation. Graphics writes disabled.
+## Author: Northern Lights Labs
+## Version: 0.1.0-dev.1
+## SavedVariables: LumenShiftDB
+## X-Website: https://github.com/ProfessorMinty/LumenShift
+## X-LumenShift-Phase: 01A
+
+Core/Namespace.lua
+Core/Value.lua
+Core/ReadOnly.lua
+Core/Compatibility.lua
+Core/Catalog.lua
+Core/Profiles.lua
+Core/Store.lua
+Core/Planner.lua
+Core/Recovery.lua
+Core/WriteBoundary.lua
+Core/Controller.lua
+Core/Diagnostics.lua
+Core/Bootstrap.lua

@@ -6,7 +6,9 @@ Repository: https://github.com/ProfessorMinty/LumenShift (clone URL: https://git
 LumenShift is intended for public publication on **CurseForge for World of Warcraft: Forever**, after explicit owner approval. Plan for transparent, free and unobfuscated Lua code, Blizzard addon-policy compliance, original/licensed assets, proper Forever-specific TOC and CurseForge-compatible ZIP, game-version tagging, consistent license, release notes, QA, and a human-gated publication process. Read docs/08-CURSEFORGE-RELEASE.md. No CurseForge setup, API tokens, uploads or release publishing during Phase 00. Do not decide the license or claim CurseForge approval.
 
 ## Current authorization
-**PHASE 00: RESEARCH + ARCHITECTURE ONLY.** You may create/edit Markdown research reports, evidence records and architectural proposals. Do NOT implement the Lua addon, import an untested alpha as production code, install/deploy files to the game, change graphics settings, publish releases, or advance to another phase without explicit approval. Do not silently change unrelated files.
+**PHASE 01A: FOUNDATION + READ-ONLY DIAGNOSTICS.** Arctic explicitly authorized implementation on 2026-11-06 after accepting the Phase 00 architecture in principle. Read docs/11-PHASE-01A-FOUNDATION.md and docs/12-PHASE-01A-VALIDATION.md for the current scope and evidence. The historical Phase 00 documents remain preserved; their earlier implementation hold is superseded only for this scope.
+
+You may implement the modular bootstrap, read-only adapter/diagnostics, configuration schema, pure planning/ownership/recovery models and automated mocks. Core/WriteBoundary.lua is the sole future graphics-writing boundary and MUST unconditionally refuse operations in Phase 01A. No other module may call a graphics writer or an equivalent fallback. No live writes, automatic presets, effects, radial menu, installed-game changes, release packaging, CurseForge setup/publication or Phase 01B without separate authorization. Do not merge PRs automatically or close Issue #1 while client validation remains incomplete. Do not silently change unrelated files.
 
 ## Sacred truth and verification
 - Classify claims as **Verified in-client**, **Source-confirmed for a named build**, **Community-reported**, **Hypothesis**, **Unknown**, or **Unsupported**.
@@ -43,4 +45,4 @@ Brightness 45; Contrast 60; ResampleAlwaysSharpen 1; groundEffectDensity 256; fa
 8. Concise handoff proposing Phase 01 scope and acceptance criteria, then STOP for approval.
 
 ## Working style
-Make small auditable documentation changes. Don't overwrite others' work. Clearly separate proposal from fact. No license until selected by maintainer. No 'passed in-game' claim without build, steps, observation and result. This public repository is not a waiver of intellectual property.
+Make auditable changes within the authorized phase. Don't overwrite others' work. Clearly separate proposal from fact and mocks from native observations. Run tools/check.py and tests/run.lua as described in docs/12 for runtime changes. No license until selected by maintainer. No 'passed in-game' claim without build, steps, observation and result. This public repository is not a waiver of intellectual property.
