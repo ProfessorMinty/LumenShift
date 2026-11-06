@@ -1,0 +1,50 @@
+# LumenShift 🌙
+
+**A Northern Lights Labs project: visual modes and advanced graphics controls for World of Warcraft: Forever.**
+
+> **Status: Phase 00 — research and architecture.** This repository is intentionally documentation-first. No addon implementation is approved for this repository yet.
+
+LumenShift is a proposed, accessible visual-preset addon combining a fast radial mode wheel, a full configuration panel, immersive audiovisual effects, and carefully validated graphics-console-variable (CVar) management.
+
+## The idea
+One keybind should let players select an atmospheric visual mode without digging through multiple graphics menus. Two independent layers keep the system predictable:
+
+- **Visual mode:** Night Vision, Cinematic, Lantern, Clarity, Moonlight and Natural, with optional UI overlays, sounds and color/exposure adjustments.
+- **Graphics-quality profile:** Baseline, Balanced, Ultra/Vista and Performance, controlling verified engine detail settings independently of the visual mode.
+
+The user's existing graphics preferences are the **baseline**. Switching modes should not silently destroy them.
+
+## Current decisions
+- **Primary target:** World of Warcraft: Forever. Do not assume untested Retail parity.
+- **Stage gate:** research and architecture documents only until explicit approval.
+- **No hidden or magical shaders:** addon UI textures are overlays, not post-processing LUTs or true night vision.
+- **Safety first:** opt-in changes; capture original CVar state; verify readback; reversible restoration; respect protected/reload-only settings and combat restrictions.
+- **No automatic quality downgrade** merely because a color/exposure mode was selected.
+- **No automatic indoor detection** in the initial release.
+- **Original or properly licensed** audio, icons and visual assets only.
+
+## Start here (for Codex)
+1. Read [AGENTS.md](AGENTS.md) completely.
+2. Read [docs/00-PROJECT-BRIEF.md](docs/00-PROJECT-BRIEF.md).
+3. Execute the research-only work order in [docs/01-PHASE-00-RESEARCH.md](docs/01-PHASE-00-RESEARCH.md).
+4. Use [docs/02-CVAR-REGISTER.md](docs/02-CVAR-REGISTER.md) as a hypothesis register, **not** a list of confirmed safe settings.
+5. Follow [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md), [docs/04-UX-DESIGN.md](docs/04-UX-DESIGN.md), [docs/05-TEST-PLAN.md](docs/05-TEST-PLAN.md) and [docs/06-ROADMAP.md](docs/06-ROADMAP.md).
+6. Record sourced findings and unresolved questions in [docs/07-EVIDENCE-AND-DECISIONS.md](docs/07-EVIDENCE-AND-DECISIONS.md).
+
+## Starter prototype
+An earlier **v0.1.0-alpha** demonstration exists outside this repository. It had six modes, a clickable wheel, a settings pane and synthesized sound effects; it was **not tested inside WoW**. Treat it as a UX and behavior reference, not authoritative, production-ready code. Do not claim it is already in this repo or rebuild it without approval.
+
+## Development workflow
+Phase 00 reports **facts, evidence, unknowns, compatibility tests and architecture proposals**. Present findings for review; do not silently move into implementation. No push/release of code without an approved phase.
+
+## Source starting points
+- [Blizzard UI Add-On Development Policy](https://us.battle.net/support/en/article/135677)
+- [WoW Forever beta API observations](https://github.com/Thunderz96/forever-addon-kit)
+- [Blizzard UI source mirror](https://github.com/Gethe/wow-ui-source)
+- [Forever Graphics addon (third-party example)](https://github.com/drengalis/foreverGraphics)
+- [Dynamic Ambiance Forever (third-party example)](https://github.com/imperial64/dynamic-ambiance-forever)
+
+These references are evidence leads. Codex must compare their dates/builds with the user's installed client.
+
+---
+**Maintainer:** Northern Lights Labs · **Product name:** LumenShift · **Stage:** Research only.
