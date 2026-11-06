@@ -1,0 +1,27 @@
+# Local editor and OS junk
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local game configuration or user data must never be committed
+WTF/
+Cache/
+Logs/
+Screenshots/
+Config.wtf
+*.log
+
+# Build outputs and temporary archives
+dist/
+build/
+*.zip
+*.7z
+*.rar
+*.tmp
+
+# Local research/test captures (add curated sanitized examples explicitly when approved)
+local-test-data/
+local-screenshots/
