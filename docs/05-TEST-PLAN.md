@@ -61,3 +61,55 @@ Crash, repeated Lua errors, non-revertible values, unexpectedly large FPS regres
 
 ## Verification scorecard
 PASS only after reproduction on the target client with steps and expected/actual behavior. SIMULATED PASS is distinct from IN-GAME PASS. NOT TESTED is not PASS. Problems have severity and reproducible evidence.
+
+## Reconciled Phase 00 test specification — 2026-11-06
+
+**All tests are NOT RUN.** [10](10-CLIENT-VALIDATION.md) supplies the read-only R1–R4 commands and separately gated W1–W4/V1/B1 protocols. A source inspection is not an executed mock or live test. The future implementation must preserve these test IDs in its evidence records.
+
+### Required off-client cases
+
+| ID | Injected scenario | Required observable result |
+|---|---|---|
+| M01 | First load, fresh DB, reconnect, valid DB | Zero setters and zero unsolicited sound; diagnostics available |
+| M02 | Actual baseline 45 and separately 52; NV -> Natural | Restore 45 and 52 respectively; original never replaced by 75 |
+| M03 | Target already equals current, key unowned | No write, no restore claim/ownership acquired |
+| M04 | Visual transition with quality profile active, then reverse | Exact writer-call set restricted to selected layer; other selection unchanged |
+| M05 | Missing API/CVar, false/nil/error return, secure/read-only flags, inaccessible value | Refusal before mutation; clear specific status; no fallback ConsoleExec/RegisterCVar |
+| M06 | NaN/infinity, string payload, unknown key, wrong type, out-of-domain target | Rejected before any write; imports never execute code |
+| M07 | Setter returns success but no-op/clamps; setter errors after changing | Detect mismatch; inspect attempted key; compensate only defensible changes |
+| M08 | Failure at each operation in a multikey switch | Reverse compensation to transaction before-values; previous active mode retained only if recovered |
+| M09 | Restore fails or becomes restricted midway | PARTIAL/ERROR with unresolved journal preserved; no “fully restored” status |
+| M10 | External value drift before preflight, before setter, after readback and before restore | External value preserved; ownership suspended, bounded diagnostics, no write fight |
+| M11 | Synchronous/reentrant CVAR_UPDATE, duplicate/missing events | No recursive apply; immediate reads still authoritative; bounded event queue |
+| M12 | Late readback drift, stale timer, rapid repeated toggles/cancel | Transaction IDs reject stale callbacks; one transaction at a time; latest explicit request handled once |
+| M13 | Combat enters between preflight and operation | Stop/defer; no automatic retry after combat; recover only when allowed |
+| M14 | Reload with unresolved journal; character switch; missing/stale journal after simulated crash | Read-only recovery; never adopt an active preset as fresh baseline |
+| M15 | Corrupt/older/newer schema or invalid profile | Preserve recovery data, disable writes, transactional migration or explicit refusal |
+| M16 | Profile tries visual/quality overlap or tier plus low-level writer | Reject ambiguity before writes, including indirect dependency conflicts |
+| M17 | Unknown client build/interface or unsupported renderer | Read-only mode, no stale catalog writes |
+| M18 | Optional missing sound/texture, hidden UI, reduced motion | Core result accurately reported; no global audio changes; effects clean up |
+
+Model the unavoidable same-value/ABA race separately: the mock should demonstrate the limitation, not claim to solve writer attribution. Property checks over generated valid plans should enforce disjoint writer sets, no write without a captured original, and preservation of unresolved records. A stock Lua pass cannot certify WoW's security/taint behavior; use a parser/runtime matched to the game's accepted dialect when implementation begins.
+
+### Live acceptance record
+
+For each R/W/V/B case record build tuple, date, catalog version, approved scope, API/flags, exact before/target/immediate/settled/restore strings, visual effect, unrelated-key comparison, expected vs actual, tester and sanitized evidence. Use PASS, FAIL, BLOCKED or NOT RUN; a skipped key cannot count as a successful whole-profile restore. Keep setter acceptance, readback, rendering effect and persistence as separate result fields.
+
+W2 must cover direct Graphics sliders, overall preset fan-out, raid bank activation, another brightness writer, and late updates after closing Graphics. W3 must cover account/per-character save load, clean reload/logout/cold start, disable after restore, upgrade and schema migration. A hard-crash recovery test stays simulated until separately approved on a disposable setup. Do not install the historical alpha as a test shortcut.
+
+### B1 benchmark protocol proposal
+
+Approval must name hardware, keys/targets, acceptable frame-budget change and recovery values. Use dark interior, dense forest, busy city and long vista; add water/weather scenes for relevant keys. Record resolution, render scale, HDR, backend, driver, frame cap **and its enable state**, graphics tiers, addons, zone/weather/time and camera alignment. Do not publish private hardware identifiers.
+
+Proposed repeatable run: 30-second warmup, then 60-second A baseline / B single change / A restored blocks, at least three matched triplets. Keep the camera fixed and record scene variation; if weather/crowds differ materially, invalidate the comparison. This is a protocol choice, not measured data. Stop on serious stutter or instability; restore immediately where permitted.
+
+Use a permitted, separately approved frame-time capture method for p50/p95/p99 and stutter counts. If only `GetFramerate()` snapshots are available, report FPS samples as such; do not relabel them as true frame times or 1% lows. No external injector or overlay is required. Report effect size, variability and missing evidence; do not claim an improvement smaller than run-to-run noise. A Vista candidate with no visible gain and a measurable cost is rejected for that tested setup.
+
+### UI and packaging acceptance additions
+
+- V1: 16:9 and ultrawide, low/high UI scale, edge-clamped wheel, chat/menus focused, lost key-up, Escape, keyboard-only use, color-independent labels, muted audio, repeated toggles, hidden UI, combat warnings and EllesmereUI. Any covered critical UI fails the effect. Reduced-motion mode must remove nonessential motion.
+- P1: install from the exact prospective ZIP into a clean Forever test setup after approval; confirm TOC/interface/load order, asset paths/case and no wrapper nesting. Do not rely on “load out of date addons” to claim compatibility.
+- P2: upgrade from the last supported schema, preserve baselines/presets, reject downgrade to unsupported schema with a recovery path. Uninstall after verified restore; document residual SavedVariables and CVar state accurately.
+- P3: compare ZIP contents against an allowlist and hashes; check versions, changelog, license/provenance, forbidden files, no placeholders/secrets, and no release credential required for validation.
+
+Phase 00 document validation is limited to link/scope/evidence/consistency checks. No addon or game tests are represented as having passed.
