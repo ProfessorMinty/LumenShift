@@ -27,9 +27,10 @@ end
 function P.Defaults()
     return { selected = { visual = "natural", quality = "currentBaseline" },
         custom = { visual = {}, quality = {} },
-        preferences = { sound = false, animation = false, reducedMotion = true } }
+        preferences = { sound = false, animation = true, reducedMotion = false },
+        studio = ns.StudioConfig.Defaults() }
 end
-function P.Validate(config)
+function P.ValidateLegacy(config)
     local V = ns.Value
     if not V.Fields(config, { selected = true, custom = true, preferences = true })
         or not V.Fields(config.selected, { visual = true, quality = true })
@@ -45,4 +46,9 @@ function P.Validate(config)
         if type(config.preferences[key]) ~= "boolean" then return false end
     end
     return true
+end
+function P.Validate(config)
+    if not ns.Value.Fields(config, { selected = true, custom = true, preferences = true, studio = true }) then return false end
+    return P.ValidateLegacy({ selected = config.selected, custom = config.custom, preferences = config.preferences })
+        and ns.StudioConfig.Validate(config.studio)
 end

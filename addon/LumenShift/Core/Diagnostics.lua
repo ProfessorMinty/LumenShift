@@ -9,7 +9,7 @@ function D.Lines(runtime)
     local caps = ns.ReadOnly.Capabilities(reader)
     local observed = {}
     local status = runtime.engine and runtime.engine.Status()
-    local lines = { "LumenShift " .. ns.version .. " | Brightness test engine; writes locked until explicit confirmation",
+    local lines = { "LumenShift " .. ns.version .. " | Visual Studio; no startup graphics writes",
         "Client: " .. (identity.version or "unknown") .. " build " .. (identity.build or "unknown")
             .. " interface " .. tostring(identity.interface or "unknown"),
         "Compatibility: " .. identity.status .. "; renderer UNVERIFIED; production write admission unavailable",
@@ -32,8 +32,10 @@ function D.Lines(runtime)
     lines[#lines + 1] = "State: " .. (status and status.state or recovery and recovery.state or "RECOVERY")
         .. "; saved selection is metadata, never an active preset"
     if status then
+        lines[#lines + 1] = "Studio controls: " .. (runtime.db and runtime.db.config.studio.enabled and "enabled by user" or "setup required")
+            .. "; active presentation: " .. (runtime.product and runtime.product.active or "natural")
         lines[#lines + 1] = "Native Brightness writer API: " .. (status.setterAvailable and "available" or "unavailable")
-            .. "; only a confirmed test can call it"
+            .. "; user-enabled controls or an explicit recovery confirmation required"
         lines[#lines + 1] = "Brightness original: " .. (status.original or "not captured")
             .. "; last verified: " .. (status.lastVerified or "none") .. "; operation: " .. status.operation
         lines[#lines + 1] = "Preview confirmation: " .. (status.token or "none") .. "; startup/reload never enables writes"
@@ -47,10 +49,29 @@ function D.Lines(runtime)
             if recovery.entries[key] then lines[#lines + 1] = key .. " recovery: " .. recovery.entries[key] end
         end
     else lines[#lines + 1] = "Recovery: saved data preserved in place; schema quarantined" end
-    lines[#lines + 1] = "Commands: /ls on | off | restore (read-only previews); /ls confirm TOKEN; /ls verify; /ls cancel"
+    lines[#lines + 1] = "Studio: /ls studio; /ls wheel; /ls toggle; /ls mode NAME. Key bindings: LumenShift category."
+    lines[#lines + 1] = "Recovery: /ls on | off | restore (previews); use the exact numbered confirmation printed in chat; /ls verify; /ls cancel"
     lines[#lines + 1] = "Restore My Brightness: /ls restore. Save the displayed recovery card before confirming a live-approved test."
-    lines[#lines + 1] = "Unverified: native writes, settling, persistence and restoration. Contrast and quality controls remain read-only."
+    lines[#lines + 1] = "Native evidence: one 45/75/45 round trip. Other targets, Studio UI/audio, settling and persistence need acceptance. Contrast and quality writes remain disabled."
+    if runtime.product and runtime.product.lastError then lines[#lines + 1] = "Studio status: " .. runtime.product.lastError end
+    if runtime.audio and runtime.audio.lastError then lines[#lines + 1] = "Audio status: " .. runtime.audio.lastError end
     if runtime.lastError then lines[#lines + 1] = "Last error: " .. runtime.lastError end
+    return lines
+end
+
+function D.QualityLines(runtime)
+    local lines = { "QUALITY READ-ONLY SCAN | " .. (ns.Compatibility.Inspect(runtime.reader).signature or "unknown") }
+    for _, row in ipairs(ns.Quality.Scan(runtime.reader)) do
+        local item = row.observation
+        lines[#lines + 1] = row.key .. "=" .. (item.raw or "unavailable") .. " [" .. item.code .. "]"
+            .. "; default=" .. (item.defaultRaw or "unavailable") .. " [" .. (item.defaultCode or item.code) .. "]"
+        if item.flags then
+            lines[#lines + 1] = "secure=" .. bool(item.flags.secure) .. " readOnly=" .. bool(item.flags.readOnly)
+                .. " locked=" .. bool(item.flags.locked) .. " serverAccount=" .. bool(item.flags.serverAccount)
+                .. " serverCharacter=" .. bool(item.flags.serverCharacter)
+        else lines[#lines + 1] = "flags=" .. (item.flagsCode or item.code) end
+        lines[#lines + 1] = row.source .. ": " .. row.dependency .. "; UNVERIFIED / no writes admitted"
+    end
     return lines
 end
 

@@ -35,13 +35,21 @@ function S.Open(raw)
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
+    local migrated = false
+    if data.schemaVersion == 1 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.ValidateLegacy(data.config)
+            or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
+        data.config.studio = ns.StudioConfig.Defaults()
+        data.schemaVersion, migrated = ns.schemaVersion, true
+    end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- No released predecessor schema exists. Refuse a speculative migration.
+        -- Only the explicitly supported schema-1 migration above is permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
     if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
         or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
         or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
     data.addonVersion = ns.version
-    return data, "VALIDATED_COPY"
+    return data, migrated and "MIGRATED_1_TO_2" or "VALIDATED_COPY"
 end

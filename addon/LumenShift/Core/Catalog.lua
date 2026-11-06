@@ -8,7 +8,13 @@ local candidates = {
     Contrast = { layer = "visual", kind = "number", uiMin = 0, uiMax = 100,
         evidence = "SOURCE_DECLARED_70790", admitted = false, version = 1 },
 }
-function C.Get(key) return ns.Value.Copy(candidates[key]) end
+function C.Get(key)
+    if candidates[key] then return ns.Value.Copy(candidates[key]) end
+    for _, candidate in ipairs(ns.Quality and ns.Quality.Candidates or {}) do
+        if candidate.key == key then return { layer = "quality", kind = "number", evidence = candidate.source,
+            admitted = false, version = 1, diagnosticOnly = true } end
+    end
+end
 function C.Keys() return ns.Value.Keys(candidates) end
 function C.Snapshot() return ns.Value.Copy(candidates) end
 

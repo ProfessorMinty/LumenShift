@@ -1,63 +1,45 @@
-# LumenShift 🌙
+# LumenShift
 
-**A Northern Lights Labs project: visual modes and advanced graphics controls for World of Warcraft: Forever.**
+**Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-> **Status: Phase 01B — controlled Brightness experiment, unreleased.** Graphics writes are locked until an explicit preview/confirmation. Startup and diagnostics never write. **One owner-operated 45 → 75 → 45 round trip passed readback and visual checks; broader native acceptance remains open. Intended release channel: CurseForge (World of Warcraft: Forever), pending compliance, further testing and approval.**
+LumenShift combines reversible brightness controls, a six-mode icon wheel and a seven-page Visual Studio. It keeps visual modes separate from graphics-quality preferences, captures the actual original before taking ownership and never changes graphics at startup.
 
-Read the [engine architecture and mock results](docs/15-PHASE-01B-ENGINE.md), [installation and controlled acceptance steps](docs/16-BRIGHTNESS-ACCEPTANCE.md), and [owner-gated merge sequence](docs/17-MERGE-SEQUENCE.md). Source is in [addon/LumenShift](addon/LumenShift). Bare `/lumenshift` and `/ls` display diagnostics. `/ls on`, `/ls off` and `/ls restore` only preview; enter the exact numbered confirmation command printed by the addon to perform a test write, then `/ls verify` for a later read. Arctic's [Phase 01A smoke reports](docs/14-CLIENT-SMOKE-RESULTS.md) confirm loading and readable diagnostics on **1.60.1, build 70790, interface 16001**. The subsequent [Phase 01B round-trip result](docs/18-BRIGHTNESS-CLIENT-RESULTS.md) confirms activation, exact restoration and the intended visual changes on this observed setup. Persistence, native failure recovery and broader compatibility remain unverified.
+**0.2.0-beta.1 is a local development candidate, not an accepted feature-complete beta or a published release.** The earlier owner-operated Brightness 45 → 75 → 45 test passed readback and visual inspection on Forever 1.60.1.70790 / interface 16001. The new integrated UI, effects, audio and alternative brightness targets still require native acceptance. Contrast and quality-profile writes remain unavailable because their native ranges, dependencies and exact restoration have not been validated.
 
-LumenShift is a proposed, accessible visual-preset addon combining a fast radial mode wheel, a full configuration panel, immersive audiovisual effects, and carefully validated graphics-console-variable (CVar) management.
+## Use the candidate
 
-## The idea
-One keybind should let players select an atmospheric visual mode without digging through multiple graphics menus. Two independent layers keep the system predictable:
+Install the whole extracted `LumenShift` folder under the existing Forever `Interface/AddOns` folder; the TOC alone is not the addon. Follow the [installation, controlled test and recovery guide](docs/21-BETA-USER-GUIDE.md).
 
-- **Visual mode:** Night Vision, Cinematic, Lantern, Clarity, Moonlight and Natural, with optional UI overlays, sounds and color/exposure adjustments.
-- **Graphics-quality profile:** Baseline, Balanced, Ultra/Vista and Performance, controlling verified engine detail settings independently of the visual mode.
+- `/ls` or `/lumenshift`: read-only diagnostics.
+- `/ls studio`: Visual Modes, Graphics Quality, Colors and Effects, Audio, Personal Presets, Accessibility, Diagnostics and Recovery.
+- `/ls wheel`: labeled mouse/keyboard wheel; left-click the draggable launcher for the same menu, right-click for Studio.
+- `/ls toggle`: Night Vision/Natural after explicit initial setup. Natural restores the exact captured original and removes effects.
+- Set optional keys in the game's Key Bindings → LumenShift. No key assignments are changed automatically.
 
-The user's existing graphics preferences are the **baseline**. Switching modes should not silently destroy them.
+Night Vision defaults to Brightness 75 with optional green tint/vignette and original electronic cues. Cinematic, Lantern, Clarity and Moonlight have distinct editable brightness and presentation settings; non-75 native targets need a separate experimental opt-in. UI overlays are not world shaders. Audio starts muted, screenshot bars are off, and optional presentation clears in combat. Personal presets contain only bounded validated data.
 
-## Current decisions
-- **Primary target:** World of Warcraft: Forever. Do not assume untested Retail parity.
-- **Stage gate:** Phase 01B implementation is authorized. Native graphics tests, PR merges, Phase 02 and publication require separate approval.
-- **No hidden or magical shaders:** addon UI textures are overlays, not post-processing LUTs or true night vision.
-- **Safety first:** opt-in changes; capture original CVar state; verify readback; reversible restoration; respect protected/reload-only settings and combat restrictions.
-- **No automatic quality downgrade** merely because a color/exposure mode was selected.
-- **No automatic indoor detection** in the initial release.
-- **Original or properly licensed** audio, icons and visual assets only.
+No graphics-quality profile silently applies a partial/guessed target set. Current Baseline leaves quality unchanged; Balanced/Vista/Performance report their validation requirement. Read-only capability scans help collect evidence. See the [feature/evidence matrix and architecture](docs/20-BETA-FEATURES-AND-TESTS.md).
 
-## Where Codex should work
-- **Phase 00 review:** [Findings, open gates and approval decisions](docs/09-PHASE-00-FINDINGS.md) · [Read-only client checks](docs/10-CLIENT-VALIDATION.md). Preserved research; the current Phase 01B scope is recorded in [15](docs/15-PHASE-01B-ENGINE.md). Live-client validation is still open.
-- **Repository:** https://github.com/ProfessorMinty/LumenShift
-- **Clone:** https://github.com/ProfessorMinty/LumenShift.git
-- **Kickoff:** [CODEX-START-HERE.md](CODEX-START-HERE.md)
-- **Research tracker:** https://github.com/ProfessorMinty/LumenShift/issues/1
+## Safety and evidence
 
-## Start here (for Codex)
-1. Read [AGENTS.md](AGENTS.md) completely.
-2. Read [docs/00-PROJECT-BRIEF.md](docs/00-PROJECT-BRIEF.md).
-3. Read the historical work order in [docs/01-PHASE-00-RESEARCH.md](docs/01-PHASE-00-RESEARCH.md), the [Phase 01A foundation](docs/11-PHASE-01A-FOUNDATION.md), then follow the current scope in [docs/15-PHASE-01B-ENGINE.md](docs/15-PHASE-01B-ENGINE.md).
-4. Use [docs/02-CVAR-REGISTER.md](docs/02-CVAR-REGISTER.md) as a hypothesis register, **not** a list of confirmed safe settings.
-5. Follow [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md), [docs/04-UX-DESIGN.md](docs/04-UX-DESIGN.md), [docs/05-TEST-PLAN.md](docs/05-TEST-PLAN.md) and [docs/06-ROADMAP.md](docs/06-ROADMAP.md).
-6. Record sourced findings and unresolved questions in [docs/07-EVIDENCE-AND-DECISIONS.md](docs/07-EVIDENCE-AND-DECISIONS.md).
-7. Follow [docs/08-CURSEFORGE-RELEASE.md](docs/08-CURSEFORGE-RELEASE.md) for packaging, policy, licensing, QA and publication rules, even during architectural planning.
+`Core/WriteBoundary.lua` is the sole native graphics writer and only writes Brightness. Every operation uses planner preflight, exact baseline ownership and readback. Ordinary switching requires setup; uncertain reload/conflict recovery requires a fresh explicit preview and confirmation. External changes are preserved rather than repeatedly overwritten. SavedVariables are not immediately durable or crash-proof: save the recovery note outside the game and restore/verify before updating or removing the addon.
 
-## Intended public distribution
-We plan to distribute a **free, unobfuscated, policy-compliant addon via CurseForge**. Proper version/flavor tagging, license selection, asset provenance, accurate screenshots, tested restoration and archive validation are release requirements, not optional polish. No CurseForge project has been created or submission made here. Refer to the [release engineering plan](docs/08-CURSEFORGE-RELEASE.md).
+Read [prior native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md), [current integration decisions](docs/19-BETA-INTEGRATION.md) and [acceptance/publication gates](docs/22-BETA-RELEASE-QA.md). Automated mocks do not establish native rendering, audio, taint, disk persistence, addon coexistence or performance. EllesmereUI compatibility remains unverified.
 
-## Starter prototype
-An earlier **v0.1.0-alpha** demonstration exists outside this repository. It had six modes, a clickable wheel, a settings pane and synthesized sound effects; it was **not tested inside WoW**. Treat it as a UX and behavior reference, not authoritative, production-ready code. Do not claim it is already in this repo or rebuild it without approval.
+## Develop and package
 
-## Development workflow
-Work on a dedicated implementation branch based on PR #3 while its predecessors remain unmerged. Validate source/TOC structure and Lua 5.1 mocks before review; see [15](docs/15-PHASE-01B-ENGINE.md). Keep simulated and live results separate. Do not install into the owner's game, execute native graphics tests, merge automatically or publish a release under implementation-only authorization.
+Authoritative repository: [ProfessorMinty/LumenShift](https://github.com/ProfessorMinty/LumenShift). Read [AGENTS.md](AGENTS.md) and [CODEX-START-HERE.md](CODEX-START-HERE.md). Current development branch: `feat/beta-integration`, preserving PRs #2–4; main is unchanged and merging requires owner approval. [Issue #1](https://github.com/ProfessorMinty/LumenShift/issues/1) remains open while validation is incomplete.
 
-## Source starting points
-- [Blizzard UI Add-On Development Policy (official forum post)](https://eu.forums.blizzard.com/en/wow/t/wow-user-interface-add-on-development-policy/1642/1)
-- [WoW Forever beta API observations](https://github.com/Thunderz96/forever-addon-kit)
-- [Blizzard UI source mirror](https://github.com/Gethe/wow-ui-source)
-- [Forever Graphics addon (third-party example)](https://github.com/drengalis/foreverGraphics)
-- [Dynamic Ambiance Forever (third-party example)](https://github.com/imperial64/dynamic-ambiance-forever)
+```text
+python tools/check.py --mocks --lua-runtime PATH_TO_ISOLATED_LUPA
+python -m unittest discover -s tests -p test_package.py -v
+python tools/package.py --output PATH_OUTSIDE_REPOSITORY
+```
 
-These references are evidence leads. Codex must compare their dates/builds with the user's installed client.
+The optional isolated development runner uses Lupa 2.6 / Lua 5.1; no library is shipped in the addon. `lua tests/run.lua` also works with Lua 5.1. Packaging requires a clean committed tree and reads recorded Git blobs. The ZIP has one install root, explicit runtime/legal files, a source/hash manifest and fixed metadata; it is built twice and compared. No publishing credentials, install operation or upload workflow exists.
 
----
-**Maintainer:** Northern Lights Labs · **Product name:** LumenShift · **Stage:** Phase 01B, controlled-test source; native writes unverified.
+## Licensing and eventual distribution
+
+Original code and technical documentation: [MIT](LICENSE), copyright 2026 Northern Lights Labs. Original artwork, icons, textures, sound effects, logo and branding: [All Rights Reserved](ASSET-LICENSE.md), permitted for installation/use as part of LumenShift, not independent reuse or redistribution in other projects without permission. Third-party components retain their own terms. [Asset provenance](assets/PROVENANCE.md) and reproducible source recipes are included in the repository; no third-party media is bundled.
+
+The whole addon must not be described as MIT-only. The eventual CurseForge description/license metadata must reflect both terms. No CurseForge project, upload, release or moderation approval has been created here. Public distribution requires completed QA and final owner approval.

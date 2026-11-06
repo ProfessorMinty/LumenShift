@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.1 — integrated development candidate, unreleased
+
+- Add six mode editors, user-triggered switching after initial setup, optional tint/vignette/screenshot bars, original electronic cues, radial menu, launcher and Studio pages.
+- Preserve exact Brightness ownership/recovery and the single graphics write boundary. Non-75 targets are labeled experimental; Contrast and quality writes remain gated by missing native evidence.
+- Add schema-1 migration, bounded personal presets, accessibility controls, split code/asset licenses and reproducible development packaging.
+- Native acceptance of this integrated build is pending. The earlier 45/75/45 test does not certify the new UI, effects, audio or other targets.
+
 ## 0.1.0-dev.2 — Phase 01B source, unreleased
 
 - Add a Brightness-only controlled test engine behind the single native write boundary. Writes remain locked until a preview's one-use confirmation; login/reload never arms it.

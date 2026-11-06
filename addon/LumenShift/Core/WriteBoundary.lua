@@ -127,14 +127,14 @@ function B.New(reader, db, emit)
             db.journal = held
             db.journal.entries.Brightness.state = "pending"
             db.journal.entries.Brightness.lastVerifiedRaw = expected
-            transaction = { compensation = true, expected = expected, finalJournal = rollback.journal,
+            transaction = { id = tx.id, compensation = true, expected = expected, finalJournal = rollback.journal,
                 failure = lastError, held = V.Copy(db.journal) }
             state = "AWAITING_VERIFICATION"
         end
         say("Operation failed: " .. lastError .. "; compensation state " .. state .. ". Inspect /ls.")
     end
 
-    local function prepare(action)
+    local function prepare(action, target, ordinary)
         proposal = nil -- a new explicit request always expires the previous preview
         if action ~= "on" and action ~= "off" and action ~= "restore" then return nil, "UNKNOWN_ACTION" end
         local catalog, context = eligible()
@@ -159,7 +159,8 @@ function B.New(reader, db, emit)
                 mark("EXTERNAL_CONFLICT", true); return nil, "EXTERNAL_CONFLICT"
             end
         end
-        local targets = action == "on" and { Brightness = 75 } or {}
+        target = target == nil and 75 or target
+        local targets = action == "on" and { Brightness = target } or {}
         local plan, code = ns.Planner.Build(catalog, context, { Brightness = current }, journal, "visual", targets)
         if not plan then return nil, code end
         if #plan.operations == 0 then return nil, "ALREADY_AT_TARGET_NO_OWNERSHIP_CHANGE" end
@@ -172,11 +173,16 @@ function B.New(reader, db, emit)
         if recoveryAction then
             shown = say("Explicit recovery will replace the CURRENT value with the saved original. No automatic compensation on recovery failure.") and shown
         end
-        shown = say("Only after live-test approval and saving the card: /ls confirm " .. serial
-            .. ". This authorizes the displayed operation and bounded compensation for normal on/off failures.") and shown
+        if ordinary then
+            shown = say("User-selected visual control; original retained for restoration. No automatic login changes.") and shown
+        else
+            shown = say("Only after live-test approval and saving the card: /ls confirm " .. serial
+                .. ". This authorizes the displayed operation and bounded compensation for normal on/off failures.") and shown
+        end
         if not shown then return nil, "RECOVERY_CARD_NOT_DISPLAYED" end
         proposal = { token = tostring(serial), plan = plan, journal = journal, sourceJournal = V.Copy(db.journal),
-            action = action, recoveryAction = recoveryAction, priorState = sessionOwned and "ACTIVE" or "BASELINE" }
+            action = action, target = target, ordinary = ordinary, recoveryAction = recoveryAction,
+            priorState = sessionOwned and "ACTIVE" or "BASELINE" }
         operation = "PREVIEW_" .. action
         return true
     end
@@ -195,7 +201,7 @@ function B.New(reader, db, emit)
             if db.journal.entries.Brightness then mark("EXTERNAL_CONFLICT", true) end
             return nil, "PREVIEW_CHANGED"
         end
-        local targets = pending.action == "on" and { Brightness = 75 } or {}
+        local targets = pending.action == "on" and { Brightness = pending.target } or {}
         local _, context = ns.Catalog.BrightnessExperiment(op.signature)
         local fresh, why = ns.Planner.Build(catalog, context, { Brightness = current }, pending.journal, "visual", targets)
         if not fresh or #fresh.operations ~= 1 or fresh.operations[1].targetRaw ~= op.targetRaw then
@@ -225,10 +231,11 @@ function B.New(reader, db, emit)
             end
         end
         keepPending(tx)
-        transaction = { model = tx, action = pending.action, recoveryAction = pending.recoveryAction,
+        transaction = { id = tx.id, model = tx, action = pending.action, recoveryAction = pending.recoveryAction,
             held = V.Copy(db.journal) }
         state = "AWAITING_VERIFICATION"
-        say("Immediate readback matched. Inspect the scene, then /ls verify for a separate fresh read. Original=" .. op.originalRaw)
+        say((pending.ordinary and "Immediate readback matched; a separate read-only check is scheduled. Original="
+            or "Immediate readback matched. Inspect the scene, then /ls verify for a separate fresh read. Original=") .. op.originalRaw)
         return true
     end
 
@@ -262,7 +269,7 @@ function B.New(reader, db, emit)
         sessionOwned = db.journal.entries.Brightness ~= nil
         state, lastError = sessionOwned and "ACTIVE" or "BASELINE", nil
         transaction, dirty = nil, false
-        say(sessionOwned and "Night Vision verified by readback. /ls off previews exact restoration."
+        say(sessionOwned and "Brightness target verified by readback. Natural restores the original; /ls off previews restoration."
             or "Original Brightness verified by exact readback; ownership released.")
         return true
     end
@@ -282,6 +289,22 @@ function B.New(reader, db, emit)
     end
 
     function engine.Prepare(action) return guarded(prepare, action) end
+    function engine.Switch(target)
+        return guarded(function()
+            if not db or not ns.Profiles.Validate(db.config) or db.config.studio.enabled ~= true then return nil, "SETUP_REQUIRED" end
+            if target ~= nil and (not V.Finite(target) or target < 0 or target > 100) then return nil, "INVALID_TARGET" end
+            if target ~= nil and target ~= 75 and not db.config.studio.experimentalBrightness then
+                return nil, "EXPERIMENTAL_BRIGHTNESS_DISABLED"
+            end
+            if target == nil and state == "BASELINE" and not next(db.journal.entries) then return true, "NO_CHANGE" end
+            local ok, code = prepare(target == nil and "off" or "on", target, true)
+            if not ok then
+                if code == "ALREADY_AT_TARGET_NO_OWNERSHIP_CHANGE" then return true, "NO_CHANGE" end
+                return nil, code
+            end
+            return confirm(proposal.token)
+        end)
+    end
     function engine.Confirm(token) return guarded(confirm, token) end
     function engine.Verify() return guarded(verify) end
     function engine.Cancel()
@@ -303,7 +326,8 @@ function B.New(reader, db, emit)
         local record = db and db.journal.entries.Brightness
         return { state = state, operation = operation, original = record and record.originalRaw,
             lastVerified = record and record.lastVerifiedRaw, token = proposal and proposal.token,
-            error = lastError, notificationsPending = dirty, writeEnabled = false, setterAvailable = setterAvailable() }
+            error = lastError, notificationsPending = dirty, writeEnabled = false, setterAvailable = setterAvailable(),
+            transactionID = transaction and transaction.id }
     end
     return engine
 end

@@ -44,6 +44,18 @@ end
 
 function C.Command(runtime, message)
     local command = type(message) == "string" and message:match("^%s*(.-)%s*$") or ""
+    if command == "studio" or command == "wheel" then
+        if runtime.ui and runtime.ui.Open then
+            if command == "wheel" then runtime.ui.Wheel() else runtime.ui.Open() end
+        else ns.Diagnostics.Emit(runtime, "LumenShift: native UI unavailable; /ls still provides diagnostics.") end
+        return
+    end
+    if command == "toggle" and runtime.product then runtime.product.Toggle(); return end
+    local selected = command:match("^mode (%a+)$")
+    if selected and runtime.product then
+        if selected:lower() == "nightvision" then selected = "nightVision" else selected = selected:lower() end
+        runtime.product.Select(selected); return
+    end
     if command == "" or command == "status" or command == "help" then ns.Diagnostics.Show(runtime); return end
     if not runtime.engine then ns.Diagnostics.Emit(runtime, "LumenShift: engine unavailable; no writes enabled."); return end
     local token = command:match("^confirm (%d+)$")
@@ -55,4 +67,5 @@ function C.Command(runtime, message)
         ns.Diagnostics.Emit(runtime, ok and "LumenShift: preview cancelled; no automatic restore. Inspect /ls for recovery status."
             or "LumenShift: operation busy; cancel was refused.")
     else ns.Diagnostics.Emit(runtime, "LumenShift: unknown command; use /ls help. No write performed.") end
+    if runtime.product then runtime.product.Observe() end
 end

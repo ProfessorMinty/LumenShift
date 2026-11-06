@@ -1,5 +1,7 @@
 # CurseForge publication and release engineering
 
+> **Current addendum (2026-11-06):** The Phase 00 plan below is preserved as historical research. Arctic subsequently authorized full-product implementation and local deterministic development ZIPs, and chose MIT for original source/technical documentation plus All Rights Reserved for original creative assets. See root LICENSE / ASSET-LICENSE.md and [current QA/publication gates](22-BETA-RELEASE-QA.md). Forever 1.60.1:70790:16001 and one Brightness round trip are now verified in-client (docs/14, docs/18). Earlier undecided-license/proposed-interface/no-packaging statements describe that earlier phase. No CurseForge creation or publication is authorized.
+
 **Project:** LumenShift — World of Warcraft: Forever visual modes and advanced graphic settings.
 **Target distributor:** CurseForge (intended, not yet submitted).
 **Authorization:** Planning and documentation only. Do not create a CurseForge project, configure upload tokens/webhooks, upload files or announce releases without Arctic's approval.

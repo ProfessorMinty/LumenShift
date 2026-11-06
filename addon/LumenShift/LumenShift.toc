@@ -1,22 +1,30 @@
 ## Interface: 16001
 ## Title: LumenShift
-## Notes: Forever Brightness experiment. Writes require explicit preview confirmation.
+## Notes: Visual modes, optional effects and diagnostics. Initial setup required; no startup writes.
 ## Author: Northern Lights Labs
-## Version: 0.1.0-dev.2
+## Version: 0.2.0-beta.1
 ## SavedVariables: LumenShiftDB
 ## X-Website: https://github.com/ProfessorMinty/LumenShift
-## X-LumenShift-Phase: 01B
+## X-LumenShift-Phase: BETA_CANDIDATE
 
 Core/Namespace.lua
 Core/Value.lua
 Core/ReadOnly.lua
 Core/Compatibility.lua
 Core/Catalog.lua
+Core/StudioConfig.lua
 Core/Profiles.lua
 Core/Store.lua
 Core/Planner.lua
 Core/Recovery.lua
 Core/WriteBoundary.lua
+Core/Quality.lua
+Core/Product.lua
 Core/Controller.lua
 Core/Diagnostics.lua
+UI/Widgets.lua
+UI/Presentation.lua
+UI/Audio.lua
+UI/Radial.lua
+UI/Studio.lua
 Core/Bootstrap.lua
