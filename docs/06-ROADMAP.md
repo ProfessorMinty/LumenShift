@@ -25,9 +25,9 @@ Exit: known behavior on target build, measured cost where possible and zero sile
 Deliverables: safe preset clone/edit/import/export, visual transition polish, onboarding/warnings, error and diagnostics improvements, optional zone suggestions only if user explicitly approves.
 Exit: no data loss on migration and all presets validate against capability set.
 
-## Phase 06 — Packaging/release
-Deliverables: repeatable packaging, version/changelog, installation/uninstallation and recovery guides, license/distribution decision, game build smoke tests.
-Exit: signed-off release QA and honest compatibility statement.
+## Phase 06 — CurseForge packaging / release
+Deliverables: approved public license, source/asset provenance review, verified Forever-flavor TOC, reproducible clean runtime ZIP with one top-level addon folder, automated syntax/structure checks, version/changelog, installation/uninstallation and CVar recovery instructions, real in-game compatibility and UI smoke tests, CurseForge description/logo/authentic screenshots, correct game-version/release-channel tagging, and policy/moderation compliance. See docs/08-CURSEFORGE-RELEASE.md.
+Exit: owner-approved release artifact and submission, with confirmed moderation outcome before claiming it is published. No automatic publishing without explicit opt-in. The release distribution pipeline must be designed before Phase 01 code architecture is finalized.
 
 ## Out-of-scope until separately authorized
 Game hooks/injectors, OS/GPU filters, automated light sensing, live frame-based adaptive resolution, automatic raid combat responses, external key presses, DRM or prohibited game automation.
