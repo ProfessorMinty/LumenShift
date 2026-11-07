@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-dev.9 — Enchanted optics artwork (2026-11-07)
+
+- Integrate supplied Streamline Core utility icons, Steel/Midnight mesh panels and restrained teal Lumen Loops accents across Studio, setup, reports and navigation.
+- Add original fitted wheel segments and matching selection geometry, a central logo/halo, rounded switch tracks and knobs, and keyboard-focus outlines. Visible sector clicks use matching pure hit geometry; keyboard and labeled buttons remain available.
+- Keep high-contrast decoration suppression, text labels, saved preferences, independent mode/quality controllers and zero startup writes. No new animations or runtime dependencies.
+- Bundle third-party credits and exact source/export mapping. Do not relicense third-party textures as original Northern Lights Labs artwork; omit source packs, Figma files and videos.
+- Keep original mode icons pending custom replacements. Fractal Haze was not present in the supplied directory and is not included.
+- 209 Lua 5.1 mock tests and 9 packaging tests pass, including texture pool reset, focus, high contrast, sector geometry, asset notices and bounded media size. Layout previews remain off-client evidence, not native game verification.
+
 ## 0.2.0-dev.8 — Studio hierarchy and approved logo (2026-11-07)
 
 - Redesign Studio with a charcoal sidebar, grouped navigation, larger page titles, clear selected states, mode/profile cards, two-column settings and a fixed teal primary action.

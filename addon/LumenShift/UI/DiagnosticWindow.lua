@@ -15,7 +15,9 @@ function D.Open(runtime)
         local window = env.CreateFrame("Frame", "LumenShiftDiagnosticReport", env.UIParent); ui.window = window
         window:SetSize(800, 620); window:SetPoint("CENTER"); window:SetFrameStrata("FULLSCREEN_DIALOG")
         window:SetClampedToScreen(true); window:EnableMouse(true); W.Fill(window, W.colors.bg)
-        W.Text(window, "COMPLETE DIAGNOSTIC REPORT", 18, -18, 720, 18, W.colors.accent)
+        ui.panelArt = W.Art(window, "panel-steel", 1, -1, 798, 618, 0.25, "BACKGROUND"); W.Border(window)
+        W.Art(window, "ui-diagnostics", 20, -20, 22, 22)
+        W.Text(window, "Diagnostic Report", 56, -17, 700, 24)
         W.Text(window, "Click Select All, then press Ctrl+C. Paste into Codex or ChatGPT. Nothing is uploaded automatically.", 18, -50, 750, 13)
         local scroll = env.CreateFrame("ScrollFrame", nil, window); ui.scroll = scroll
         scroll:SetPoint("TOPLEFT", window, "TOPLEFT", 18, -135); scroll:SetSize(744, 460); scroll:EnableMouseWheel(true)
@@ -33,12 +35,13 @@ function D.Open(runtime)
         W.Script(box, "OnTextChanged", function(self, userInput) if userInput and ui.text then self:SetText(ui.text) end end)
         W.Script(window, "OnHide", function() box:ClearFocus() end)
         function ui.SelectAll() box:SetFocus(); box:HighlightText(0, -1) end
-        W.Button(env, window, "Select All", 18, -91, 160, ui.SelectAll)
+        W.Button(env, window, "Select All", 18, -91, 160, ui.SelectAll, nil, "primary")
         W.Button(env, window, "Refresh report", 190, -91, 170, function() D.Open(runtime) end)
         W.Button(env, window, "Close", 676, -91, 105, function() window:Hide() end)
         if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftDiagnosticReport") end
         runtime.exportUI = ui -- publish only a fully initialized export interface
     end
+    W.Decoration(ui.panelArt)
     ui.text = report; ui.box:SetText(report)
     local estimated = 0
     for line in (report .. "\n"):gmatch("(.-)\n") do estimated = estimated + math.max(1, math.ceil(#line / 85)) end

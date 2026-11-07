@@ -29,7 +29,10 @@ local function region(parent, kind, layer)
         pool[kind][index] = kind == "font" and parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight") or parent:CreateTexture(nil, layer)
     end
     local item = pool[kind][index]; item:ClearAllPoints(); item:Show()
-    if kind == "texture" and item.SetDrawLayer then item:SetDrawLayer(layer) end
+    if kind == "texture" then
+        if item.SetDrawLayer then item:SetDrawLayer(layer) end
+        item:SetAlpha(1); item:SetVertexColor(1, 1, 1, 1); item:SetTexCoord(0, 1, 0, 1)
+    end
     return item
 end
 function W.Texture(parent, layer) return region(parent, "texture", layer) end
@@ -55,7 +58,7 @@ function W.CreatePool(env, root)
         for _, owner in ipairs(pool.owners) do
             if owner ~= root then
                 owner:Hide(); owner:ClearAllPoints()
-                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnValueChanged", "OnEnterPressed", "OnEscapePressed" }) do
+                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnValueChanged", "OnEnterPressed", "OnEscapePressed", "OnEditFocusGained", "OnEditFocusLost" }) do
                     -- Native frames reject unsupported script names, so clear only installed scripts.
                     local ok, fn = pcall(owner.GetScript, owner, script)
                     if ok and fn then W.Script(owner, script, nil) end
@@ -82,18 +85,42 @@ function W.Fill(frame, color)
     texture:SetAllPoints(frame); texture:SetColorTexture(unpack(color or W.colors.card))
     return texture
 end
+function W.Art(parent, name, x, y, width, height, alpha, layer)
+    local texture = W.Texture(parent, layer or "ARTWORK")
+    texture:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); texture:SetSize(width, height)
+    W.Asset(texture, "Interface/AddOns/LumenShift/Media/" .. name .. ".tga")
+    texture:SetVertexColor(1, 1, 1, 1); texture:SetAlpha(alpha or 1)
+    return texture
+end
+function W.HighContrast()
+    return ns.runtime and ns.runtime.db and ns.runtime.db.config.studio.highContrast == true
+end
+function W.Decoration(texture)
+    if W.HighContrast() then texture:Hide() else texture:Show() end
+    return texture
+end
+function W.ButtonIcon(button, name, size)
+    size = size or 18
+    button.icon = W.Art(button, name, 10, -(button:GetHeight() - size) / 2, size, size)
+    button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", button, "TOPLEFT", size + 20, -7)
+    button.label:SetWidth(math.max(1, button:GetWidth() - size - 28))
+    button.Paint(false); return button
+end
 function W.Rule(parent, x, y, width, color, thickness)
     local texture = W.Texture(parent, "BORDER")
     texture:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); texture:SetSize(width, thickness or 1)
     texture:SetColorTexture(unpack(color or W.colors.border)); return texture
 end
 function W.Border(frame, color)
+    local edges = {}
     for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
         local edge = W.Texture(frame, "BORDER"); edge:SetPoint(side, frame, side, 0, 0)
         edge:SetSize((side == "TOP" or side == "BOTTOM") and frame:GetWidth() or 1,
             (side == "LEFT" or side == "RIGHT") and frame:GetHeight() or 1)
         edge:SetColorTexture(unpack(color or W.colors.border))
+        edges[#edges + 1] = edge
     end
+    return edges
 end
 function W.Section(parent, title, x, y, width)
     W.Text(parent, title, x, y, width, 11, W.colors.muted)
@@ -103,12 +130,12 @@ function W.Checkbox(env, parent, title, description, x, y, width, get, set)
     local button = env.CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 56)
     local box = env.CreateFrame("Frame", nil, button); box:SetSize(34, 18); box:SetPoint("TOPRIGHT", button, "TOPRIGHT", -6, -2)
-    local background = W.Fill(box)
-    local mark = W.Texture(box, "OVERLAY"); mark:SetSize(10, 10); mark:SetColorTexture(1, 1, 1, 1)
+    local background = W.Art(box, "switch-track", 0, 0, 34, 18, 1, "BACKGROUND")
+    local mark = W.Art(box, "switch-knob", 0, 0, 10, 10, 1, "OVERLAY")
     button.label = W.Text(button, title, 0, 0, width - 48, 16)
     W.Text(button, description, 0, -26, width, 12, W.colors.muted)
     local function refresh()
-        background:SetColorTexture(unpack(get() and W.colors.accent or W.colors.border))
+        background:SetVertexColor(unpack(get() and W.colors.accent or W.colors.border))
         mark:ClearAllPoints(); mark:SetPoint("TOPLEFT", box, "TOPLEFT", get() and 20 or 4, -4)
     end
     W.Script(button, "OnClick", function() set(not get()); refresh() end)
@@ -126,7 +153,7 @@ function W.Button(env, parent, label, x, y, width, callback, tip, style)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 30)
     button.background = W.Fill(button)
     button.label = W.Text(button, label, 10, -7, width - 16, 13)
-    button.style, button.selected = style or "secondary", false
+    button.style, button.selected, button.icon = style or "secondary", false, nil
     button.marker = W.Texture(button, "BORDER"); button.marker:SetPoint("LEFT", button, "LEFT", 0, 0)
     button.marker:SetSize(2, 24); button.marker:SetColorTexture(unpack(W.colors.accent)); button.marker:Hide()
     function button.Paint(hover)
@@ -136,6 +163,7 @@ function W.Button(env, parent, label, x, y, width, callback, tip, style)
             or (button.style == "quiet" or button.style == "nav") and { 0, 0, 0, 0 } or W.colors.card
         button.background:SetColorTexture(unpack(color))
         button.label:SetTextColor(unpack(button.style == "primary" and W.colors.sidebar or selected and W.colors.accent or W.colors.text))
+        if button.icon then button.icon:SetVertexColor(unpack(button.style == "primary" and W.colors.sidebar or selected and W.colors.accent or W.colors.muted)) end
         if selected then button.marker:Show() else button.marker:Hide() end
     end
     function button.SetSelected(value) button.selected = value == true; button.Paint(false) end
@@ -155,12 +183,11 @@ function W.Toggle(env, parent, label, x, y, width, get, set, tip)
     local button = W.Button(env, parent, label, x, y, width, function() end, tip, "quiet")
     button.label:SetWidth(width - 74)
     local track = env.CreateFrame("Frame", nil, button); track:SetSize(38, 20); track:SetPoint("TOPRIGHT", button, "TOPRIGHT", -8, -5)
-    local background = W.Fill(track)
-    local knob = W.Texture(track, "OVERLAY"); knob:SetSize(12, 12)
-    knob:SetColorTexture(0.96, 0.99, 0.99, 1)
+    local background = W.Art(track, "switch-track", 0, 0, 38, 20, 1, "BACKGROUND")
+    local knob = W.Art(track, "switch-knob", 0, 0, 12, 12, 1, "OVERLAY")
     local function refresh()
         local value = get()
-        background:SetColorTexture(unpack(value and W.colors.accent or W.colors.border))
+        background:SetVertexColor(unpack(value and W.colors.accent or W.colors.border))
         knob:ClearAllPoints(); knob:SetPoint("TOPLEFT", track, "TOPLEFT", value and 22 or 4, -4)
         button.value = value
     end
@@ -171,6 +198,11 @@ end
 function W.Card(env, parent, label, description, x, y, width, height, selected, callback, icon)
     local button = W.Button(env, parent, label, x, y, width, callback)
     button:SetHeight(height)
+    W.Border(button, selected and { 0.20, 0.46, 0.42, 1 } or W.colors.border)
+    if selected and not W.HighContrast() then
+        local glow = W.Art(button, "light-sweep", 1, -height + 35, width - 2, 34, 0.45, "BORDER")
+        glow:SetTexCoord(0, 1, 0.40, 0.65)
+    end
     local inset = icon and 60 or 18
     button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", button, "TOPLEFT", inset, -16)
     button.label:SetWidth(width - inset - 16)
@@ -186,7 +218,12 @@ function W.Edit(env, parent, value, x, y, width, callback)
     local edit = env.CreateFrame("EditBox", nil, parent)
     edit:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); edit:SetSize(width, 28)
     edit:SetAutoFocus(false); edit:SetFontObject("GameFontHighlight"); edit:SetTextInsets(6, 6, 0, 0)
-    edit:SetMaxLetters(64); W.Fill(edit, W.colors.sidebar); W.Border(edit); edit:SetText(tostring(value))
+    edit:SetMaxLetters(64); W.Fill(edit, W.colors.sidebar); local edges = W.Border(edit); edit:SetText(tostring(value))
+    local function focus(active)
+        for _, edge in ipairs(edges) do edge:SetColorTexture(unpack(active and W.colors.accent or W.colors.border)) end
+    end
+    W.Script(edit, "OnEditFocusGained", function() focus(true) end)
+    W.Script(edit, "OnEditFocusLost", function() focus(false) end)
     W.Script(edit, "OnEscapePressed", function(self) self:ClearFocus() end)
     W.Script(edit, "OnEnterPressed", function(self) callback(self:GetText()); self:ClearFocus() end)
     return edit

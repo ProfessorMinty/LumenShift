@@ -36,7 +36,8 @@ return function(env)
     function methods:UnregisterEvent(name) self.events[name] = nil end
     function methods:CreateTexture(_, layer) return create("Texture", nil, self, layer) end
     function methods:CreateFontString(_, layer) return create("FontString", nil, self, layer) end
-    function methods:SetColorTexture(r, g, b, a) self.color = { r, g, b, a or 1 } end
+    function methods:SetColorTexture(r, g, b, a) self.color = { r, g, b, a or 1 }; self.texture = nil end
+    function methods:SetVertexColor(r, g, b, a) self.vertexColor = { r, g, b, a or 1 } end
     function methods:SetTextColor(r, g, b, a) self.textColor = { r, g, b, a or 1 } end
     function methods:SetTexture(path) self.texture = path end
     function methods:SetText(value) self.text = tostring(value or "") end
@@ -64,8 +65,8 @@ return function(env)
     function methods:SetVerticalScroll(value) self.scroll = value end
     function methods:GetVerticalScroll() return self.scroll or 0 end
     function methods:SetThumbTexture(texture) self.thumb = texture end
-    function methods:ClearFocus() self.focus = false end
-    function methods:SetFocus() self.focus = true end
+    function methods:ClearFocus() self.focus = false; if self.scripts.OnEditFocusLost then self.scripts.OnEditFocusLost(self) end end
+    function methods:SetFocus() self.focus = true; if self.scripts.OnEditFocusGained then self.scripts.OnEditFocusGained(self) end end
     function methods:HighlightText(first, last) self.highlight = { first, last } end
     function methods:CreateAnimationGroup()
         local group = { animations = {} }
@@ -131,7 +132,9 @@ return function(env)
                 n:GetWidth(), n:GetHeight(), escape(point[1]), point[2] and point[2].id or 0,
                 escape(point[3]), point[4] or 0, point[5] or 0, escape(n.text), escape(n.texture),
                 n.allPoints and n.allPoints.id or 0, n.fontSize or 13, n.justify or "LEFT",
-                table.concat(n.color or n.textColor or { 1, 1, 1, 1 }, ","), n.scroll or 0 }, "\t"), "\n")
+                table.concat(n.color or n.textColor or { 1, 1, 1, 1 }, ","), n.scroll or 0,
+                n.alpha or 1, table.concat(n.vertexColor or { 1, 1, 1, 1 }, ","),
+                table.concat(n.SetTexCoordArgs or { 0, 1, 0, 1 }, ","), n.layer or "" }, "\t"), "\n")
         end
         file:close()
     end

@@ -91,5 +91,22 @@ class PackageTests(unittest.TestCase):
         expected["Core/Bootstrap.lua"] = b"changed"
         with self.assertRaises(AssertionError): package.validate(self.data, expected)
 
+    def test_third_party_artwork_keeps_notices_and_source_mapping(self):
+        sources = json.loads(self.payload['ASSET-SOURCES.json'])
+        notices = self.payload['THIRD-PARTY-NOTICES.md'].decode('utf-8')
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            self.assertIn('CC BY', json.loads(archive.read('LumenShift/BUILD.json'))['creative_asset_license'])
+        self.assertIn('Streamline', notices); self.assertIn('Jon Lehman', notices)
+        self.assertIn('Craftwork Studio', notices)
+        self.assertEqual(len(sources['third_party']), 16)
+        for item in sources['third_party']:
+            self.assertIn(item['file'], self.payload)
+            self.assertRegex(item['source_sha256'], r'^[0-9a-f]{64}$')
+            self.assertTrue(item['license_url'].startswith('https://'))
+        self.assertTrue(sources['source_packs_not_distributed'])
+        self.assertFalse(any(name.endswith(('.svg', '.fig', '.mp4', '.webm')) for name in self.payload))
+        # Bound decoded texture storage; full-resolution source packs must not leak into a build.
+        self.assertLess(sum(len(data) for name, data in self.payload.items() if name.endswith('.tga')), 8 * 1024 * 1024)
+
 
 if __name__ == "__main__": unittest.main()

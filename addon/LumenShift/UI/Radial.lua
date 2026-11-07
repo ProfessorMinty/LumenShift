@@ -4,6 +4,16 @@ ns.Radial = R
 function R.Clamp(x, y, width, height, radius)
     return math.max(radius, math.min(width - radius, x)), math.max(radius, math.min(height - radius, y))
 end
+function R.Hit(x, y)
+    if not ns.Value.Finite(x) or not ns.Value.Finite(y) then return nil end
+    local radius = math.sqrt(x * x + y * y)
+    if radius < 88 or radius > 171 then return nil end
+    local clockwise = (90 - math.deg(math.atan2(y, x))) % 360
+    local segment = math.floor((clockwise + 30) / 60) % 6
+    local offset = ((clockwise - segment * 60 + 180) % 360) - 180
+    if math.abs(offset) > 28 then return nil end -- match the visible gaps
+    return segment + 1
+end
 function R.New(runtime, openStudio)
     local env, db, product = runtime.reader.env, runtime.db, runtime.product
     local self = { selection = 1 }
@@ -12,13 +22,23 @@ function R.New(runtime, openStudio)
     self.frame = frame
     frame:SetSize(352, 352); frame:SetFrameStrata("DIALOG"); frame:SetClampedToScreen(true)
     frame:EnableMouse(true); frame:Hide()
-    W.Text(frame, "LUMENSHIFT", 112, -131, 150, 15, W.colors.accent)
-    W.Text(frame, "1-6 / arrows / Enter\nEsc to cancel", 106, -154, 155, 11, W.colors.muted)
+    W.Art(frame, "wheel-base", 0, 0, 352, 352, 1, "BACKGROUND")
+    self.sector = W.Art(frame, "wheel-sector-1", 0, 0, 352, 352, 1, "BORDER")
+    self.halo = W.Art(frame, "light-halo", 84, -84, 184, 184, 0.65, "BORDER")
+    W.Art(frame, "logo", 153, -110, 46, 46)
+    local title = W.Text(frame, "LUMENSHIFT", 111, -161, 130, 12, W.colors.accent); title:SetJustifyH("CENTER")
+    local help = W.Text(frame, "1–6 / Enter\nEsc to cancel", 112, -182, 128, 10, W.colors.muted); help:SetJustifyH("CENTER")
     self.buttons = {}
     local function highlight()
+        if self.drawnSelection ~= self.selection then
+            W.Asset(self.sector, "Interface/AddOns/LumenShift/Media/wheel-sector-" .. self.selection .. ".tga")
+            self.drawnSelection = self.selection
+        end
+        W.Decoration(self.halo)
         for i, button in ipairs(self.buttons) do
             local id = ns.StudioConfig.Order[i]
-            button.background:SetColorTexture(unpack(i == self.selection and { 0.13, 0.28, 0.30, 1 } or W.colors.card))
+            button.background:SetColorTexture(0, 0, 0, 0)
+            button.label:SetTextColor(unpack(i == self.selection and W.colors.accent or W.colors.text))
             button.label:SetText((product.active == id and "* " or "") .. i .. " " .. ns.StudioConfig.Labels[id])
         end
     end
@@ -41,10 +61,20 @@ function R.New(runtime, openStudio)
         local icon = button:CreateTexture(nil, "ARTWORK"); icon:SetSize(30, 30); icon:SetPoint("TOP", button, "TOP", 0, -4)
         ns.Widgets.Asset(icon, "Interface/AddOns/LumenShift/Media/" .. modeID .. ".tga")
         ns.Widgets.Script(button, "OnEnter", function() self.selection = index; highlight() end)
+        ns.Widgets.Script(button, "OnLeave", function() highlight() end)
         self.buttons[i] = button
     end
-    W.Button(env, frame, "Studio", 137, -191, 80, function() self.Close(); openStudio() end)
-    ns.Widgets.Script(frame, "OnMouseDown", function(_, button) if button == "RightButton" then self.Close() end end)
+    W.ButtonIcon(W.Button(env, frame, "Studio", 126, -211, 100, function() self.Close(); openStudio() end, nil, "quiet"), "ui-settings", 14)
+    ns.Widgets.Script(frame, "OnMouseDown", function(_, button)
+        if button == "RightButton" then self.Close(); return end
+        if button ~= "LeftButton" then return end
+        local position = ns.ReadOnly.Call(runtime.reader, env.GetCursorPosition)
+        local scale, cx, cy = frame:GetEffectiveScale(), frame:GetCenter()
+        if not position or position.n ~= 2 or not ns.Value.Finite(position[1]) or not ns.Value.Finite(position[2])
+            or not ns.Value.Finite(scale) or scale <= 0 or not ns.Value.Finite(cx) or not ns.Value.Finite(cy) then return end
+        local selected = R.Hit(position[1] / scale - cx, position[2] / scale - cy)
+        if selected then selectMode(selected) end
+    end)
     ns.Widgets.Script(frame, "OnKeyDown", function(_, key)
         if key == "ESCAPE" then self.Close()
         elseif key == "ENTER" or key == "SPACE" then selectMode(self.selection)
@@ -77,6 +107,7 @@ function R.New(runtime, openStudio)
     launcher:SetSize(146, 46); launcher:SetFrameStrata("MEDIUM"); launcher:SetClampedToScreen(true)
     launcher:SetMovable(true); launcher:EnableMouse(true); launcher:RegisterForDrag("LeftButton")
     launcher:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+    W.Fill(launcher, { 0.055, 0.075, 0.09, 0.94 }); W.Border(launcher)
     local icon = launcher:CreateTexture(nil, "ARTWORK"); icon:SetSize(46, 46); icon:SetPoint("LEFT", launcher, "LEFT", 0, 0)
     ns.Widgets.Asset(icon, "Interface/AddOns/LumenShift/Media/logo.tga")
     W.Text(launcher, "LumenShift", 49, -8, 95, 13, W.colors.accent)

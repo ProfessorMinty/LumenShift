@@ -1,4 +1,4 @@
-# LumenShift 0.2.0-dev.8 — install and explore
+# LumenShift 0.2.0-dev.9 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
@@ -6,7 +6,7 @@ Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report con
 
 1. In the old build, select **Natural** and **Current Baseline** if settings are active. Keep unresolved recovery records.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.8-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.9-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
@@ -24,7 +24,7 @@ Completed dev.6 setup stays completed; it should not pop up again. First-time us
 
 Right-click the launcher to open Studio. Check that the grouped sidebar, page title and bottom-right action fit your screen. In Visual Modes, selecting another card should only change the editor; Apply performs the switch. Visit Graphics Quality and Camera, then try Accessibility → Studio scale and High-contrast panel. Longer Advanced Graphics and Diagnostic Center content scrolls while the main action stays visible. Existing preferences and completed setup are retained.
 
-The six smaller mode icons remain placeholders pending the owner’s new artwork. The approved metal-ring/aurora logo is included.
+The six smaller mode icons remain placeholders pending the owner’s new artwork. The approved metal-ring/aurora logo is included. Dev.9 adds silver Core utility icons, Steel/Midnight mesh panels, teal Lumen Loops accents and a fitted segmented wheel. High contrast hides the decorative panels and glow. Studio → Accessibility → Art & Credits lists the artists; complete third-party notices ship with the addon.
 
 ## Camera Mode and names
 
@@ -73,6 +73,6 @@ Restore before updating, disabling, downgrading or removing the addon. SavedVari
 
 ## What is verified
 
-Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.8 UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
+Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.9 textured UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
 
 Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved with permission to install/use as part of LumenShift. Both notices ship in the addon. No new third-party assets are included.

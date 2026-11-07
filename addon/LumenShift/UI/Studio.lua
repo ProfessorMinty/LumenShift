@@ -14,6 +14,7 @@ local pages = {
 }
 local modeNotes = { natural = "Your original settings", nightVision = "See more in low light", cinematic = "A dramatic, softer look",
     lantern = "Warm and welcoming", clarity = "Clean, readable detail", moonlight = "Cool and atmospheric" }
+local pageIcons = { "ui-modes", "ui-quality", "ui-effects", "ui-audio", "ui-presets", "ui-accessibility", "ui-diagnostics", "ui-advanced", "ui-camera" }
 function S.New(runtime)
     local env, db, product = runtime.reader.env, runtime.db, runtime.product
     local ui = { page = 1, edited = "nightVision", pageFrames = {}, nav = {} }
@@ -28,9 +29,13 @@ function S.New(runtime)
     W.Script(window, "OnDragStart", function(self) if not product.IsCombat() then self:StartMoving() end end)
     W.Script(window, "OnDragStop", function(self) self:StopMovingOrSizing() end)
     W.Script(window, "OnHide", function(self) if self.lumenFade then self.lumenFade:Stop() end end)
-    ui.background = W.Fill(window, W.colors.bg); W.Border(window)
+    ui.background = W.Fill(window, W.colors.bg)
+    ui.panelArt = W.Art(window, "panel-steel", 1, -1, 1118, 738, 0.48, "BACKGROUND")
+    ui.headerArt = W.Art(window, "light-sweep", 588, -8, 500, 102, 0.48, "BACKGROUND")
+    ui.headerArt:SetTexCoord(0, 1, 0.32, 0.73); W.Border(window)
     local sidebar = env.CreateFrame("Frame", nil, window); sidebar:SetSize(220, 738); sidebar:SetPoint("TOPLEFT", 1, -1)
     ui.sidebar = W.Fill(sidebar, W.colors.sidebar)
+    ui.sidebarArt = W.Art(sidebar, "panel-midnight", 0, 0, 220, 738, 0.17, "BACKGROUND")
     local logo = W.Texture(sidebar, "ARTWORK"); logo:SetSize(42, 42); logo:SetPoint("TOPLEFT", 18, -29)
     W.Asset(logo, "Interface/AddOns/LumenShift/Media/logo.tga")
     W.Text(sidebar, "LumenShift", 68, -31, 143, 20)
@@ -38,17 +43,19 @@ function S.New(runtime)
     W.Rule(sidebar, 18, -94, 184)
     ui.title = W.Text(window, "", 252, -30, 735, 28)
     ui.subtitle = W.Text(window, "", 253, -75, 805, 14, W.colors.muted)
-    W.Button(env, window, "Close", 1032, -24, 64, function() window:Hide() end, nil, "quiet")
+    W.ButtonIcon(W.Button(env, window, "Close", 996, -24, 100, function() window:Hide() end, nil, "quiet"), "ui-close", 14)
     W.Rule(window, 252, -111, 836)
     ui.status = W.Text(window, "", 253, -132, 830, 12, W.colors.muted)
     W.Rule(window, 252, -678, 836)
     ui.footer = W.Text(window, "", 253, -698, 520, 12, W.colors.muted)
     ui.primary = W.Button(env, window, "", 798, -695, 290, function() end, nil, "primary")
     ui.primary:SetHeight(32)
+    W.ButtonIcon(ui.primary, "ui-modes", 16)
     function ui.Primary(label, fn, hint)
         ui.hint = hint or "Preferences save as you edit. Apply changes your current view."
         if label then
             ui.primary.label:SetText(label); W.Script(ui.primary, "OnClick", fn); ui.primary:Show()
+            W.Asset(ui.primary.icon, "Interface/AddOns/LumenShift/Media/" .. (ui.page == 7 and "ui-export" or pageIcons[ui.page]) .. ".tga")
         else ui.primary:Hide(); W.Script(ui.primary, "OnClick", nil) end
     end
     local scroll = env.CreateFrame("ScrollFrame", nil, window); ui.scroll = scroll
@@ -244,6 +251,9 @@ function S.New(runtime)
             text("Assign shortcuts in Key Bindings > LumenShift.\nMode wheel: 1–6, arrows or Tab to choose; Enter to apply; Escape to close.", 0, -278, 820, 14, W.colors.muted)
             button("Setup wizard", 0, -350, 184, function() if runtime.setup then runtime.setup.Open() end end)
             button("Disable controls (restore Natural first)", 206, -350, 360, function() product.Disable() end, "quiet")
+            section("ART & CREDITS", -414)
+            text("Core UI icons by Streamline · CC BY 4.0 · streamlinehq.com\nMesh Gradients by Craftwork Studio · Lumen Loops by Jon Lehman\nCraftwork Commercial License · craftwork.design/license\nLumenShift logo and original mode artwork · Northern Lights Labs", 0, -455, 820, 12, W.colors.muted)
+            height = 550
         elseif ui.page == 7 then
             section("ADDON HEALTH", 0)
             local counts = {}; for _, check in ipairs(runtime.checks or {}) do counts[check.status] = (counts[check.status] or 0) + 1 end
@@ -308,6 +318,7 @@ function S.New(runtime)
         window:SetScale(math.min(cfg().scale / effective, env.UIParent:GetWidth() / 1168, env.UIParent:GetHeight() / 788))
         ui.background:SetColorTexture(unpack(cfg().highContrast and { 0, 0, 0, 1 } or W.colors.bg))
         ui.sidebar:SetColorTexture(unpack(cfg().highContrast and { 0, 0, 0, 1 } or W.colors.sidebar))
+        W.Decoration(ui.panelArt); W.Decoration(ui.sidebarArt); W.Decoration(ui.headerArt)
     end
     function ui.Open(page)
         if product.IsCombat() then emit("Studio is unavailable during combat. Nothing queued."); return end
@@ -321,7 +332,7 @@ function S.New(runtime)
         for index = 2, #group do
             local page = group[index]
             ui.nav[page] = W.Button(env, sidebar, pages[page][1], 12, y, 196, function() ui.Open(page) end, nil, "nav")
-            ui.nav[page]:SetHeight(34); y = y - 38
+            ui.nav[page]:SetHeight(34); W.ButtonIcon(ui.nav[page], pageIcons[page], 17); y = y - 38
         end
         y = y - 22
     end

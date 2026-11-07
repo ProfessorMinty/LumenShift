@@ -14,8 +14,8 @@ permission from Northern Lights Labs. No additional permission to use LumenShift
 branding or imply endorsement is granted.
 
 Original source code and technical documentation are covered by `LICENSE`.
-Third-party components, if any, retain their respective licenses and attribution
-requirements; this notice does not override them. The asset provenance ledger
+The identified Streamline and Craftwork textures retain their respective licenses
+and attribution requirements in `THIRD-PARTY-NOTICES.md` and `ASSET-SOURCES.json`; this notice does not override them. The asset provenance ledger
 identifies the original creative files supplied with each build.
 
 This split model was selected by the owner on 2026-11-06. Eventual CurseForge

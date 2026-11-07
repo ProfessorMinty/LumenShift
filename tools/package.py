@@ -11,7 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 NOTICES = {"LICENSE": "LICENSE", "ASSET-LICENSE.md": "ASSET-LICENSE.md",
            "README.md": "docs/21-BETA-USER-GUIDE.md", "CHANGELOG.md": "CHANGELOG.md",
-           "ASSET-PROVENANCE.md": "assets/PROVENANCE.md", "ASSET-MANIFEST.json": "assets/manifest.json"}
+           "ASSET-PROVENANCE.md": "assets/PROVENANCE.md", "ASSET-MANIFEST.json": "assets/manifest.json",
+           "THIRD-PARTY-NOTICES.md": "THIRD-PARTY-NOTICES.md", "ASSET-SOURCES.json": "assets/theme-sources.json"}
 
 
 def digest(data):
@@ -70,7 +71,7 @@ def build(payload, version, commit):
                 "production_admission": False,
                 "generated": {"Core/Build.lua": "source commit identifier; deterministic build substitution"},
                 "status": "development candidate; integrated native acceptance pending; not published",
-                "code_license": "MIT", "creative_asset_license": "All Rights Reserved; ASSET-LICENSE.md",
+                "code_license": "MIT", "creative_asset_license": "Original assets: All Rights Reserved; third-party assets: CC BY 4.0 / Craftwork Commercial License; see bundled notices",
                 "files": {name: digest(data) for name, data in sorted(payload.items())}}
     contents = dict(payload)
     contents["BUILD.json"] = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode("utf-8")

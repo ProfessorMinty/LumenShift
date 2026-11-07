@@ -8,7 +8,7 @@ On 2026-11-07, Arctic supplied and designated a new logo: a brushed-metal ring c
 
 `tools/export_logo.ps1` performs only size/format exports through Windows System.Drawing: 256×256 runtime TGA and a 400×400 PNG preview. It preserves the source composition and transparency. `tools/create_assets.py` now preserves the approved logo and its provenance instead of overwriting them with the old placeholder. Runtime UI already shares `Media/logo.tga` across the launcher, minimap entry, Studio and setup header.
 
-`manifest.json` records all 12 runtime files and hashes. Packaging uses committed exports, never regeneration. Output from different image/audio libraries may vary; the source master hash and committed export hashes identify the exact artwork being shipped.
+`manifest.json` records every runtime asset and hash, including the later theme additions listed below. Packaging uses committed exports, never regeneration. Output from different image/audio libraries may vary; the source master hash and committed export hashes identify the exact artwork being shipped.
 
 | Files | Design / technical details |
 |---|---|
@@ -26,3 +26,11 @@ On 2026-11-07, Arctic supplied and designated a new logo: a brushed-metal ring c
 Icons are 128×128, the runtime logo is 256×256, vignette is 64×64; all use uncompressed 32-bit BGRA TGA with alpha. WAV files are 0.32 seconds, mono, 16-bit PCM at 22,050 Hz with bounded peaks. `logo-400.png` previews the approved logo outside the runtime archive. `icon-review.png` is the historical 2026-11-06 placeholder contact sheet, including the superseded logo; it is not current branding or a game screenshot. The game supplies the font; no font files are distributed.
 
 Native decoding, small-size legibility and sound balance remain acceptance checks. Development-only tools and the full-size source master are not copied into the addon ZIP. The logo design is approved by Arctic; public-distribution approval remains separate.
+
+## Supplied theme artwork — dev.9
+
+On 2026-11-07 the owner supplied Core Essential UI Icons, Lumen Loops, Mesh Gradients and separate Steel/Midnight images for the interface. Fractal Haze was named but absent from the supplied directory. `theme-sources.json` records the 16 selected third-party inputs, creators, licenses, changes and source hashes; `THIRD-PARTY-NOTICES.md` contains the attribution and source links. These files are exceptions to the original-asset rights notice above. The source packs, videos, editable Figma files and full-resolution downloaded masters are not included in Git or the addon.
+
+`tools/export_theme.py` exports 12 Core Line/Solid utility icons at 64×64, two panel textures and two teal light accents at 512×512. It also renders nine original functional UI shapes: wheel base, six matching selected sectors, switch track and knob. Those shapes use original SVG geometry in the MIT-licensed tool; the rendered original artwork follows ASSET-LICENSE.md. These are technical exports, not AI-generated substitutes for the supplied art. No source assets were sent to an image generator.
+
+The complete Media directory has 37 files totaling 6,991,746 bytes. The six mode icons and original audio remain unchanged. TGA exports are uncompressed BGRA with alpha and power-of-two dimensions. The reproducible archive uses the committed exports; source re-export uses isolated Pillow 13.0.0 and resvg-py 0.5.0 build tools, never addon runtime dependencies.

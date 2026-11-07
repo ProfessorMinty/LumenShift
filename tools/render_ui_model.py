@@ -10,13 +10,15 @@ def render(model, output):
     nodes = {}
     for row in model.read_text(encoding='utf-8').splitlines():
         parts = row.split('\t')
-        if len(parts) != 18:
+        if len(parts) not in (18, 22):
             raise ValueError('Unexpected mock geometry row')
-        index, kind, parent, visible, width, height, anchor, relative, relative_point, x, y, text, texture, all_points, size, justify, color, scroll = parts
+        index, kind, parent, visible, width, height, anchor, relative, relative_point, x, y, text, texture, all_points, size, justify, color, scroll = parts[:18]
+        alpha, vertex, coords, layer = parts[18:] if len(parts) == 22 else ('1', '1,1,1,1', '0,1,0,1', '')
         nodes[int(index)] = dict(kind=kind, parent=int(parent), visible=visible == '1', width=float(width), height=float(height),
                                 anchor=anchor, relative=int(relative), relative_point=relative_point, x=float(x), y=float(y),
                                 text=text, texture=texture, all=int(all_points), size=float(size), justify=justify,
-                                color=[float(n) for n in color.split(',')], scroll=float(scroll))
+                                color=[float(n) for n in color.split(',')], scroll=float(scroll), alpha=float(alpha),
+                                vertex=[float(n) for n in vertex.split(',')], coords=[float(n) for n in coords.split(',')], layer=layer)
     root_id = next(i for i, node in nodes.items() if node['parent'] == 0 and node['width'] == 1280)
     output.parent.mkdir(parents=True, exist_ok=True)
     textures = output.parent / 'textures'; textures.mkdir(exist_ok=True)
@@ -30,7 +32,7 @@ def render(model, output):
         n = nodes[index]
         if not n['visible']:
             return ''
-        style = ['position:absolute', 'box-sizing:border-box']
+        style = ['position:absolute', 'box-sizing:border-box', f'opacity:{n["alpha"]}']
         if index == root_id:
             style += ['left:0', 'top:0', 'width:1280px', 'height:800px']
         elif n['all']:
@@ -52,7 +54,16 @@ def render(model, output):
         content = ''
         if n['kind'] == 'Texture':
             if n['texture']:
-                style += [f'background:url(textures/{Path(n["texture"]).stem}.png) center/contain no-repeat']
+                name = Path(n['texture']).stem
+                left, right, top, bottom = n['coords']
+                size = f'{100 / (right-left)}% {100 / (bottom-top)}%'
+                position = f'{-left * n["width"] / (right-left)}px {-top * n["height"] / (bottom-top)}px'
+                if name.startswith(('ui-', 'switch-')):
+                    v = n['vertex']
+                    style += [f'background:rgba({v[0]*255:.0f},{v[1]*255:.0f},{v[2]*255:.0f},{v[3]})',
+                              f'mask:url(textures/{name}.png) {position}/{size} no-repeat']
+                else:
+                    style += [f'background:url(textures/{name}.png) {position}/{size} no-repeat']
             else:
                 style += [f'background:{rgba}']
         if n['kind'] == 'ScrollFrame':
@@ -65,7 +76,8 @@ def render(model, output):
                 style += ['padding:4px 6px', 'z-index:1']
                 content = '<span style="position:relative;z-index:2">' + content + '</span>'
         children = [child for child, node in nodes.items() if node['parent'] == index]
-        children.sort(key=lambda child: (nodes[child]['kind'] != 'Texture', child))
+        layers = {'BACKGROUND': 0, 'BORDER': 1, 'ARTWORK': 2, 'OVERLAY': 3}
+        children.sort(key=lambda child: (nodes[child]['kind'] != 'Texture', layers.get(nodes[child]['layer'], 4), child))
         return '<div style="' + ';'.join(style) + '">' + ''.join(emit(child) for child in children) + content + '</div>'
     document = '<!doctype html><meta charset="utf-8"><meta name="darkreader-lock"><meta name="color-scheme" content="dark"><title>LumenShift off-client UI model</title>'
     document += '<body style="margin:0;background:#172331;overflow:hidden">' + emit(root_id)

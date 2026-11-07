@@ -332,16 +332,68 @@ return function(fixture, native, eq, test)
         end
         eq(#f.calls, 0); eq(#f.uiMock.soundCalls, 0); f.zero()
     end)
+    test("U07 textured navigation preserves action labels and high contrast removes decoration", function()
+        local f = studio(); f.ui.Open(1)
+        for _, button in pairs(f.ui.nav) do assert(button.icon and button.icon.texture); assert(#button.label.text > 0) end
+        f.ui.Open(6); f.uiMock.Click("High-contrast panel")
+        eq(f.ui.panelArt:IsShown(), false); eq(f.ui.headerArt:IsShown(), false); eq(f.ui.sidebarArt:IsShown(), false)
+        f.ui.Open(1); eq(f.ui.nav[1].selected, true); eq(f.ui.primary.label.text, "Apply Night Vision")
+        f.ui.Wheel(); eq(f.ui.radial.halo:IsShown(), false)
+        f.ui.radial.Close(); f.ui.Open(6); f.uiMock.Click("High-contrast panel")
+        eq(f.ui.panelArt:IsShown(), true); eq(#f.calls, 0); eq(#f.uiMock.soundCalls, 0); f.zero()
+    end)
+    test("U08 pooled texture opacity tint crop and edit focus reset without scene writes", function()
+        local f = studio(); local W = f.ns.Widgets
+        local parent = f.env.CreateFrame("Frame", nil, f.env.UIParent); local pool = W.CreatePool(f.env, parent)
+        local art = W.Art(parent, "light-sweep", 0, 0, 100, 30, .2)
+        art:SetVertexColor(.2, .3, .4, 1); art:SetTexCoord(.2, .8, .3, .7)
+        pool.Reset(); local fresh = W.Fill(parent)
+        eq(art, fresh); eq(fresh.alpha, 1); eq(fresh.vertexColor[1], 1); eq(fresh.SetTexCoordArgs[1], 0); eq(fresh.texture, nil)
+        local edit = W.Edit(pool.env, parent, "52", 0, 0, 100, function() end)
+        edit:SetFocus(); local focusBorder = edit.lumenRegions.texture[2]
+        eq(focusBorder.color[2], W.colors.accent[2]); edit:ClearFocus(); eq(focusBorder.color[2], W.colors.border[2])
+        eq(#f.calls, 0); f.zero()
+    end)
+    test("U09 radial sector follows keyboard selection with no write until activation", function()
+        local f = studio(); f.ui.Wheel()
+        local wheel = f.ui.radial
+        assert(wheel.sector.texture:match('wheel%-sector%-1'))
+        local count = #f.uiMock.nodes
+        for _ = 1, 24 do wheel.frame.scripts.OnKeyDown(wheel.frame, "RIGHT") end
+        eq(#f.uiMock.nodes, count); eq(#f.calls, 0)
+        wheel.frame.scripts.OnKeyDown(wheel.frame, "RIGHT")
+        assert(wheel.sector.texture:match('wheel%-sector%-2'))
+        wheel.frame.scripts.OnKeyDown(wheel.frame, "ESCAPE"); eq(wheel.frame:IsShown(), false); f.zero()
+    end)
+    test("U10 visible wheel sectors accept clicks while center gaps and outside do not", function()
+        local f = studio(); local R = f.ns.Radial
+        for i = 1, 6 do
+            local angle = math.rad(90 - (i - 1) * 60)
+            eq(R.Hit(math.cos(angle) * 150, math.sin(angle) * 150), i)
+        end
+        eq(R.Hit(0, 0), nil); eq(R.Hit(0, 180), nil); eq(R.Hit(0/0, 100), nil)
+        eq(R.Hit(math.cos(math.rad(60)) * 150, math.sin(math.rad(60)) * 150), nil)
+        f.enable(); f.ui.Wheel(); local wheel = f.ui.radial.frame
+        local cx, cy = wheel:GetCenter()
+        f.env.GetCursorPosition = function() return cx + 130, cy + 75 end
+        wheel.scripts.OnMouseDown(wheel, "LeftButton"); f.uiMock.Flush()
+        eq(f.product.active, "nightVision"); eq(#f.calls, 1); eq(wheel:IsShown(), false); f.zero()
+    end)
     if os.getenv("LUMENSHIFT_UI_MODEL_PATH") then
         local f = studio()
         for page = 1, 9 do
             f.ui.Open(page); f.ui.radial.launcher:Hide()
             f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-" .. page .. ".tsv")
         end
+        f.ui.Open(6); f.uiMock.Click("High-contrast panel"); f.ui.Open(1); f.ui.radial.launcher:Hide()
+        f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-contrast.tsv")
+        f.ui.Open(6); f.uiMock.Click("High-contrast panel")
         f.ui.Open(8); f.uiMock.Click("Shadows, lighting & water"); f.ui.radial.launcher:Hide()
         f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-tiers.tsv")
         f.ui.window:Hide(); f.ui.Wheel(); f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-wheel.tsv")
         local setup = f.ns.Setup.New(f.ns.runtime); setup.Open(); f.ui.radial.Close()
         f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-setup.tsv")
+        setup.window:Hide(); f.ns.DiagnosticWindow.Open(f.ns.runtime)
+        f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-report.tsv")
     end
 end
