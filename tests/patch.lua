@@ -79,16 +79,14 @@ return function(fixture, eq, test)
         local calls = #f.calls; f.ns.Report.Export(f.r); eq(#f.calls, calls)
         eq(f.r.lab.Status().state, "AWAITING_VERIFICATION"); eq(f.r.lab.certificates.Contrast, nil)
     end)
-    test("K06 unsupported client families cannot write even when preference setup completes", function()
+    test("K06 version and interface differences warn but do not disable normal controls", function()
         for _, tuple in ipairs({ { "70789", 16001 }, { "70862", 16002 }, { "70862", 16001, "1.60.2" }, { "70862", 16001, "12.0.0" } }) do
             local f = make(tuple[1], function(f) identity(f, unpack(tuple)) end); f.enter()
-            eq(f.r.db.config.studio.enabled, false); eq(f.r.product.CanEnable(), nil)
-            local enabled, code, explanation = f.r.product.Enable(true)
-            eq(enabled, nil); eq(code, "UNSUPPORTED_BUILD"); assert(explanation:find("outside the supported Forever", 1, true))
-            eq(f.r.log.issues[#f.r.log.issues].result, "UNSUPPORTED_BUILD")
-            eq(f.r.engine.Prepare("on"), nil); eq(f.r.lab.Preview("Contrast", 65), nil)
-            assert(f.r.setup.Finish()); eq(f.saved.config.studio.enabled, true)
-            eq(f.r.product.Select("nightVision"), nil); eq(#f.calls, 0)
+            eq(f.check("client-identity").status, "WARN"); assert(f.r.product.CanEnable())
+            eq(#f.calls, 0); assert(f.r.setup.Finish()); eq(#f.calls, 0)
+            assert(f.r.product.Select("nightVision")); f.mock.Flush(); eq(f.values.Brightness, "75")
+            assert(f.r.product.Select("natural")); f.mock.Flush(); eq(f.values.Brightness, "45")
+            assert(f.r.lab.Test("Contrast", 65)); f.mock.Flush(); eq(f.values.Contrast, "60")
         end
     end)
     test("K07 changing between reviewed builds invalidates both pending preview types", function()
@@ -113,17 +111,23 @@ return function(fixture, eq, test)
             eq(entry.originalRaw, leaf and "60" or "45"); eq(entry.signature, "1.60.1:70840:16001")
         end
     end)
-    test("K09 reload on another reviewed build cannot retag or restore historical recovery records", function()
+    test("K09 explicit recovery after a build update preserves provenance until verified restoration", function()
         for _, leaf in ipairs({ false, true }) do
             local old = make("70790"); local engine = leaf and old.r.lab or old.r.engine
             if leaf then assert(engine.Preview("Contrast", 65)) else assert(engine.Prepare("on")) end
             assert(engine.Confirm(engine.Status().token))
-            local f = make("70840", nil, old.r.db); f.enter()
-            local ok, why
-            if leaf then ok, why = f.r.lab.PreviewRestore("visual") else ok, why = f.r.engine.Prepare("restore") end
-            eq(ok, nil); eq(why, "RECOVERY_SIGNATURE_MISMATCH"); eq(#f.calls, 0); eq(f.reloads, 0)
+            local key = leaf and "Contrast" or "Brightness"
+            local f = make("70840", function(g) g.values[key] = leaf and "65" or "75" end, old.r.db); f.enter()
+            eq(#f.calls, 0)
+            local current = leaf and f.r.lab or f.r.engine
+            if leaf then assert(current.PreviewRestore("visual")) else assert(current.Prepare("restore")) end
+            eq(#f.calls, 0); assert(current.Confirm(current.Status().token))
             local journal = leaf and f.r.db.experiments.journal or f.r.db.journal
-            eq(journal.entries[leaf and "Contrast" or "Brightness"].signature, "1.60.1:70790:16001")
+            eq(journal.entries[key].signature, "1.60.1:70790:16001")
+            if leaf then f.mock.Flush() else assert(current.Verify()) end
+            eq(f.values[key], leaf and "60" or "45")
+            eq(next((leaf and f.r.db.experiments.journal or f.r.db.journal).entries), nil)
+            eq(#f.calls, 1); eq(f.reloads, 0)
         end
     end)
     test("K10 native API and restriction gates still apply on 70840", function()
@@ -139,7 +143,7 @@ return function(fixture, eq, test)
     test("K11 experimental descriptor signatures cannot be forged, omitted or promoted to production", function()
         local f = make(); local c, e = f.ns.Catalog, f.ns.ExperimentPolicy
         local bounds = assert(e.Bounds("Contrast", "60"))
-        eq(e.Descriptor("Contrast", bounds), nil); eq(e.Descriptor("Contrast", bounds, "1.60.1:70862:16002"), nil)
+        eq(e.Descriptor("Contrast", bounds), nil); eq(e.Descriptor("Contrast", bounds, "invalid-identity"), nil)
         local descriptor = assert(e.Descriptor("Contrast", bounds, "1.60.1:70840:16001"))
         eq(c.Admitted(descriptor, e.Context("1.60.1:70790:16001")), false)
         eq(c.Get("Brightness").admitted, false); eq(c.Get("Contrast").admitted, false)
@@ -164,7 +168,7 @@ return function(fixture, eq, test)
         saved.addonVersion = "0.2.0-dev.5"; saved.onboarding.completed = true
         saved.config.studio.enabled = false; saved.config.preferences.sound = true
         local f = make("70862", nil, saved); f.enter()
-        eq(f.r.identity.status, "FOREVER_SUPPORTED_FAMILY"); eq(f.r.storeStatus, "SETUP_REFRESH_REQUIRED")
+        eq(f.r.identity.status, "OBSERVED_CLIENT_IDENTITY"); eq(f.r.storeStatus, "SETUP_REFRESH_REQUIRED")
         assert(f.r.setup.window:IsShown()); eq(f.r.setup.draft.sound, true); eq(#f.calls, 0)
         eq(saved.onboarding.completed, true); eq(saved.addonVersion, "0.2.0-dev.5") -- copy-only upgrade
         f.mock.Click("Finish & Reload UI"); eq(f.reloads, 1); eq(#f.calls, 0)
@@ -184,15 +188,15 @@ return function(fixture, eq, test)
             eq(#f.calls, 4)
         end
     end)
-    test("K15 malformed identities and policy-copy edits cannot expand the supported family", function()
+    test("K15 malformed identities stay invalid and reference-policy copies cannot change warning behavior", function()
         local f = make("70862"); local c = f.ns.Compatibility
         for _, signature in ipairs({ "1.60.1:foo:16001", "1.60.1:070862:16001", "1.60.1:70862x:16001",
-            "1.60.1:70862:016001", "1.60.1:70789:16001", "1.60.2:70862:16001", "12.0.0:70862:16001" }) do
+            "1.60.1:70862:016001", "1.60.1:0:16001", "1.60.1:70862:0" }) do
             eq(c.Experimental(signature), false)
         end
         eq(c.Experimental(nil), false); eq(c.Experimental({}), false)
         local policy = c.Policy(); policy.interface = 16002; policy.version = "1.60.2"; policy.minimumBuild = 1
-        eq(c.Experimental("1.60.2:1:16002"), false); assert(c.Experimental("1.60.1:70862:16001"))
+        eq(c.Policy().version, "1.60.1"); eq(c.Policy().mismatchAction, "warn"); assert(c.Experimental("1.60.2:1:16002"))
         eq(#f.calls, 0)
     end)
     test("K16 current hotfix still rejects unavailable and restricted native controls without a write", function()
@@ -228,6 +232,84 @@ return function(fixture, eq, test)
             local token = engine.Status().token; identity(f, "70999")
             local ok, why = engine.Confirm(token); eq(ok, nil); eq(why, "SESSION_BUILD_CHANGED"); eq(#f.calls, 0)
         end
+    end)
+    test("K19 mismatch warning is nonblocking, shown once, and exported as WARN instead of BLOCKED", function()
+        local f = make("71000", function(g) identity(g, "71000", 16002, "1.60.2") end)
+        f.enter(); f.enter(); f.frame.OnEvent(f.frame, "PLAYER_REGEN_ENABLED")
+        local notices = 0
+        for _, line in ipairs(f.output) do if line:find("has not been reviewed", 1, true) then notices = notices + 1 end end
+        eq(notices, 1); eq(#f.calls, 0)
+        local text = f.ns.Report.Export(f.r)
+        assert(text:find("WARN | client-identity | UNREVIEWED_CLIENT_WARNING", 1, true))
+        assert(text:find("Mode controls: AVAILABLE", 1, true)); eq(text:find("BLOCKED | client-identity", 1, true), nil)
+        assert(f.r.product.Select("nightVision")); f.mock.Flush(); eq(f.values.Brightness, "75")
+        f.enter(); local after = 0
+        for _, line in ipairs(f.output) do if line:find("has not been reviewed", 1, true) then after = after + 1 end end
+        eq(after, 1); assert(f.r.product.Select("natural")); f.mock.Flush(); eq(f.values.Brightness, "45")
+    end)
+    test("K20 failed warning display never becomes an approval gate; API failures still refuse", function()
+        local f = make("71000", function(g)
+            identity(g, "71000", 16002, "1.60.2"); g.env.DEFAULT_CHAT_FRAME.AddMessage = function() error("unavailable") end
+        end)
+        f.enter(); assert(f.r.product.Select("lantern")); f.mock.Flush(); eq(f.values.Brightness, "65")
+        local unavailable = make("71000", function(g)
+            identity(g, "71000", 16002, "1.60.2"); g.env.C_CVar.SetCVar = nil
+        end)
+        unavailable.enter(); eq(unavailable.r.product.Select("nightVision"), nil); eq(#unavailable.calls, 0)
+        eq(unavailable.check("client-identity").status, "WARN"); eq(unavailable.check("native-setter").status, "BLOCKED")
+    end)
+    test("K21 failed cross-version recovery keeps exact originals and their source identity", function()
+        for _, leaf in ipairs({ false, true }) do
+            local old = make("70862"); local engine = leaf and old.r.lab or old.r.engine
+            if leaf then assert(engine.Preview("Contrast", 65)) else assert(engine.Prepare("on")) end
+            assert(engine.Confirm(engine.Status().token))
+            local key = leaf and "Contrast" or "Brightness"
+            local f = make("71000", function(g)
+                identity(g, "71000", 16002, "1.60.2"); g.values[key] = leaf and "65" or "75"
+                g.env.C_CVar.SetCVar = function() g.calls[#g.calls + 1] = "failed"; return false end
+            end, old.r.db)
+            local recovery = leaf and f.r.lab or f.r.engine
+            if leaf then assert(recovery.PreviewRestore("visual")) else assert(recovery.Prepare("restore")) end
+            eq(recovery.Confirm(recovery.Status().token), nil); eq(#f.calls, 1)
+            local journal = leaf and f.r.db.experiments.journal or f.r.db.journal
+            eq(journal.entries[key].originalRaw, leaf and "60" or "45")
+            eq(journal.entries[key].signature, "1.60.1:70862:16001"); eq(recovery.Status().state, "RECOVERY")
+        end
+    end)
+    test("K22 mixed historical visual and quality originals restore independently on a newer version", function()
+        local old = make("70790")
+        assert(old.r.lab.Apply("visual", { Contrast = 65 })); old.mock.Flush()
+        assert(old.r.lab.Apply("quality", { ResampleSharpness = 1.1 })); old.mock.Flush()
+        old.r.db.experiments.journal.entries.ResampleSharpness.signature = "1.60.1:70840:16001"
+        local f = make("71000", function(g)
+            identity(g, "71000", 16002, "1.60.2"); g.values.Contrast = "65"; g.values.ResampleSharpness = "1.1"
+        end, old.r.db)
+        eq(#f.calls, 0); assert(f.r.lab.PreviewRestore("visual")); assert(f.r.lab.Confirm(f.r.lab.Status().token)); f.mock.Flush()
+        eq(f.values.Contrast, "60"); eq(f.values.ResampleSharpness, "1.1")
+        eq(f.r.db.experiments.journal.entries.ResampleSharpness.signature, "1.60.1:70840:16001")
+        assert(f.r.lab.PreviewRestore("quality")); assert(f.r.lab.Confirm(f.r.lab.Status().token)); f.mock.Flush()
+        eq(f.values.ResampleSharpness, "1"); eq(next(f.r.db.experiments.journal.entries), nil); eq(#f.calls, 2)
+    end)
+    test("K23 version-warning recovery already at the original releases without a native setter call", function()
+        for _, leaf in ipairs({ false, true }) do
+            local old = make("70862"); local engine = leaf and old.r.lab or old.r.engine
+            if leaf then assert(engine.Preview("Contrast", 65)) else assert(engine.Prepare("on")) end
+            assert(engine.Confirm(engine.Status().token))
+            local f = make("71000", function(g) identity(g, "71000", 16002, "1.60.2") end, old.r.db)
+            local recovery = leaf and f.r.lab or f.r.engine
+            if leaf then assert(recovery.PreviewRestore("visual")) else assert(recovery.Prepare("restore")) end
+            assert(recovery.Confirm(recovery.Status().token))
+            if leaf then f.mock.Flush() else assert(recovery.Verify()) end
+            eq(#f.calls, 0); eq(recovery.Status().state, "BASELINE")
+        end
+    end)
+    test("K24 reconciliation cannot become a new-target shortcut around ownership checks", function()
+        local f = make("70862"); local ns = f.ns
+        local catalog, context = ns.Catalog.BrightnessExperiment("1.60.1:70862:16001")
+        context.explicitRecovery = true
+        local seen = { Brightness = ns.ReadOnly.Read(f.r.reader, "Brightness") }
+        local plan, why = ns.Planner.Build(catalog, context, seen, ns.Store.EmptyJournal(), "visual", { Brightness = 75 })
+        eq(plan, nil); eq(why, "INVALID_RECOVERY_REQUEST"); eq(#f.calls, 0)
     end)
     local path = os.getenv("LUMENSHIFT_SETUP_MODEL_PATH")
     if path then

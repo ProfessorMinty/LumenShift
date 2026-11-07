@@ -17,11 +17,15 @@ function P.Build(catalog, context, observed, journal, layer, targets)
     if not input or type(input.catalog) ~= "table" or type(input.context) ~= "table"
         or type(input.observed) ~= "table" or type(input.targets) ~= "table"
         or not ns.Store.ValidateJournal(input.journal)
-        or (layer ~= "visual" and layer ~= "quality") then return nil, "INVALID_INPUT" end
+        or (layer ~= "visual" and layer ~= "quality" and layer ~= "camera") then return nil, "INVALID_INPUT" end
     catalog, context, observed, journal, targets = input.catalog, input.context,
         input.observed, input.journal, input.targets
     if not ns.Catalog.TestContext(context)
         and (context.verified ~= true or context.rendererVerified ~= true) then return nil, "UNVERIFIED_CLIENT" end
+    -- Only explicit release-only reconciliation may use historical client provenance.
+    -- Current descriptors, numeric domains and observations are still fully checked.
+    if context.explicitRecovery ~= nil and (context.explicitRecovery ~= true or next(targets) ~= nil
+        or not ns.Catalog.TestContext(context)) then return nil, "INVALID_RECOVERY_REQUEST" end
     local affected, count = {}, 0
     for key in pairs(targets) do
         if type(key) ~= "string" then return nil, "INVALID_KEY" end
@@ -50,7 +54,8 @@ function P.Build(catalog, context, observed, journal, layer, targets)
         if not ns.Catalog.Admitted(descriptor, context) then return nil, "UNADMITTED_KEY:" .. key end
         if descriptor.layer ~= layer or (record and record.layer ~= layer) then return nil, "LAYER_CONFLICT:" .. key end
         if not safeObservation(current) then return nil, "UNSAFE_OBSERVATION:" .. key end
-        if record and (record.state ~= "owned" or record.signature ~= context.signature
+        if record and (record.state ~= "owned" or (record.signature ~= context.signature
+            and not (context.explicitRecovery and ns.Compatibility.Experimental(record.signature)))
             or record.descriptorVersion ~= descriptor.version
             or current.raw ~= record.lastVerifiedRaw) then return nil, "OWNERSHIP_CONFLICT:" .. key end
         -- A new capture or retained original must be restorable in the admitted domain.
@@ -85,7 +90,7 @@ function P.Build(catalog, context, observed, journal, layer, targets)
             byKey[key] = { key = key, beforeRaw = current.raw, targetRaw = targetRaw,
                 originalRaw = originalRaw,
                 epoch = epoch, layer = layer, descriptorVersion = descriptor.version,
-                signature = context.signature, release = release, write = not equal,
+                signature = context.explicitRecovery and record and record.signature or context.signature, release = release, write = not equal,
                 numericEquivalent = descriptor.numericEquivalent }
         end
     end

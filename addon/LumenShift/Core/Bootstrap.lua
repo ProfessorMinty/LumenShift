@@ -8,6 +8,7 @@ frame:RegisterEvent("ADDON_LOADED")
 frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(self, event, name)
     if event == "CVAR_UPDATE" then
         if runtime.engine then runtime.engine.Notify() end
+        if runtime.names then runtime.names.Observe() end
         if runtime.product then runtime.product.Observe() end
         return
     end
@@ -17,7 +18,10 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     end
     if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
         if runtime.product then runtime.product.Observe() end
-        if event == "PLAYER_ENTERING_WORLD" and runtime.loaded then ns.Report.Run(runtime, "world-entry-read-only") end
+        if event == "PLAYER_ENTERING_WORLD" and runtime.loaded then
+            ns.Compatibility.WarnOnce(runtime)
+            ns.Report.Run(runtime, "world-entry-read-only")
+        end
         if runtime.setup then runtime.setup.MaybeOpen() end
         return -- no queued reapply, even when combat ends
     end
@@ -35,7 +39,10 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.controller = ns.Controller.New(db and not next(db.journal.entries) and "BASELINE" or "RECOVERY")
     runtime.engine = ns.WriteBoundary.New(runtime.reader, db, function(line) return ns.Diagnostics.Emit(runtime, line) end)
     runtime.lab = ns.WriteBoundary.NewExperiments(runtime)
+    runtime.tierTrial = ns.WriteBoundary.NewTierTrials(runtime)
+    runtime.names = ns.WriteBoundary.NewExperiments(runtime, true)
     runtime.product = ns.Product.New(runtime)
+    runtime.camera = ns.Camera.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)
     runtime.audio = ns.Audio.New(runtime.reader)
     if db and UIParent then
@@ -50,9 +57,11 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     BINDING_NAME_LUMENSHIFT_TOGGLE = "Toggle Night Vision"
     BINDING_NAME_LUMENSHIFT_WHEEL = "Open / close visual wheel"
     BINDING_NAME_LUMENSHIFT_STUDIO = "Open Visual Studio"
+    BINDING_NAME_LUMENSHIFT_CAMERA = "Enter / exit Camera Mode"
     LumenShift_ToggleNightVision = runtime.log.Guard("bindings", "toggle", function() runtime.product.Toggle() end)
     LumenShift_OpenWheel = runtime.log.Guard("bindings", "wheel", function() if runtime.ui and runtime.ui.Wheel then runtime.ui.Wheel() end end)
     LumenShift_OpenStudio = runtime.log.Guard("bindings", "studio", function() if runtime.ui and runtime.ui.Open then runtime.ui.Open() end end)
+    LumenShift_ToggleCamera = runtime.log.Guard("bindings", "camera", function() runtime.camera.Toggle() end)
     self:UnregisterEvent("ADDON_LOADED")
     self:RegisterEvent("CVAR_UPDATE")
     self:RegisterEvent("PLAYER_REGEN_DISABLED")

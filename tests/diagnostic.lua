@@ -38,10 +38,10 @@ return function(fixture, eq, test)
     test("D02 report privacy excludes user names, paths, arbitrary metadata and native exception text", function()
         local f = setup(); assert(f.product.SavePreset("Private Character", "nightVision"))
         f.values.gxapi = "PRIVATE_ACCOUNT_123"
-        f.runtime.log.Guard("ui", "private-error", function() error("SECRET_ACCOUNT C:/Private/Path PlayerName") end)()
+        f.runtime.log.Guard("ui", "private-error", function() error("SECRET_ACCOUNT C:/Private/Path PRIVATE_PLAYER_ALIAS_192") end)()
         f.runtime.log.Add("ui", "test", "ERROR", "SAFE_CODE", { original = "PRIVATE_NUMBER", detail = "C:/Private/Path", account = "PRIVATE_ACCOUNT_123" })
         local report = f.ns.Report.Export(f.runtime)
-        for _, token in ipairs({ "Private Character", "PRIVATE_ACCOUNT_123", "SECRET_ACCOUNT", "C:/Private/Path", "PlayerName", "PRIVATE_NUMBER" }) do
+        for _, token in ipairs({ "Private Character", "PRIVATE_ACCOUNT_123", "SECRET_ACCOUNT", "C:/Private/Path", "PRIVATE_PLAYER_ALIAS_192", "PRIVATE_NUMBER" }) do
             eq(report:find(token, 1, true), nil)
         end
         assert(report:find("REDACTED", 1, true)); assert(report:find("OWNED_HANDLER_ERROR", 1, true)); eq(#f.calls, 0)
@@ -145,7 +145,7 @@ return function(fixture, eq, test)
         eq(f.env.LumenShiftDB.experiments.sideEffects.farclip.after, "110")
         assert(f.ns.Report.Export(f.runtime):find("UNRESOLVED watched change farclip", 1, true)); eq(f.lab.certificates.Contrast, nil)
     end)
-    test("D14 missing, restricted, secret and unsupported native capabilities refuse calibration", function()
+    test("D14 missing, restricted, secret and changed-session capabilities refuse calibration", function()
         for _, change in ipairs({ function(f) f.env.C_CVar.SetCVar = nil end,
             function(f) f.env.C_CVar.GetCVar = function() return "SECRET" end end,
             function(f) f.env.C_CVar.GetCVarInfo = function(key) return f.values[key], "50", false, false, false, false, true end end,
@@ -229,8 +229,8 @@ return function(fixture, eq, test)
         f.calibrate("Contrast", 65); eq(#f.calls, 2); eq(f.values.Brightness, "52")
     end)
     test("D23 schema-2 migration preserves existing state and malformed experimental data is quarantined", function()
-        local f = setup(); local old = f.ns.Value.Copy(f.env.LumenShiftDB); old.schemaVersion = 2; old.experiments = nil; old.onboarding = nil
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_2_TO_4"); eq(migrated.schemaVersion, 4)
+        local f = setup(); local old = f.ns.Value.Copy(f.env.LumenShiftDB); old.schemaVersion = 2; old.camera = nil; old.experiments = nil; old.onboarding = nil
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_2_TO_5"); eq(migrated.schemaVersion, 5)
         eq(old.schemaVersion, 2); eq(old.experiments, nil); eq(next(migrated.experiments.journal.entries), nil)
         migrated.experiments.profiles.vista.Unknown = 100
         local reloaded = setup(migrated); eq(reloaded.runtime.db, nil); eq(reloaded.env.LumenShiftDB, migrated); eq(#reloaded.calls, 0)
@@ -240,7 +240,7 @@ return function(fixture, eq, test)
         assert(f.lab.SaveProfile("performance", "ResampleSharpness", 1.1))
         f.env.LumenShiftDB.experiments.profiles.performance.groundEffectDensity = 150
         local count = #f.calls; eq(f.lab.SelectProfile("performance"), nil); eq(#f.calls, count)
-        eq(f.lab.SelectProfile("vista"), nil); eq(#f.calls, count)
+        eq(f.lab.SelectProfile("unknown"), nil); eq(#f.calls, count)
     end)
     test("D25 Calibration Lab buttons and slash Diagnostic Center form a complete exportable flow", function()
         local f = setup(); f.env.SlashCmdList.LUMENSHIFT("calibrate"); eq(f.ui.page, 8)
@@ -303,7 +303,7 @@ return function(fixture, eq, test)
     test("D31 choosing another calibration key cannot silently cancel a running test", function()
         local f = setup(); f.ui.Open(8); f.ui.labTarget = "65"; f.ui.BuildPage()
         f.mock.Click("Preview exact modification (read only)"); f.mock.Click("Confirm displayed operation " .. f.lab.Status().token)
-        eq(f.lab.busy, true); f.mock.Click("farclip"); eq(f.ui.labKey, "Contrast"); eq(f.lab.busy, true)
+        eq(f.lab.busy, true); f.mock.Click("View distance"); eq(f.ui.labKey, "Contrast"); eq(f.lab.busy, true)
         f.mock.Flush(); eq(f.values.Contrast, "60"); assert(f.lab.certificates.Contrast["65"])
     end)
     test("D32 media failures are reported without graphics writes or raw native error text", function()
@@ -367,6 +367,21 @@ return function(fixture, eq, test)
         eq(f.lab.SelectProfile("vista"), nil); eq(#f.calls, 0)
         f.env.InCombatLockdown = function() return false end
         assert(f.lab.SelectProfile("vista")); f.mock.Flush(); eq(f.values.ResampleSharpness, "1.1")
+    end)
+
+    test("D39 slider edits coalesce while native operations stay visible and counts survive history eviction", function()
+        local f = setup(); f.enable(); f.select("nightVision"); f.select("natural")
+        local log = f.runtime.log
+        for i = 1, 500 do log.Add("configuration", "edit", "DEBUG", "VALIDATED_NO_WRITE") end
+        assert(log.coalesced >= 499)
+        local history = log.History(); local found = false
+        for _, event in ipairs(history) do if event.operation == "verified" and event.result == "BASELINE" then found = true end end
+        assert(found)
+        for i = 1, 300 do log.Add("ui", "navigation", "DEBUG", "OPEN") end
+        local report = f.ns.Report.Export(f.runtime)
+        assert(report:find("PASS | native-writes", 1, true))
+        assert(report:find("accepted=2; rejected=0; verified Brightness transitions=2; restorations=1", 1, true))
+        eq(log.native.attempts, 2); eq(#f.calls, 2)
     end)
 
 end

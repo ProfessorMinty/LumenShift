@@ -16,7 +16,17 @@ local messages = {
     CONFIGURE_PROFILE_FIRST = "This profile is empty. Add settings in Advanced Graphics first.",
     OUTSIDE_BOUNDED_TEST_POLICY = "That value is outside this control's available range.",
     INVALID_TEST_STEP = "Choose a value using the step shown for this control.",
-    UNSUPPORTED_BUILD = "Graphics controls are not available for this game build yet. Preferences are saved; Diagnostics has the details.",
+    QUALITY_TRIAL_RECOVERY_REQUIRED = "Finish or restore the quality trial in Advanced Graphics first.",
+    RESTORE_ACTIVE_SETTINGS_BEFORE_TIER_TRIAL = "Choose Natural and Current Baseline before trying a native quality tier.",
+    INVALID_TIER_CHOICE = "Choose one of the available quality levels first.",
+    UNCHANGED_TIER_CHOICE = "That level is already selected. Choose a different level for the trial.",
+    NO_TIER_ORIGINAL = "There is no interrupted quality trial to restore.",
+    NAME_CONTROLS_UNAVAILABLE = "Friendly-name controls are unavailable. Open Diagnostics for the API results.",
+    UI_VISIBILITY_UNAVAILABLE = "The game interface visibility API is unavailable. Alt+Z remains the game's own shortcut.",
+    UI_VISIBILITY_NOT_CHANGED = "The game did not change interface visibility. Your name originals are retained.",
+    CAMERA_ENTRY_INTERRUPTED = "Camera entry was interrupted. The interface was left visible; restore names from the Camera page if needed.",
+    TIER_OR_DEPENDENT_RESTORATION_INCOMPLETE = "Some values did not return to their originals. Export the report; originals are retained. No repair values were guessed.",
+    EXTERNAL_CONFLICT_NO_AUTOMATIC_RESTORE = "A setting changed during the trial. Automatic restoration stopped; review the report before restoring the trial.",
     MODE_PARTIAL = "The mode did not finish applying. Your original values are retained; open Recovery.",
 }
 function P.Message(code)
@@ -47,7 +57,9 @@ function P.New(runtime)
         product.active, product.lastError, product.lastMessage = id, nil, nil
         product.appliedBrightness = settings.brightness
         db.config.selected.visual = id
-        ns.Log.Record(runtime.reader, "product", "mode-commit", "INFO", "PASS", { mode = id, requested = settings.brightness })
+        ns.Log.Record(runtime.reader, "product", "mode-commit", "INFO", "PASS", { mode = id,
+            requested = id ~= "natural" and settings.brightness or nil,
+            detail = id == "natural" and "CAPTURED_ORIGINAL_RESTORED" or nil })
         if runtime.presentation then
             local ok, code = runtime.presentation.Apply(id, settings, db.config)
             if not ok then
@@ -61,7 +73,7 @@ function P.New(runtime)
     function product.Availability()
         if not db or not ns.Profiles.Validate(db.config) then return nil, "Saved preferences need recovery. Open Diagnostic Center.", "SAVED_DATA_QUARANTINED" end
         local identity = ns.Compatibility.Inspect(runtime.reader)
-        if not ns.Compatibility.Experimental(identity.signature) then return nil, ns.Compatibility.Explain(identity), identity.signature and "UNSUPPORTED_BUILD" or "IDENTITY_UNAVAILABLE" end
+        if not ns.Compatibility.Experimental(identity.signature) then return nil, ns.Compatibility.Explain(identity), "IDENTITY_UNAVAILABLE" end
         if combat() then return nil, "Try again after combat.", "COMBAT_OR_RESTRICTION" end
         if product.busy or (runtime.lab and runtime.lab.busy) then return nil, "Wait for the current change to finish.", "BUSY" end
         local state = engine.Status().state

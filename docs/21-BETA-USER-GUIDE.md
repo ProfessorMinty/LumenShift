@@ -1,59 +1,72 @@
-# LumenShift 0.2.0-dev.6 — install and try it
+# LumenShift 0.2.0-dev.7 — install and explore
 
-Northern Lights Labs · World of Warcraft: Forever · interface 16001. Your report confirms 1.60.1 build 70862. Controls support the 1.60.1/interface 16001 family from build 70790 onward, with fresh API checks; no launcher reconfirmation is needed.
+Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
-This update fixes the 70862 hotfix rejection and automatically shows the updated setup once, keeping your choices. It includes six visual modes, editable Brightness/optional Contrast, effects, sounds, wheel, Studio and custom quality profiles. Some advanced graphics tiers are still unfinished. Dev.6's automated checks are not a native game test.
+## Install the whole folder
 
-## Install
+1. In the old build, select **Natural** and **Current Baseline** if settings are active. The latest dev.6 export ended at Brightness 75 with original 45 retained, so select Natural before updating. Keep unresolved recovery records.
+2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
+3. Extract `LumenShift-0.2.0-dev.7-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
+5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
-1. In the old addon, select **Natural** and **Current Baseline** if settings are active. Keep unresolved recovery data rather than deleting it.
-2. Exit WoW. Keep a backup of your existing LumenShift addon folder.
-3. Extract `LumenShift-0.2.0-dev.6-<commit>.zip`. Replace only the old **LumenShift** folder in `_forever_/Interface/AddOns` with the entire extracted folder. Keep your SavedVariables so your preferences carry forward.
-4. Check that `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc` has **Core**, **UI**, **Media** and **Bindings.xml** beside it. Do not install the ZIP or TOC alone, and avoid `LumenShift/LumenShift` nesting.
-5. Start WoW, enable LumenShift in AddOns and log in.
+Completed dev.6 setup stays completed; it should not pop up again. First-time users see setup automatically. Older dev.1–dev.5 setups reopen once with saved choices preselected. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Setup/startup never applies graphics or hides the HUD. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
 
-## Setup and preferences
+## Open and use LumenShift
 
-Setup opens automatically after upgrading from dev.1–dev.5, even if you completed an older wizard. Your existing choices are preselected. Finish once and it will stay completed on later reloads. You can also open it through **Settings → AddOns → LumenShift → Setup wizard**.
+- **Left-click** the launcher/minimap icon for the six-mode wheel. **Right-click** for Studio.
+- Select **Night Vision**, then **Natural** to restore the actual captured originals. Other modes have editable Brightness, optional Contrast, tint and effects.
+- **Visual Modes**: edit saved sliders/toggles, then **Apply**. Natural restores owned visual settings; it leaves quality alone.
+- **Colors and Effects**, **Audio**, **Personal Presets** and **Accessibility** contain optional presentation, sounds, saved variations, reduced motion and scale controls.
+- Optional bindings are under Key Bindings → LumenShift. No keys are assigned automatically. Commands remain shortcuts only.
 
-Choose screen effects, Night Vision sounds, menu animations, reduced motion, high contrast and the on-screen launcher. Click **Finish & Reload UI**. Your choices and completion are saved before reload is requested. **Save & Close** saves without reloading; **Later** or X leaves the draft unsaved. Reduced motion takes precedence over menu animation.
+## Camera Mode and names
 
-Setup does not change graphics. If reload cannot run, the preferences stay saved and the window explains why. A temporary unreadable graphics value no longer silently saves controls as disabled. Upgrading reopens the new preferences screen without deleting your saved data.
+1. Open **Studio → Camera**. Leave **Hide friendly player and pet names in Camera Mode** checked to hide those names with the interface; uncheck it for HUD-only behavior.
+2. Click **Enter Camera Mode — hide interface**. It uses the same native visibility API as Alt+Z. Your visual mode and graphics profile stay active.
+3. Return using your optional **Enter / exit Camera Mode** keybind. Alternatively, press **Alt+Z**, then click **Exit Camera Mode** in Studio. Alt+Z itself reveals the HUD; it does not restore names.
+4. **Toggle friendly player and pet names** works independently of HUD visibility. Toggling back restores the individual original settings, including a mixed on/off pair.
+5. **Restore original name settings** explicitly recovers saved originals after an interruption or conflict. Enemy names, nameplates, camera zoom and camera movement are unchanged.
 
-After reload, reopen setup to check your choices, then close it. Completed setup should not automatically appear again.
+If name restoration fails, the interface is shown first and originals stay in the report. No name or HUD setting is automatically reapplied on login/reload.
 
-## Try the actual modes
+## Independent quality profiles
 
-Outside combat, use a stationary scene where brightness changes are visible.
+Studio → **Graphics Quality** offers usable experimental profiles:
 
-1. **Left-click** the LumenShift launcher or minimap button to open the wheel. Choose **Night Vision**. It applies Brightness 75 and checks the result automatically. No confirmation command or exported card is required.
-2. Choose **Natural** to return to your actual original value. It does not assume the original was 45.
-3. Try **Lantern**, then **Natural**. Other mode Brightness targets no longer require a separate unlock. Effects and sounds follow your saved preferences.
-4. **Right-click** the launcher/minimap button for Studio. In **Visual Modes**, choose a mode, adjust its Brightness, then click **Apply**. Sliders save preferences; Apply changes the scene.
-5. To try Contrast, set its value in the same editor and turn on **Adjust Contrast with this mode**, then Apply. Natural restores the owned Brightness and Contrast originals.
+- **Balanced:** sharpening while keeping/restoring original scene detail.
+- **Vista:** modest increases in foliage, distance and object detail from your originals.
+- **Performance:** modest reductions in scene detail. No FPS improvement is guaranteed.
+- **Current Baseline:** restore captured quality originals without switching off your visual mode.
 
-Quality and modes are independent. No mode automatically reapplies after login or reload. The wheel also supports labeled keyboard selection, arrows/Tab, Enter and Escape; optional bindings are in Key Bindings → LumenShift. Commands are shortcuts only.
+Targets and unavailable built-in controls are shown before Apply. Existing custom profiles keep exactly their saved values; built-in keys are not silently added. Edit named settings in **Advanced Graphics**, save values into a profile, then Apply. Removing all custom keys returns that slot to its built-in recipe. These are experimental recipes within bounded test ranges, not native defaults or measured safe maxima.
 
-## Advanced Graphics
+## Advanced controls and temporary trials
 
-Use **Studio → Advanced Graphics** for the named experimental controls.
+For sharpening, foliage, distance/LOD, Contrast, bloom or weather: choose a setting and value, then **Test & Restore**. It tries the value for about two seconds and checks restoration. Start with Natural and Current Baseline. A prior trial is optional for direct named-control Apply.
 
-- Choose a setting, enter a value inside its displayed test range, and click **Test & Restore**. The addon tries it for about two seconds, checks readback, restores the captured original and checks again. Start from Natural with previous experiments restored. If a conflict or failure prevents restoration, the status shows recovery instead of pretending success.
-- To keep a quality change active, save its value into **Balanced**, **Vista** or **Performance**, then click **Apply … profile**. These start as empty custom profiles; no guessed optimization values are assigned. **Current Baseline — restore owned quality** restores them separately from visual modes.
-- Saved profiles remain available after reload. A prior test or same-login calibration certificate is not required. Each Apply still checks actual current availability, flags and values.
+For **Shadows, lighting & water**: choose a supported native level, then **Try selected level & restore**. It captures the tier and readable named settings, applies the tier, waits two seconds, restores it and checks the captured values. These are experimental temporary trials, not persistent tier profiles. If a related setting fails to return, the report retains its original and no guessed repair is attempted. Use **Restore interrupted quality trial** deliberately after reviewing an interrupted/failed trial. HDR/renderer changes remain in the game's settings.
 
-Preview/export remain optional tools. These test ranges are addon policy limits, not universal safe maxima or performance promises. Shadow/light/water tiers, HDR, renderer and unmapped controls remain observation-only. They are not secretly implemented behind an unlock.
+## One consolidated check
 
-## If something fails
+Outside combat, use a stationary scene:
 
-Open **Diagnostic Center → Export Complete Diagnostic Report → Select All → Ctrl+C**, then paste the report with a short description of what you saw. It collects the details; you do not need to paste chat or run a list of commands. Reports exclude names, chat, accounts, local paths and raw native exception text; nothing uploads automatically.
+1. Night Vision → Natural; Lantern → Natural. Check the effects and optional sounds you chose.
+2. Apply Vista, switch Night Vision/Natural, then Current Baseline. Quality and modes should stay independent.
+3. Toggle friendly names twice. Enter Camera Mode, then exit using its keybind or Alt+Z plus Exit. Check that original player/pet name visibility returns.
+4. Optionally try a supported shadow/light/water tier and let restoration finish. If it reports recovery, stop that trial and export; do not repeatedly retry it.
+5. Open **Diagnostic Center → Export Complete Diagnostic Report → Select All → Ctrl+C**. Paste the report with a short description of what looked right or wrong. It collects the technical details; no chat transcript or extra commands are needed.
 
-An external change is preserved rather than repeatedly overwritten. A partial Brightness/Contrast operation retains the originals. Use Diagnostic Center's Brightness recovery buttons, or Advanced Graphics' visual/quality recovery buttons, to review and explicitly restore them. A recovery preview requires confirmation because it may replace a newer external value. This is separate from normal Natural/Current Baseline use.
+Reports exclude names, chat, accounts, local paths and raw native exception text. They include only name-setting CVar identifiers and numeric states, not actual player/pet names. Nothing uploads automatically. Run Diagnostics is read-only; test/apply/camera buttons perform their named actions.
 
-Restore before disabling, updating or removing LumenShift. SavedVariables is written by WoW during normal persistence events, not immediately after every click; an external report is useful for unresolved recovery. Deleting addon files or SavedVariables does not undo graphics changes.
+## Recovery and removal
 
-## Build status and terms
+External edits are preserved instead of repeatedly overwritten. Ordinary Natural/Current Baseline/name toggle respects conflicts. Explicit recovery can replace a newer value with the captured original; use the appropriate Diagnostic Center, Advanced Graphics or Camera restore control deliberately.
 
-Automated validation and the interaction investigation are recorded in [dev.6 notes](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/27-HOTFIX-COMPATIBILITY-AND-SETUP-UPGRADE.md). Native rendering, preference persistence, audio/effects and the new direct control paths still need evaluation in this build. It is not the accepted feature-complete beta or a CurseForge release.
+Restore before updating, disabling, downgrading or removing the addon. SavedVariables is not immediately durable or crash-proof. Deleting files or saved data does not undo graphics/name changes. Keep unresolved originals and export instead of deleting a journal.
 
-Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved, with permission to install/use as part of LumenShift. See both included licenses; third-party terms remain independent.
+## What is verified
+
+Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
+
+Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved with permission to install/use as part of LumenShift. Both notices ship in the addon. No new third-party assets are included.

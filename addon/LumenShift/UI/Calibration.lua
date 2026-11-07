@@ -13,13 +13,57 @@ function U.Build(runtime, ui, parent, env)
         end); y = y - 40
     end
     line("Advanced graphics", 30, W.colors.accent)
+    if ui.qualityTrials then
+        action("Back to detail and sharpening", function() ui.qualityTrials = false; return true end)
+        line("Shadows, lighting and water", 32, W.colors.accent)
+        line("Choose a level, then Try & Restore. It runs for two seconds and restores the captured tier. Surrounding settings are checked too. Experimental: these native tiers can change related settings.", 100)
+        ui.trialKey = ui.trialKey or "graphicsShadowQuality"
+        local top = y
+        for i, key in ipairs(ns.QualityTrial.Order) do
+            local selected = key
+            W.Button(env, parent, (ui.trialKey == key and "* " or "") .. ns.QualityTrial.Definition(key).label,
+                ((i - 1) % 2) * 275, top - math.floor((i - 1) / 2) * 40, 265, function()
+                    if runtime.tierTrial.busy then return end
+                    ui.trialKey, ui.trialTarget = selected, nil; ui.BuildPage()
+                end)
+        end
+        y = top - 92
+        local key, trial = ui.trialKey, runtime.tierTrial
+        local definition = ns.QualityTrial.Definition(key)
+        local current = ns.ReadOnly.Read(runtime.reader, key)
+        line(definition.label .. " now: " .. ns.Report.Number(current.raw), 35)
+        top = y
+        for i, label in ipairs(definition.choices) do
+            local value = i - 1
+            local supported = ns.QualityTrial.Support(runtime.reader, key, value)
+            local button = W.Button(env, parent, (ui.trialTarget == value and "* " or "") .. label .. " (" .. value .. ")",
+                ((i - 1) % 2) * 275, top - math.floor((i - 1) / 2) * 40, 265, function()
+                    ui.trialTarget = value; ui.BuildPage()
+                end)
+            if not supported then button:Disable() end
+        end
+        y = top - math.ceil(#definition.choices / 2) * 40 - 12
+        local supported, why = ns.QualityTrial.Support(runtime.reader, key, ui.trialTarget or ns.Value.Number(current.raw))
+        if not supported then line("Client capability: " .. (why or current.code), 55, W.colors.muted) end
+        action("Try selected level & restore", function() return trial.Test(key, ui.trialTarget) end)
+        ui.trialStateText = W.Text(parent, "", 0, y, 550, 13, W.colors.accent); y = y - 65
+        local status = trial.Status()
+        if status.key then line("Captured " .. status.key .. " original: " .. ns.Report.Number(status.original), 40) end
+        action("Restore interrupted quality trial", trial.Restore)
+        action("Export Complete Diagnostic Report", function() return ns.DiagnosticWindow.Open(runtime) end)
+        line("The trial checks named settings, not every engine dependency. If restoration differs, the report retains originals. It never invents repair values or retries after reload. Normal profiles use direct detail controls instead of these tier switches.", 115, W.colors.muted)
+        return -y + 20
+    end
+    action("Shadows, lighting & water", function() ui.qualityTrials = true; return true end)
     line("Choose a setting and a value. Test & Restore tries it for about two seconds, then returns to your original value.", 85)
     line("These controls are experimental. No settings change until you click Test & Restore or Apply. Details and recovery are in Diagnostic Center.", 80, W.colors.muted)
     ui.labKey = ui.labKey or "Contrast"; ui.labProfile = ui.labProfile or "balanced"
     local start = y
+    local labels = { Contrast = "Contrast" }
+    for _, candidate in ipairs(ns.Quality.Candidates) do labels[candidate.key] = candidate.label end
     for i, key in ipairs(ns.ExperimentPolicy.Keys) do
         local chosen = key
-        W.Button(env, parent, (ui.labKey == key and "* " or "") .. key, ((i - 1) % 2) * 275, start - math.floor((i - 1) / 2) * 38, 265,
+        W.Button(env, parent, (ui.labKey == key and "* " or "") .. (labels[key] or key), ((i - 1) % 2) * 275, start - math.floor((i - 1) / 2) * 38, 265,
             function()
                 if lab.busy then ns.Diagnostics.Emit(runtime, "LumenShift: wait for the test to finish before choosing another setting."); return end
                 ui.labKey = chosen; ui.labTarget = nil; lab.Cancel(); ui.BuildPage()
@@ -76,6 +120,6 @@ function U.Build(runtime, ui, parent, env)
         action("Apply " .. ns.Quality.Profiles[ui.labProfile] .. " profile", function() return lab.SelectProfile(ui.labProfile) end)
         action("Current Baseline — restore owned quality", function() return lab.SelectProfile("currentBaseline") end)
     end
-    line("Shadow, lighting and water tiers, HDR and renderer settings are observation-only: their indirect writes/restart/hardware contracts are not mapped. Use the diagnostic report to see the actual read/capability results.", 90, W.colors.muted)
+    line("Shadows, lighting and water have separate native tier trials above. HDR and renderer changes remain in the game's own settings because they can need a restart.", 78, W.colors.muted)
     return -y + 20
 end

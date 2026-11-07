@@ -1,5 +1,7 @@
 # Hotfix compatibility and setup upgrade — dev.6
 
+> Historical dev.6 implementation record. [28](28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) records its subsequent native acceptance and the newer warning-only version policy. Dev.7 adds [quality trials/profiles](29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera Mode](30-CAMERA-MODE.md).
+
 2026-11-07. Version 0.2.0-dev.6; schema 4 unchanged. This supersedes the exact-hotfix allowlist and completed-setup upgrade behavior documented in docs/25–26.
 
 ## Actual owner report

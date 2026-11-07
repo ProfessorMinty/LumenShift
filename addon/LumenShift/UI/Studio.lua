@@ -1,7 +1,7 @@
 local _, ns = ...
 local S, W = {}, ns.Widgets
 ns.Studio = S
-local pages = { "Visual Modes", "Graphics Quality", "Colors and Effects", "Audio", "Personal Presets", "Accessibility", "Diagnostic Center", "Advanced Graphics" }
+local pages = { "Visual Modes", "Graphics Quality", "Colors and Effects", "Audio", "Personal Presets", "Accessibility", "Diagnostic Center", "Advanced Graphics", "Camera" }
 function S.New(runtime)
     local env, db, product = runtime.reader.env, runtime.db, runtime.product
     local ui = { page = 1, edited = "nightVision", pageFrames = {} }
@@ -78,6 +78,17 @@ function S.New(runtime)
             ui.labStateText:SetText(ns.Product.Message(lab.error) or (lab.operation == "PREVIEW" and "Preview ready. No change yet.")
                 or states[lab.state] or lab.state)
         end
+        if ui.trialStateText and runtime.tierTrial then
+            local trial = runtime.tierTrial.Status()
+            ui.trialStateText:SetText("Quality trial: " .. trial.state .. (trial.error and " — " .. ns.Product.Message(trial.error) or ""))
+        end
+        if ui.cameraStateText and runtime.camera then
+            local player = ns.ReadOnly.Read(runtime.reader, "UnitNameFriendlyPlayerName")
+            local pet = ns.ReadOnly.Read(runtime.reader, "UnitNameFriendlyPetName")
+            ui.cameraStateText:SetText("Friendly player names: " .. (player.raw or "unavailable") .. "    Pet names: " .. (pet.raw or "unavailable")
+                .. "\n" .. (runtime.camera.error and ns.Product.Message(runtime.camera.error) or runtime.names.Status().state))
+        end
+        if ui.cameraButton then ui.cameraButton.label:SetText(runtime.camera.active and "Exit Camera Mode" or "Enter Camera Mode — hide interface") end
         if ui.radial then ui.radial.Refresh() end
     end
     function ui.BuildPage()
@@ -132,13 +143,21 @@ function S.New(runtime)
             pageHeight = 520
         elseif ui.page == 2 then
             line("Independent graphics quality", 30, W.colors.accent)
-            line("Set up a custom profile in Advanced Graphics, then apply it here. Quality stays independent of your visual mode.", 78)
+            line("Pick a profile to apply it. Built-in recipes use modest changes from your captured originals; saved custom targets take precedence. Quality stays independent of your visual mode.", 90)
             button("Configure a quality profile", function() ui.labKey = "ResampleSharpness"; ui.Open(8) end)
             for _, id in ipairs({ "currentBaseline", "balanced", "vista", "performance" }) do
                 local profileID = id
-                local b = button(ns.Quality.Profiles[id] .. (id == "currentBaseline" and " — restore quality" or " — apply configured targets"), function()
+                local targets, omitted, source = ns.Quality.Resolve(runtime, id)
+                local b = button(ns.Quality.Profiles[id] .. (id == "currentBaseline" and " — restore quality" or " — apply " .. (source or "profile")), function()
                     local ok, code = runtime.lab.SelectProfile(profileID); if not ok then emit(code) end; ui.Refresh()
                 end, ns.Quality.Descriptions[id])
+                line(ns.Quality.Descriptions[id], 66, W.colors.muted)
+                if targets and id ~= "currentBaseline" then
+                    local details = {}
+                    for _, key in ipairs(ns.Value.Keys(targets)) do details[#details + 1] = key .. "=" .. targets[key] end
+                    line(table.concat(details, ", "), 94)
+                    if #omitted > 0 then line("Unavailable; omitted: " .. table.concat(omitted, ", "), 70, W.colors.muted) end
+                end
             end
             button("Refresh available controls", function() ui.Invalidate(2); ui.BuildPage() end)
             button("Print control details to chat", function()
@@ -261,6 +280,21 @@ function S.New(runtime)
             pageHeight = height() + box:GetHeight() + 20
         elseif ui.page == 8 then
             pageHeight = ns.CalibrationUI.Build(runtime, ui, parent, env)
+        elseif ui.page == 9 then
+            line("Camera Mode", 32, W.colors.accent)
+            line("Hide the interface for a clear view, using the game's Alt+Z behavior. Your visual mode and quality profile stay as they are.", 78)
+            toggle("Hide friendly player and pet names in Camera Mode", function() return db.camera.hideWithUI end,
+                function(value) db.camera.hideWithUI = value end)
+            ui.cameraButton = button(runtime.camera.active and "Exit Camera Mode" or "Enter Camera Mode — hide interface", function()
+                runtime.camera.Toggle(); ui.BuildPage()
+            end)
+            line("To return: use your Camera Mode keybinding, or press Alt+Z and click Exit Camera Mode here. Alt+Z itself only shows the interface; it does not restore names.", 92)
+            button("Toggle friendly player and pet names", function() runtime.camera.ToggleNames(); ui.Refresh() end)
+            line("Names can be toggled separately from the interface. Toggling back restores each captured original, even if player and pet names started differently.", 80)
+            button("Restore original name settings", function() runtime.camera.RestoreNames(); ui.Refresh() end)
+            ui.cameraStateText = W.Text(parent, "", 0, -height(), 550, 13, W.colors.accent)
+            line("", 74)
+            line("Optional shortcut: Key Bindings > LumenShift > Enter / exit Camera Mode. No key is assigned or replaced automatically. Enemy names and nameplates are unchanged.", 92, W.colors.muted)
         end
         parent:SetHeight(pageHeight or height())
         ui.scrollMaximum = math.max(0, parent:GetHeight() - 476)
@@ -287,7 +321,7 @@ function S.New(runtime)
     end
     for i, label in ipairs(pages) do
         local index = i
-        W.Button(env, window, label, 16, -112 - (i - 1) * 47, 198, function() ui.page = index; ui.BuildPage() end)
+        W.Button(env, window, label, 16, -112 - (i - 1) * 43, 198, function() ui.page = index; ui.BuildPage() end)
     end
     W.Button(env, window, "Open mode wheel", 16, -505, 198, function() window:Hide(); ui.Wheel() end)
     W.Button(env, window, "Export report", 16, -550, 198, function() ns.DiagnosticWindow.Open(runtime) end)

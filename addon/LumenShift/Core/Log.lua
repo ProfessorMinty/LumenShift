@@ -12,10 +12,28 @@ local function code(value)
 end
 L.Code = code
 function L.New(reader)
-    local log = { capacity = 240, sequence = 0, dropped = 0, events = {}, issues = {}, latest = {}, counts = {} }
+    local log = { capacity = 240, sequence = 0, dropped = 0, coalesced = 0, events = {}, issues = {}, latest = {}, counts = {},
+        native = { attempts = 0, accepted = 0, rejected = 0, verified = 0, restored = 0 } }
     local session = ns.ReadOnly.Call(reader, reader.env.GetServerTime)
     log.session = session and V.Finite(session[1]) and tostring(session[1]) or "current-login-time-unavailable"
     function log.Add(subsystem, operation, level, result, data)
+        -- Slider drags can emit dozens of identical edits per second. Keep a count,
+        -- not hundreds of records that evict actual operations and recovery history.
+        local previous = log.events[(log.sequence - 1) % log.capacity + 1]
+        if subsystem == "configuration" and operation == "edit" and level == "DEBUG" and result == "VALIDATED_NO_WRITE"
+            and previous and previous.subsystem == subsystem and previous.operation == operation and previous.result == result then
+            previous.data.count = math.min(2147483647, (previous.data.count or 1) + 1)
+            log.coalesced = log.coalesced + 1
+            return previous.sequence
+        end
+        if subsystem == "graphics" and operation == "setter" then
+            log.native.attempts = log.native.attempts + 1
+            local key = result == "ACCEPTED" and "accepted" or "rejected"
+            log.native[key] = log.native[key] + 1
+        elseif subsystem == "brightness" and operation == "verified" and (result == "BASELINE" or result == "ACTIVE") then
+            log.native.verified = log.native.verified + 1
+            if result == "BASELINE" then log.native.restored = log.native.restored + 1 end
+        end
         local entry = { sequence = log.sequence + 1, subsystem = code(subsystem), operation = code(operation),
             severity = severity[level] and level or "INFO", result = code(result or "UNKNOWN"), data = {} }
         local now = ns.ReadOnly.Call(reader, reader.env.GetTime)

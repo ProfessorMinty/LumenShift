@@ -1,5 +1,7 @@
 # Beta acceptance and eventual distribution
 
+> Current dev.7 scope/evidence is in [28](28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md), [29](29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [30](30-CAMERA-MODE.md). The owner has now tested dev.6 Brightness switching successfully. Native Camera/name restoration, quality recipes, tier dependencies, UI integration and performance remain acceptance work. The older table below describes beta.1 history; current testing needs no repeated approval/unlock ceremony. Use [21](21-BETA-USER-GUIDE.md). No CurseForge publication is authorized.
+
 **Historical beta.1 publication plan, not the current development priority.** The owner never installed/tested beta.1. Current work is the interactive diagnostic build in [23](23-INTERACTIVE-DIAGNOSTICS.md), with [one exploration/report workflow](21-BETA-USER-GUIDE.md). That document supersedes the old Brightness-only scope, schema/module counts and packaging detail below. Publication remains unapproved; no release-polish work is required before owner exploration.
 
 The code and local archive are development deliverables. **Recommendation: owner acceptance testing next; no feature-complete beta sign-off or CurseForge publication yet.** Existing build identity is accepted; do not ask Arctic to reconfirm the launcher. Preserve previous Phase 00/01 evidence and mark only tests actually observed in this integrated build as passed.

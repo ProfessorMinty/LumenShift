@@ -1,6 +1,8 @@
 local _, ns = ...
 local E, V = {}, ns.Value
 ns.ExperimentPolicy = E
+E.Version = 2
+function E.Layer(key) return key == "Contrast" and "visual" or "quality" end
 -- Bounds are TEST POLICIES, never claims of measured native safe/effective domains.
 -- No overall/tier/restart/HDR/camera CVars. Only the exact named leaf candidates below.
 E.Keys = { "Contrast", "ResampleAlwaysSharpen", "ResampleSharpness", "groundEffectDensity", "groundEffectDist",

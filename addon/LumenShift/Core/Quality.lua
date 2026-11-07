@@ -19,10 +19,39 @@ Q.Candidates = {
     { key = "weatherDensity", label = "Weather density", group = "Atmosphere", source = "SRC-05", dependency = "Canonical spelling and real weather test" },
 }
 Q.Profiles = { currentBaseline = "Current Baseline", balanced = "Balanced", vista = "Vista", performance = "Performance" }
-Q.Descriptions = { currentBaseline = "Restore owned quality settings to their captured originals; leave other settings unchanged.",
-    balanced = "Your custom target set. Configure values in Advanced Graphics.",
-    vista = "Your scenic target set. Apply checks the current client and values.",
-    performance = "Your experimental target set. No measured FPS benefit is claimed." }
+Q.Descriptions = { currentBaseline = "Restore captured quality originals. Your visual mode stays active.",
+    balanced = "Preserve scene detail and enable sharpening. Uses your saved custom targets when configured.",
+    vista = "Increase scene detail by a bounded amount from your original values. Experimental; may cost FPS.",
+    performance = "Reduce scene detail by a bounded amount. Experimental; an FPS improvement is not guaranteed." }
+local recipeKeys = { "ResampleAlwaysSharpen", "ResampleSharpness", "groundEffectDensity", "groundEffectDist",
+    "farclip", "terrainLodDist", "lodObjectCullSize", "lodObjectFadeScale" }
+function Q.Resolve(runtime, id)
+    if not Q.Profiles[id] or not runtime.db then return nil, "INVALID_QUALITY_PROFILE" end
+    if id == "currentBaseline" then return {}, {} end
+    local data = runtime.db.experiments
+    -- Preserve existing custom profiles exactly: built-ins never silently append keys.
+    if next(data.profiles[id]) then return ns.Value.Copy(data.profiles[id]), {}, "custom" end
+    local targets, omitted = {}, {}
+    for _, key in ipairs(recipeKeys) do
+        local observed = ns.ReadOnly.Read(runtime.reader, key)
+        local entry = data.journal.entries[key]
+        local original = entry and entry.originalRaw or observed.raw
+        local bounds = ns.ExperimentPolicy.Bounds(key, original)
+        if ns.Planner.SafeObservation(observed) and bounds then
+            local value = ns.Value.Number(original)
+            if key == "ResampleAlwaysSharpen" then value = 1
+            elseif key == "ResampleSharpness" then value = 1 -- source UI: neutral midpoint; lower = sharper
+            elseif id ~= "balanced" then
+                local increase = id == "vista"
+                if key == "lodObjectCullSize" then increase = not increase end
+                value = increase and math.floor(bounds.max) or math.ceil(bounds.min)
+            end
+            if id ~= "balanced" or key == "ResampleAlwaysSharpen" or key == "ResampleSharpness" then targets[key] = value end
+        else omitted[#omitted + 1] = key end
+    end
+    if not next(targets) then return nil, "NO_QUALITY_CONTROLS_AVAILABLE" end
+    return targets, omitted, "built-in"
+end
 function Q.Scan(reader)
     local rows = {}
     for _, candidate in ipairs(Q.Candidates) do
@@ -31,7 +60,8 @@ function Q.Scan(reader)
         local bounds = ns.ExperimentPolicy.Bounds(row.key, row.observation.raw)
         row.operational = ns.ExperimentPolicy.Known(row.key) and bounds ~= nil
             and ns.Planner.SafeObservation(row.observation) and ns.Compatibility.Experimental(ns.Compatibility.Inspect(reader).signature)
-        row.reason = row.operational and "Experimental control available in Advanced Graphics."
+        row.reason = ns.QualityTrial.Known(row.key) and "Native tier trial in Advanced Graphics; checks named settings on restoration."
+            or row.operational and "Experimental control available in Advanced Graphics."
             or not ns.ExperimentPolicy.Known(row.key) and "Control not implemented; observation only."
             or "Currently unavailable or outside the supported test range; see Diagnostics."
         rows[#rows + 1] = row

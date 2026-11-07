@@ -21,10 +21,10 @@ def check():
         assert name.startswith("Media/") and ".." not in name
         assert hashlib.sha256((RUNTIME / name).read_bytes()).hexdigest() == digest, f"Asset hash mismatch: {name}"
     bindings = ET.parse(RUNTIME / "Bindings.xml").getroot()
-    assert bindings.tag == "Bindings" and len(bindings) == 3
-    assert {child.attrib["name"] for child in bindings} == {"LUMENSHIFT_TOGGLE", "LUMENSHIFT_WHEEL", "LUMENSHIFT_STUDIO"}
+    assert bindings.tag == "Bindings" and len(bindings) == 4
+    assert {child.attrib["name"] for child in bindings} == {"LUMENSHIFT_TOGGLE", "LUMENSHIFT_WHEEL", "LUMENSHIFT_STUDIO", "LUMENSHIFT_CAMERA"}
     expected_calls = {"LUMENSHIFT_TOGGLE": "LumenShift_ToggleNightVision", "LUMENSHIFT_WHEEL": "LumenShift_OpenWheel",
-                      "LUMENSHIFT_STUDIO": "LumenShift_OpenStudio"}
+                      "LUMENSHIFT_STUDIO": "LumenShift_OpenStudio", "LUMENSHIFT_CAMERA": "LumenShift_ToggleCamera"}
     for child in bindings:
         fn = expected_calls[child.attrib["name"]]
         assert (child.text or "").strip() == f"if {fn} then {fn}() end", "Unexpected binding action"

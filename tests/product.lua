@@ -15,9 +15,9 @@ return function(fixture, native, eq, test)
     test("P01 schema-1 migration preserves journal, selections and source input without enabling controls", function()
         local f = native(); f.activate()
         local old = f.ns.Value.Copy(f.env.LumenShiftDB)
-        old.schemaVersion = 1; old.config.studio = nil; old.experiments = nil; old.onboarding = nil
+        old.schemaVersion = 1; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_1_TO_4"); eq(copy.schemaVersion, 4); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
+        eq(code, "MIGRATED_1_TO_5"); eq(copy.schemaVersion, 5); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "52"); eq(copy.journal.entries.Brightness.state, "owned")
         eq(copy.config.studio.enabled, false)
         local reload = studio(old, "75"); eq(#reload.calls, 0); eq(reload.engine.Status().state, "RECOVERY")
@@ -229,9 +229,9 @@ return function(fixture, native, eq, test)
         f.env.InCombatLockdown = function() error("inaccessible") end
         assert(f.product.RefreshPresentation()); eq(p.frame:IsShown(), false); eq(#f.calls, 1); f.zero()
     end)
-    test("P24 enabling controls refuses unsupported identity or missing native writer", function()
+    test("P24 enabling controls refuses unreadable identity or missing native writer", function()
         for _, change in ipairs({ function(f) f.env.C_CVar.SetCVar = nil end,
-            function(f) f.env.GetBuildInfo = function() return "1.60.2", "99999", "future", 16002 end end }) do
+            function(f) f.env.GetBuildInfo = function() return nil end end }) do
             local f = studio(); change(f); eq(f.product.Enable(true), nil)
             eq(f.env.LumenShiftDB.config.studio.enabled, false); eq(#f.calls, 0); f.zero()
         end

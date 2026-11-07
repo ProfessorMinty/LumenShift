@@ -1,6 +1,20 @@
 # Changelog
 
 
+## 0.2.0-dev.7 — Camera Mode, usable quality profiles and warning-only compatibility (2026-11-07)
+
+- Version, build and interface differences produce one nonblocking warning per login/reload. No acknowledgement, update requirement or version-based control lock. Missing/malformed identity and actual API/value/recovery failures still have distinct diagnostics.
+- Explicit recovery can restore originals recorded before a game update, using current flags/domains and fresh readbacks. Historical source identity stays intact until successful restoration; no automatic startup recovery or retagging of originals.
+- Diagnostics distinguish WARN from BLOCKED. Package metadata separates reference evidence from warning-only version policy.
+- Keep zero startup graphics writes, single writer, per-key capture, exact restoration, conflict handling and saved preferences. Completed dev.6 setup stays completed; older setup refresh still applies.
+- Add Camera Mode with native Alt+Z-style UI visibility, an optional keybinding, friendly-player/pet name toggle, separate captured originals and explicit recovery. Enemy names/nameplates and lens/movement settings are unchanged.
+- Schema 5 adds the independent camera-name journal and saved preference; migrations retain old setup completion, preferences and recovery records.
+- Make Balanced/Vista/Performance usable bounded recipes; preserve existing custom profiles exactly. Profile targets derive from original values without compounding.
+- Add native enum/hardware-checked shadow/light/water/PBR temporary trials with captured named-watch restoration checks. Persistent tier profiles remain incomplete pending real dependency evidence; no guessed child repair writes.
+- Coalesce slider-edit logs, retain native-operation counters, and label Natural restoration accurately. Record successful native dev.6 Brightness cycles without claiming dev.7 in-game acceptance.
+- Automated tests remain simulated; native dev.7 acceptance is pending.
+
+
 ## 0.2.0-dev.6 — hotfix compatibility and automatic updated setup (2026-11-07)
 
 - Fix dev.5 refusing the owner's actual Forever build 70862. Explicit development controls now use the Forever 1.60.1/interface 16001 contract from build 70790 onward, with fresh API/flag/value checks on each operation. Hotfix numbers remain recorded; version/interface changes still require review.

@@ -4,8 +4,8 @@ ns.WriteBoundary = B
 local function setterAvailable(reader)
     return type(reader.env.C_CVar) == "table" and type(reader.env.C_CVar.SetCVar) == "function"
 end
--- The only native graphics call site for Brightness and explicit bounded leaf experiments.
--- Both private callers below perform planner, fresh observation, identity and combat checks.
+-- The only native CVar call site: graphics, bounded trials and the two camera-name toggles.
+-- Private callers use narrow policies, planner, fresh observations and combat checks.
 local function nativeSet(reader, key, target)
     local result, code = ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, key, target)
     local accepted = result and result.n == 1 and result[1] == true
@@ -57,9 +57,11 @@ function B.New(reader, db, emit)
         end
         local identity = ns.Compatibility.Inspect(reader)
         local catalog, context = ns.Catalog.BrightnessExperiment(identity.signature)
-        if not catalog then return nil, "UNSUPPORTED_TEST_BUILD" end
+        if not catalog then return nil, "IDENTITY_UNAVAILABLE" end
         if identity.signature ~= sessionSignature then return nil, "SESSION_BUILD_CHANGED" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
+        if reader.tierOccupied and reader.tierOccupied() then return nil, "QUALITY_TRIAL_RECOVERY_REQUIRED" end
+        if reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if reader.experimentBusy and reader.experimentBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
         return catalog, context
@@ -163,9 +165,10 @@ function B.New(reader, db, emit)
         if action == "off" and (not sessionOwned or state ~= "ACTIVE") then return nil, "USE_EXPLICIT_RESTORE" end
         if action ~= "on" and not record then return nil, "NO_CAPTURED_ORIGINAL" end
         if record then
-            if record.signature ~= context.signature or record.descriptorVersion ~= 1 or record.layer ~= "visual" then
-                return nil, "RECOVERY_SIGNATURE_MISMATCH"
+            if not ns.Compatibility.Experimental(record.signature) or record.descriptorVersion ~= 1 or record.layer ~= "visual" then
+                return nil, "RECOVERY_DESCRIPTOR_MISMATCH"
             end
+            if record.signature ~= context.signature and action ~= "restore" then return nil, "USE_EXPLICIT_RESTORE" end
             if action == "restore" then
                 -- Explicit restore previews a reconciliation. Never silently replace originalRaw.
                 record.lastVerifiedRaw, record.state, record.failure = current.raw, "owned", nil
@@ -175,6 +178,7 @@ function B.New(reader, db, emit)
         end
         target = target == nil and 75 or target
         local targets = action == "on" and { Brightness = target } or {}
+        if action == "restore" then context.explicitRecovery = true end
         local plan, code = ns.Planner.Build(catalog, context, { Brightness = current }, journal, "visual", targets)
         if not plan then return nil, code end
         if #plan.operations == 0 then return nil, "ALREADY_AT_TARGET_NO_OWNERSHIP_CHANGE" end
@@ -217,7 +221,8 @@ function B.New(reader, db, emit)
             return nil, "PREVIEW_CHANGED"
         end
         local targets = pending.action == "on" and { Brightness = pending.target } or {}
-        local _, context = ns.Catalog.BrightnessExperiment(op.signature)
+        local _, context = ns.Catalog.BrightnessExperiment(pending.plan.signature)
+        if pending.action == "restore" then context.explicitRecovery = true end
         local fresh, why = ns.Planner.Build(catalog, context, { Brightness = current }, pending.journal, "visual", targets)
         if not fresh or #fresh.operations ~= 1 or fresh.operations[1].targetRaw ~= op.targetRaw then
             return nil, why or "PREVIEW_CHANGED"
@@ -357,16 +362,18 @@ function B.New(reader, db, emit)
     return engine
 end
 
--- Explicit leaf calibration and calibrated experimental profiles. Separate journal, disjoint
+-- Explicit leaf calibration and experimental profiles. Separate journal, disjoint
 -- keys from the preserved Brightness engine; the native setter above is shared, never exposed.
-function B.NewExperiments(runtime)
+function B.NewExperiments(runtime, cameraMode)
     local reader, db = runtime.reader, runtime.db
     local sessionSignature = ns.Compatibility.Inspect(reader).signature
-    local data = db and db.experiments
+    local data = db and (cameraMode and db.camera or db.experiments)
+    local policy = cameraMode and ns.NamePolicy or ns.ExperimentPolicy
+    local function watchKeys() return cameraMode and ns.NamePolicy.Keys or ns.Catalog.WatchKeys() end
     local lab = { state = data and not next(data.journal.entries) and "BASELINE" or "RECOVERY",
         busy = false, certificates = {}, preview = nil, serial = 0, lastError = nil, activeProfile = "currentBaseline" }
     local pending, pendingCompletion, executing, owned = nil, nil, false, {}
-    local function record(op, level, result, fields) ns.Log.Record(reader, "experiments", op, level, result, fields) end
+    local function record(op, level, result, fields) ns.Log.Record(reader, cameraMode and "names" or "experiments", op, level, result, fields) end
     local function refresh() if runtime.product and runtime.product.Refresh then runtime.product.Refresh() end end
     local function mark(code)
         lab.state, lab.lastError, lab.busy, pending, pendingCompletion = "RECOVERY", code, false, nil, nil
@@ -380,9 +387,11 @@ function B.NewExperiments(runtime)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate()
-        if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
+        if (cameraMode and runtime.lab and runtime.lab.busy) or (not cameraMode and runtime.names and runtime.names.busy) then return nil, "OTHER_OPERATION_ACTIVE" end
+        if not data or not policy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
+        if reader.tierOccupied and reader.tierOccupied() then return nil, "QUALITY_TRIAL_RECOVERY_REQUIRED" end
         local signature = ns.Compatibility.Inspect(reader).signature
-        if not ns.Compatibility.Experimental(signature) then return nil, "UNSUPPORTED_BUILD" end
+        if not ns.Compatibility.Experimental(signature) then return nil, "IDENTITY_UNAVAILABLE" end
         if signature ~= sessionSignature then return nil, "SESSION_BUILD_CHANGED" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
@@ -392,7 +401,7 @@ function B.NewExperiments(runtime)
     end
     local function observe()
         local result = {}
-        for _, key in ipairs(ns.Catalog.WatchKeys()) do result[key] = ns.ReadOnly.Read(reader, key) end
+        for _, key in ipairs(watchKeys()) do result[key] = ns.ReadOnly.Read(reader, key) end
         return result
     end
     local function same(a, b)
@@ -424,12 +433,12 @@ function B.NewExperiments(runtime)
         for key in pairs(data.journal.entries) do keys[key] = true end
         for key in pairs(keys) do
             local item = data.journal.entries[key]
-            if item and (item.signature ~= sessionSignature or item.descriptorVersion ~= 2
-                or key == "Brightness" or not ns.ExperimentPolicy.Known(key)) then return nil, "RECOVERY_SIGNATURE_MISMATCH" end
-            local bounds, why = ns.ExperimentPolicy.Bounds(key, item and item.originalRaw or seen[key] and seen[key].raw)
+            if item and (not ns.Compatibility.Experimental(item.signature) or item.descriptorVersion ~= policy.Version
+                or key == "Brightness" or not policy.Known(key)) then return nil, "RECOVERY_DESCRIPTOR_MISMATCH" end
+            local bounds, why = policy.Bounds(key, item and item.originalRaw or seen[key] and seen[key].raw)
             if overrides and overrides[key] then bounds = overrides[key] end
             if not bounds then return nil, why end
-            descriptors[key] = ns.ExperimentPolicy.Descriptor(key, bounds, sessionSignature)
+            descriptors[key] = policy.Descriptor(key, bounds, sessionSignature)
         end
         return descriptors
     end
@@ -446,7 +455,9 @@ function B.NewExperiments(runtime)
                 elseif not owned[key] then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
             end
         end
-        local plan, errorCode = ns.Planner.Build(descriptors, ns.ExperimentPolicy.Context(sessionSignature), seen, journal, layer, targets)
+        local context = policy.Context(sessionSignature)
+        if reconciliation then context.explicitRecovery = true end
+        local plan, errorCode = ns.Planner.Build(descriptors, context, seen, journal, layer, targets)
         if not plan then return nil, errorCode end
         return { plan = plan, journal = journal, source = V.Copy(data.journal), seen = seen, descriptors = descriptors,
             layer = layer, targets = V.Copy(targets), reconciliation = reconciliation, overrides = overrides }
@@ -456,7 +467,7 @@ function B.NewExperiments(runtime)
         local current = ns.ReadOnly.Read(reader, key)
         local number = V.Number(target)
         if not ns.Planner.SafeObservation(current) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
-        if not ns.Catalog.Admitted(descriptor, ns.ExperimentPolicy.Context(sessionSignature))
+        if not ns.Catalog.Admitted(descriptor, policy.Context(sessionSignature))
             or not number or number < descriptor.min or number > descriptor.max then return false, current, "INVALID_EXPERIMENT_TARGET" end
         if combat() then return false, current, "COMBAT_OR_RESTRICTION" end
         record("write", "INFO", "ATTEMPT", { key = key, before = expected, requested = target,
@@ -581,7 +592,7 @@ function B.NewExperiments(runtime)
             proposal.lines[#proposal.lines + 1] = op.key .. " original=" .. op.originalRaw .. " current=" .. op.beforeRaw .. " target=" .. op.targetRaw
         end
         local count = 0; for _, item in pairs(proposal.seen) do if item.code == "OK" then count = count + 1 end end
-        proposal.lines[#proposal.lines + 1] = "Watch coverage: " .. count .. "/" .. #ns.Catalog.WatchKeys() .. " readable named keys; no complete engine enumeration."
+        proposal.lines[#proposal.lines + 1] = "Watch coverage: " .. count .. "/" .. #watchKeys() .. " readable named keys; no complete engine enumeration."
         lab.preview = proposal; record("preview", "INFO", "READY", { count = #proposal.plan.operations })
         return true
     end
@@ -591,12 +602,12 @@ function B.NewExperiments(runtime)
         if not data or next(data.journal.entries) then return nil, "RESTORE_EXPERIMENTS_BEFORE_CALIBRATING" end
         if runtime.engine and runtime.engine.Status().state ~= "BASELINE" then return nil, "RESTORE_BRIGHTNESS_BEFORE_CALIBRATING" end
         local item = ns.ReadOnly.Read(reader, key)
-        local bounds, why = ns.ExperimentPolicy.Bounds(key, item.raw)
+        local bounds, why = policy.Bounds(key, item.raw)
         if not bounds then return nil, why end
         if not V.Finite(target) or target < bounds.min or target > bounds.max then return nil, "OUTSIDE_BOUNDED_TEST_POLICY" end
         if math.abs(target / bounds.step - math.floor(target / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP" end
         if V.Number(item.raw) == target then return nil, "UNCHANGED_VALUE_IS_NOT_A_CALIBRATION" end
-        local layer = key == "Contrast" and "visual" or "quality"
+        local layer = policy.Layer(key)
         local proposal, code = build(layer, { [key] = target }, false, { [key] = bounds })
         if not proposal then return nil, code end
         proposal.calibration, proposal.key, proposal.target, proposal.bounds = true, key, target, bounds
@@ -605,7 +616,7 @@ function B.NewExperiments(runtime)
     function lab.PreviewRestore(layer)
         lab.preview = nil
         if lab.busy then return nil, "BUSY" end
-        if layer ~= "visual" and layer ~= "quality" then return nil, "INVALID_LAYER" end
+        if layer ~= "visual" and layer ~= "quality" and not (cameraMode and layer == "camera") then return nil, "INVALID_LAYER" end
         local proposal, code = build(layer, {}, true)
         if not proposal then return nil, code end
         if #proposal.plan.operations == 0 then return nil, "NO_CAPTURED_EXPERIMENT_ORIGINAL" end
@@ -633,7 +644,7 @@ function B.NewExperiments(runtime)
     end
     local function targetBounds(key, target)
         local entry = data and data.journal.entries[key]
-        local bounds, why = ns.ExperimentPolicy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw)
+        local bounds, why = policy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw)
         if not bounds then return nil, why end
         if not V.Finite(target) or target < bounds.min or target > bounds.max then return nil, "OUTSIDE_BOUNDED_TEST_POLICY:" .. key end
         if math.abs(target / bounds.step - math.floor(target / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP:" .. key end
@@ -642,7 +653,7 @@ function B.NewExperiments(runtime)
     local function canApply(layer, targets)
         if lab.busy then return nil, "BUSY" end
         if lab.state == "RECOVERY" or lab.state == "CONFLICT" then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
-        if not ns.ExperimentPolicy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
+        if not policy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
         local overrides = {}
         for key, target in pairs(targets) do
             local bounds, why = targetBounds(key, target)
@@ -658,23 +669,32 @@ function B.NewExperiments(runtime)
         return run(proposal, callback)
     end
     function lab.SaveProfile(id, key, target)
+        if cameraMode then return nil, "INVALID_QUALITY_PROFILE" end
         if not data or not data.profiles[id] or key == "Contrast" then return nil, "INVALID_QUALITY_PROFILE" end
         local copy = V.Copy(data.profiles[id]); copy[key] = target
-        if not ns.ExperimentPolicy.ValidateTargets(copy, "quality") then return nil, "PROFILE_LIMIT" end
+        if not policy.ValidateTargets(copy, "quality") then return nil, "PROFILE_LIMIT" end
         local bounds, why = targetBounds(key, target)
         if not bounds then return nil, why end
         data.profiles[id] = copy; record("profile-save", "INFO", "PASS", { profile = id, key = key, requested = tostring(target) })
         return true
     end
     function lab.SelectProfile(id)
-        local targets = id == "currentBaseline" and {} or data and data.profiles[id]
-        if not targets then return nil, "INVALID_QUALITY_PROFILE" end
-        if id ~= "currentBaseline" and not next(targets) then return nil, "CONFIGURE_PROFILE_FIRST" end
+        if cameraMode then return nil, "INVALID_QUALITY_PROFILE" end
+        local targets, omitted = ns.Quality.Resolve(runtime, id)
+        if not targets then return nil, omitted end
+        for _, key in ipairs(omitted) do record("profile-omitted", "WARN", "CONTROL_UNAVAILABLE", { profile = id, key = key }) end
         local proposal, code = canApply("quality", targets)
         if not proposal then return nil, code end
         return run(proposal, function(ok)
             if ok then lab.activeProfile = id; db.config.selected.quality = id; record("profile-select", "INFO", "PASS", { profile = id }) end
         end)
+    end
+    function lab.RestoreLayer(layer, callback)
+        if lab.busy then return nil, "BUSY" end
+        if not cameraMode or layer ~= "camera" then return nil, "INVALID_LAYER" end
+        local proposal, code = build(layer, {}, true)
+        if not proposal then return nil, code end
+        return run(proposal, callback)
     end
     function lab.Observe()
         if lab.busy or not data then return end
@@ -699,7 +719,7 @@ function B.NewExperiments(runtime)
         return { state = lab.state, busy = lab.busy, error = lab.lastError, token = lab.preview and lab.preview.token,
             activeProfile = lab.activeProfile, operation = pending and "VERIFYING" or lab.preview and "PREVIEW" or "idle" }
     end
-    for _, name in ipairs({ "Preview", "PreviewRestore", "Confirm", "CanApply", "Apply", "SaveProfile", "SelectProfile", "Cancel" }) do
+    for _, name in ipairs({ "Preview", "PreviewRestore", "Confirm", "CanApply", "Apply", "RestoreLayer", "SaveProfile", "SelectProfile", "Cancel" }) do
         local fn, operation = lab[name], name
         lab[name] = function(...)
             if executing then return nil, "BUSY" end
@@ -711,7 +731,8 @@ function B.NewExperiments(runtime)
             return result, why
         end
     end
-    reader.experimentBusy = function() return lab.busy or executing end
+    if cameraMode then reader.nameBusy = function() return lab.busy or executing end
+    else reader.experimentBusy = function() return lab.busy or executing end end
     -- The player's Test & Restore click is the action. No prior certificate or exported card is required.
     function lab.Test(key, target)
         local ready, why = lab.Preview(key, target)
@@ -719,4 +740,188 @@ function B.NewExperiments(runtime)
         return lab.Confirm(lab.Status().token)
     end
     return lab
+end
+
+-- Native tier trials intentionally do not promise an unmapped dependency closure.
+-- Capture the named watch set before changing a tier, restore that tier, then require
+-- every captured value to match. Never synthesize child-setting repair writes.
+function B.NewTierTrials(runtime)
+    local reader, db, T = runtime.reader, runtime.db, ns.QualityTrial
+    local data = db and db.experiments
+    local signature = ns.Compatibility.Inspect(reader).signature
+    local trial = { state = T.HasRecord(data) and "RECOVERY" or "IDLE", busy = false, serial = 0 }
+    local executing = false
+    local function log(operation, level, code, fields) ns.Log.Record(reader, "quality-trial", operation, level, code, fields) end
+    local function refresh() if runtime.product and runtime.product.Refresh then runtime.product.Refresh() end end
+    local function fail(code)
+        local _, entry = T.HasRecord(data)
+        if entry then entry.state, entry.failure = "failed", code end
+        trial.busy, trial.state, trial.error = false, entry and "RECOVERY" or "IDLE", code
+        trial.serial = trial.serial + 1
+        log("state", "WARN", code); refresh(); return nil, code
+    end
+    local function gate()
+        if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
+        if ns.Compatibility.Inspect(reader).signature ~= signature then return nil, "SESSION_BUILD_CHANGED" end
+        if not ns.Compatibility.Experimental(signature) then return nil, "IDENTITY_UNAVAILABLE" end
+        if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
+        local combat = ns.ReadOnly.Call(reader, reader.env.InCombatLockdown)
+        if not combat or combat.n ~= 1 or combat[1] ~= false then return nil, "COMBAT_OR_RESTRICTION" end
+        if type(reader.env.C_Timer) ~= "table" or type(reader.env.C_Timer.After) ~= "function" then return nil, "FOLLOWUP_TIMER_UNAVAILABLE" end
+        if runtime.lab.busy or runtime.names and runtime.names.busy or runtime.engine.Status().state ~= "BASELINE" then return nil, "RESTORE_ACTIVE_SETTINGS_BEFORE_TIER_TRIAL" end
+        for key, entry in pairs(data.journal.entries) do
+            if not T.Known(key) or entry.descriptorVersion ~= 3 then return nil, "RESTORE_ACTIVE_SETTINGS_BEFORE_TIER_TRIAL" end
+        end
+        if #V.Keys(data.journal.entries) > 1 then return nil, "INVALID_TIER_JOURNAL" end
+        local key, entry = T.HasRecord(data)
+        if entry and (not data.sideEffects[key] or data.sideEffects[key].before ~= entry.originalRaw) then
+            return nil, "TIER_WATCH_RECORD_MISSING"
+        end
+        return true
+    end
+    local function schedule(delay, fn)
+        local serial = trial.serial
+        local ok = pcall(reader.env.C_Timer.After, delay, function()
+            if serial ~= trial.serial then return end
+            local success = pcall(fn)
+            if not success then fail("QUALITY_TRIAL_HANDLER_ERROR") end
+        end)
+        if not ok then return fail("FOLLOWUP_TIMER_FAILED") end
+        return true
+    end
+    local function apply(key, target, restoring)
+        local ready, why = gate(); if not ready then return nil, why end
+        local supported, reason = T.Support(reader, key, target); if not supported then return nil, reason end
+        local current = ns.ReadOnly.Read(reader, key)
+        if not ns.Planner.SafeObservation(current) then return nil, "UNSAFE_TIER_OBSERVATION" end
+        if not restoring and not T.Matches(reader, data.sideEffects, "before") then return nil, "WATCH_SNAPSHOT_CHANGED" end
+        local catalog = { [key] = T.Descriptor(key, signature) }
+        local context, journal = T.Context(signature), V.Copy(data.journal)
+        if restoring then
+            local entry = journal.entries[key]
+            if not entry or entry.descriptorVersion ~= 3 then return nil, "NO_TIER_ORIGINAL" end
+            context.explicitRecovery = true
+            entry.state, entry.lastVerifiedRaw, entry.failure = "owned", current.raw, nil
+        end
+        local targets = restoring and {} or { [key] = target }
+        local plan, code = ns.Planner.Build(catalog, context, { [key] = current }, journal, "quality", targets)
+        if not plan then return nil, code end
+        if #plan.operations ~= 1 then return nil, "UNCHANGED_TIER_CHOICE" end
+        local tx = assert(R.Begin(journal, plan, trial.serial, "BASELINE"))
+        local op = plan.operations[1]
+        if op.write then tx = assert(R.Before(tx, tx.id, 1, ns.ReadOnly.Read(reader, key), false))
+        else tx = assert(R.ReleaseObserved(tx, tx.id, 1, ns.ReadOnly.Read(reader, key), false)) end
+        if tx.state == "ROLLING_BACK" or tx.state == "DEFERRED" then return nil, tx.reason end
+        -- Keep the original even when the pure release model already removed it.
+        data.journal = V.Copy(tx.journal)
+        data.journal.entries[key] = data.journal.entries[key] or V.Copy(journal.entries[key])
+        data.journal.entries[key].state = "pending"
+        if op.write then
+            ready, why = gate(); if not ready then return nil, why end
+            local fresh = ns.ReadOnly.Read(reader, key)
+            if not ns.Planner.SafeObservation(fresh) or fresh.raw ~= op.beforeRaw then return nil, "EXTERNAL_CONFLICT" end
+            ready, why = gate(); if not ready then return nil, why end
+            log("write", "INFO", "ATTEMPT", { key = key, original = op.originalRaw, before = op.beforeRaw, requested = op.targetRaw })
+            local result = nativeSet(reader, key, op.targetRaw)
+            local after = ns.ReadOnly.Read(reader, key)
+            tx = assert(R.Observe(tx, tx.id, 1, result and result.n == 1 and result[1] == true
+                and ns.Planner.SafeObservation(after), after.raw))
+            log("immediate", "INFO", after.code, { key = key, immediate = after.raw })
+            if tx.state == "ROLLING_BACK" then return nil, "TIER_WRITE_OR_READBACK_FAILED" end
+            data.journal.entries[key].lastVerifiedRaw = after.raw
+        end
+        return tx
+    end
+    local restore
+    local function finishRestore(key, tx)
+        local ready, why = gate(); if not ready then return fail(why) end
+        local seen = ns.ReadOnly.Read(reader, key)
+        local verified = assert(R.Verify(tx, tx.id, { [key] = seen }))
+        local matched, differences = T.Matches(reader, data.sideEffects, "before")
+        if verified.state ~= "VERIFIED" or not matched then
+            for _, changed in ipairs(differences) do
+                log("restoration-difference", "WARN", "DEPENDENT_OR_EXTERNAL_VALUE_NOT_RESTORED", { key = changed,
+                    original = data.sideEffects[changed].before, after = ns.ReadOnly.Read(reader, changed).raw })
+            end
+            return fail("TIER_OR_DEPENDENT_RESTORATION_INCOMPLETE")
+        end
+        data.journal, data.sideEffects = V.Copy(verified.journal), {}
+        trial.busy, trial.state, trial.error = false, "RESTORED", nil
+        runtime.lab.state, runtime.lab.lastError = "BASELINE", nil
+        log("verified", "INFO", "NAMED_WATCH_ROUNDTRIP_PASS", { key = key, after = seen.raw })
+        refresh(); return true
+    end
+    restore = function(explicit)
+        local key, entry = T.HasRecord(data)
+        if not entry then return nil, "NO_TIER_ORIGINAL" end
+        if not explicit then
+            local same = T.Matches(reader, data.sideEffects, "after")
+            if not same then return fail("EXTERNAL_CONFLICT_NO_AUTOMATIC_RESTORE") end
+        end
+        trial.serial, trial.busy, trial.state = trial.serial + 1, true, "RESTORING"
+        local tx, why = apply(key, V.Number(entry.originalRaw), true)
+        if not tx then return fail(why) end
+        return schedule(0.15, function() finishRestore(key, tx) end)
+    end
+    function trial.Test(key, target)
+        if trial.busy then return nil, "BUSY" end
+        local ready, why = gate(); if not ready then return nil, why end
+        if next(data.journal.entries) then return nil, "QUALITY_TRIAL_RECOVERY_REQUIRED" end
+        if next(data.sideEffects) then
+            if not T.Matches(reader, data.sideEffects, "before") then return nil, "DEPENDENCY_RECOVERY_REQUIRED" end
+            data.sideEffects = {}
+        end
+        local current = ns.ReadOnly.Read(reader, key)
+        if not ns.Planner.SafeObservation(current) then return nil, "UNSAFE_TIER_OBSERVATION" end
+        ready, why = T.Support(reader, key, V.Number(current.raw)); if not ready then return nil, why end
+        ready, why = T.Support(reader, key, target); if not ready then return nil, why end
+        if V.Number(current.raw) == target then return nil, "UNCHANGED_TIER_CHOICE" end
+        data.sideEffects = T.Snapshot(reader) -- before the first possible mutation
+        trial.serial, trial.busy, trial.state, trial.error = trial.serial + 1, true, "TRYING", nil
+        local tx, code = apply(key, target, false)
+        if not tx then
+            if not T.HasRecord(data) then data.sideEffects = {} end -- no native attempt or ownership
+            return fail(code)
+        end
+        for watched, item in pairs(data.sideEffects) do
+            local after = ns.ReadOnly.Read(reader, watched)
+            if after.code ~= "OK" or not V.Number(after.raw) then return fail("WATCH_READ_UNAVAILABLE") end
+            item.after = after.raw
+            if item.after ~= item.before then log("observed-change", "INFO", "TIER_OR_EXTERNAL_CHANGE", { key = watched, before = item.before, after = item.after }) end
+            if (watched == "Brightness" or watched == "Contrast" or watched == "Gamma" or watched == "RenderScale")
+                and item.after ~= item.before then return fail("VISUAL_OR_RENDER_CHANGE_NO_AUTOMATIC_RESTORE") end
+        end
+        local held = V.Copy(data.journal.entries[key])
+        return schedule(2, function()
+            if not data.journal.entries[key] or data.journal.entries[key].originalRaw ~= held.originalRaw
+                or data.journal.entries[key].lastVerifiedRaw ~= held.lastVerifiedRaw then return fail("RECOVERY_DATA_CHANGED") end
+            local verified = assert(R.Verify(tx, tx.id, { [key] = ns.ReadOnly.Read(reader, key) }))
+            if verified.state ~= "VERIFIED" then return fail("TIER_LATE_DRIFT") end
+            restore(false)
+        end)
+    end
+    function trial.Restore()
+        if trial.busy then return nil, "BUSY" end
+        -- Explicit user action; no automatic restore after reload, error or conflict.
+        return restore(true)
+    end
+    function trial.Status()
+        local key, entry = T.HasRecord(data)
+        return { state = trial.state, busy = trial.busy, error = trial.error, key = key,
+            original = entry and entry.originalRaw, operation = trial.busy and "TRIAL" or "idle" }
+    end
+    for _, name in ipairs({ "Test", "Restore" }) do
+        local fn = trial[name]
+        trial[name] = function(...)
+            if executing then return nil, "BUSY" end
+            executing = true
+            local ok, result, why = pcall(fn, ...)
+            executing = false
+            if not ok then return fail("QUALITY_TRIAL_HANDLER_ERROR") end
+            if not result then trial.error = why; log(name, "WARN", why); refresh() end
+            return result, why
+        end
+    end
+    reader.tierOccupied = function() return trial.busy or executing or T.HasRecord(data) ~= nil end
+    return trial
 end
