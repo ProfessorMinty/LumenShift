@@ -12,8 +12,11 @@ function W.Asset(texture, path)
         not ok and "TEXTURE_API_ERROR" or result == false and "TEXTURE_REJECTED" or result == true and "TEXTURE_API_ACCEPTED" or "REQUESTED_NO_NATIVE_STATUS")
     return ok and result ~= false
 end
-W.colors = { bg = { 0.035, 0.055, 0.080, 0.97 }, card = { 0.065, 0.095, 0.13, 1 },
-    accent = { 0.38, 0.88, 0.79, 1 }, text = { 0.91, 0.95, 0.98, 1 }, muted = { 0.65, 0.73, 0.80, 1 } }
+W.colors = { bg = { 0.075, 0.087, 0.10, 0.99 }, sidebar = { 0.052, 0.064, 0.074, 1 },
+    card = { 0.105, 0.12, 0.135, 1 }, hover = { 0.14, 0.17, 0.18, 1 },
+    selected = { 0.09, 0.20, 0.19, 1 }, border = { 0.19, 0.23, 0.25, 1 },
+    accent = { 0.22, 0.86, 0.70, 1 }, text = { 0.94, 0.96, 0.96, 1 }, muted = { 0.63, 0.69, 0.72, 1 },
+    warning = { 0.94, 0.70, 0.40, 1 } }
 local function region(parent, kind, layer)
     if not parent.lumenPool then
         return kind == "font" and parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight") or parent:CreateTexture(nil, layer)
@@ -26,6 +29,7 @@ local function region(parent, kind, layer)
         pool[kind][index] = kind == "font" and parent:CreateFontString(nil, "OVERLAY", "GameFontHighlight") or parent:CreateTexture(nil, layer)
     end
     local item = pool[kind][index]; item:ClearAllPoints(); item:Show()
+    if kind == "texture" and item.SetDrawLayer then item:SetDrawLayer(layer) end
     return item
 end
 function W.Texture(parent, layer) return region(parent, "texture", layer) end
@@ -43,6 +47,7 @@ function W.CreatePool(env, root)
             frame.lumenPool = pool
         else frame:SetParent(parent) end
         if kind == "EditBox" then frame:SetMultiLine(false) end
+        if kind == "Button" and frame.Enable then frame:Enable() end
         frame:Show(); return frame
     end }, { __index = env })
     function pool.Reset()
@@ -50,7 +55,7 @@ function W.CreatePool(env, root)
         for _, owner in ipairs(pool.owners) do
             if owner ~= root then
                 owner:Hide(); owner:ClearAllPoints()
-                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnValueChanged", "OnEnterPressed", "OnEscapePressed" }) do
+                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnValueChanged", "OnEnterPressed", "OnEscapePressed" }) do
                     -- Native frames reject unsupported script names, so clear only installed scripts.
                     local ok, fn = pcall(owner.GetScript, owner, script)
                     if ok and fn then W.Script(owner, script, nil) end
@@ -77,18 +82,36 @@ function W.Fill(frame, color)
     texture:SetAllPoints(frame); texture:SetColorTexture(unpack(color or W.colors.card))
     return texture
 end
+function W.Rule(parent, x, y, width, color, thickness)
+    local texture = W.Texture(parent, "BORDER")
+    texture:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); texture:SetSize(width, thickness or 1)
+    texture:SetColorTexture(unpack(color or W.colors.border)); return texture
+end
+function W.Border(frame, color)
+    for _, side in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
+        local edge = W.Texture(frame, "BORDER"); edge:SetPoint(side, frame, side, 0, 0)
+        edge:SetSize((side == "TOP" or side == "BOTTOM") and frame:GetWidth() or 1,
+            (side == "LEFT" or side == "RIGHT") and frame:GetHeight() or 1)
+        edge:SetColorTexture(unpack(color or W.colors.border))
+    end
+end
+function W.Section(parent, title, x, y, width)
+    W.Text(parent, title, x, y, width, 11, W.colors.muted)
+    W.Rule(parent, x, y - 24, width)
+end
 function W.Checkbox(env, parent, title, description, x, y, width, get, set)
     local button = env.CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 56)
-    local box = env.CreateFrame("Frame", nil, button); box:SetSize(20, 20); box:SetPoint("TOPLEFT", 0, -2)
-    local background = W.Fill(box, { 0.18, 0.27, 0.32, 1 })
-    local mark = W.Text(box, "", 4, -1, 16, 17, W.colors.accent)
-    button.label = W.Text(button, title, 30, 0, width - 30, 16)
-    W.Text(button, description, 30, -26, width - 30, 13, W.colors.muted)
-    local function refresh() mark:SetText(get() and "x" or "") end
+    local box = env.CreateFrame("Frame", nil, button); box:SetSize(34, 18); box:SetPoint("TOPRIGHT", button, "TOPRIGHT", -6, -2)
+    local background = W.Fill(box)
+    local mark = W.Texture(box, "OVERLAY"); mark:SetSize(10, 10); mark:SetColorTexture(1, 1, 1, 1)
+    button.label = W.Text(button, title, 0, 0, width - 48, 16)
+    W.Text(button, description, 0, -26, width, 12, W.colors.muted)
+    local function refresh()
+        background:SetColorTexture(unpack(get() and W.colors.accent or W.colors.border))
+        mark:ClearAllPoints(); mark:SetPoint("TOPLEFT", box, "TOPLEFT", get() and 20 or 4, -4)
+    end
     W.Script(button, "OnClick", function() set(not get()); refresh() end)
-    W.Script(button, "OnEnter", function() background:SetColorTexture(0.25, 0.40, 0.43, 1) end)
-    W.Script(button, "OnLeave", function() background:SetColorTexture(0.18, 0.27, 0.32, 1) end)
     refresh(); return button
 end
 function W.Tip(env, frame, text)
@@ -98,62 +121,102 @@ function W.Tip(env, frame, text)
     end)
     W.Script(frame, "OnLeave", function() env.GameTooltip:Hide() end)
 end
-function W.Button(env, parent, label, x, y, width, callback, tip)
+function W.Button(env, parent, label, x, y, width, callback, tip, style)
     local button = env.CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 30)
     button.background = W.Fill(button)
     button.label = W.Text(button, label, 10, -7, width - 16, 13)
+    button.style, button.selected = style or "secondary", false
+    button.marker = W.Texture(button, "BORDER"); button.marker:SetPoint("LEFT", button, "LEFT", 0, 0)
+    button.marker:SetSize(2, 24); button.marker:SetColorTexture(unpack(W.colors.accent)); button.marker:Hide()
+    function button.Paint(hover)
+        local selected = button.selected
+        local color = button.style == "primary" and (hover and { 0.30, 0.94, 0.79, 1 } or W.colors.accent)
+            or selected and W.colors.selected or hover and W.colors.hover
+            or (button.style == "quiet" or button.style == "nav") and { 0, 0, 0, 0 } or W.colors.card
+        button.background:SetColorTexture(unpack(color))
+        button.label:SetTextColor(unpack(button.style == "primary" and W.colors.sidebar or selected and W.colors.accent or W.colors.text))
+        if selected then button.marker:Show() else button.marker:Hide() end
+    end
+    function button.SetSelected(value) button.selected = value == true; button.Paint(false) end
+    function button.SetStyle(value) button.style = value; button.Paint(false) end
     W.Script(button, "OnClick", callback)
     W.Script(button, "OnEnter", function(self)
-        self.background:SetColorTexture(0.12, 0.24, 0.28, 1)
+        button.Paint(true)
         if tip and env.GameTooltip then env.GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); env.GameTooltip:SetText(tip, 1, 1, 1, 1, true); env.GameTooltip:Show() end
     end)
     W.Script(button, "OnLeave", function(self)
-        self.background:SetColorTexture(unpack(W.colors.card))
+        button.Paint(false)
         if env.GameTooltip then env.GameTooltip:Hide() end
     end)
-    return button
+    button.Paint(false); return button
 end
 function W.Toggle(env, parent, label, x, y, width, get, set, tip)
-    local button
+    local button = W.Button(env, parent, label, x, y, width, function() end, tip, "quiet")
+    button.label:SetWidth(width - 74)
+    local track = env.CreateFrame("Frame", nil, button); track:SetSize(38, 20); track:SetPoint("TOPRIGHT", button, "TOPRIGHT", -8, -5)
+    local background = W.Fill(track)
+    local knob = W.Texture(track, "OVERLAY"); knob:SetSize(12, 12)
+    knob:SetColorTexture(0.96, 0.99, 0.99, 1)
     local function refresh()
-        button.label:SetText((get() and "[ON]  " or "[OFF] ") .. label)
-        button.label:SetTextColor(unpack(get() and W.colors.accent or W.colors.text))
+        local value = get()
+        background:SetColorTexture(unpack(value and W.colors.accent or W.colors.border))
+        knob:ClearAllPoints(); knob:SetPoint("TOPLEFT", track, "TOPLEFT", value and 22 or 4, -4)
+        button.value = value
     end
-    button = W.Button(env, parent, label, x, y, width, function() set(not get()); refresh() end, tip)
+    W.Script(button, "OnClick", function() set(not get()); refresh() end)
     refresh()
     return button
+end
+function W.Card(env, parent, label, description, x, y, width, height, selected, callback, icon)
+    local button = W.Button(env, parent, label, x, y, width, callback)
+    button:SetHeight(height)
+    local inset = icon and 60 or 18
+    button.label:ClearAllPoints(); button.label:SetPoint("TOPLEFT", button, "TOPLEFT", inset, -16)
+    button.label:SetWidth(width - inset - 16)
+    local font = button.label:GetFont(); button.label:SetFont(font, 16, "")
+    W.Text(button, description, inset, -40, width - inset - 16, 12, W.colors.muted)
+    if icon then
+        local texture = W.Texture(button, "ARTWORK"); texture:SetSize(30, 30)
+        texture:SetPoint("TOPLEFT", button, "TOPLEFT", 16, -20); W.Asset(texture, icon)
+    end
+    button.SetSelected(selected); return button
 end
 function W.Edit(env, parent, value, x, y, width, callback)
     local edit = env.CreateFrame("EditBox", nil, parent)
     edit:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); edit:SetSize(width, 28)
     edit:SetAutoFocus(false); edit:SetFontObject("GameFontHighlight"); edit:SetTextInsets(6, 6, 0, 0)
-    edit:SetMaxLetters(64); W.Fill(edit, { 0.10, 0.14, 0.18, 1 }); edit:SetText(tostring(value))
+    edit:SetMaxLetters(64); W.Fill(edit, W.colors.sidebar); W.Border(edit); edit:SetText(tostring(value))
     W.Script(edit, "OnEscapePressed", function(self) self:ClearFocus() end)
     W.Script(edit, "OnEnterPressed", function(self) callback(self:GetText()); self:ClearFocus() end)
     return edit
 end
-function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip)
-    W.Text(parent, label, x, y, 260, 13)
+function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip, width)
+    width = width or 520
+    W.Text(parent, label, x, y - 5, width - 85, 13)
     local slider = env.CreateFrame("Slider", nil, parent)
-    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 23); slider:SetSize(430, 15)
+    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 36); slider:SetSize(width, 15)
     slider:SetOrientation("HORIZONTAL"); slider:SetMinMaxValues(minimum, maximum); slider:SetValueStep(step)
     if slider.SetObeyStepOnDrag then slider:SetObeyStepOnDrag(true) end
-    W.Fill(slider, { 0.13, 0.20, 0.25, 1 })
-    local thumb = W.Texture(slider, "OVERLAY"); thumb:SetSize(10, 21); thumb:SetColorTexture(unpack(W.colors.accent)); slider:SetThumbTexture(thumb)
+    W.Rule(slider, 0, -5, width, W.colors.border, 3)
+    local progress = W.Rule(slider, 0, -5, 1, W.colors.accent, 3)
+    local thumb = W.Texture(slider, "OVERLAY"); thumb:SetSize(8, 15); thumb:SetColorTexture(unpack(W.colors.accent)); slider:SetThumbTexture(thumb)
     local initialized, edit = false
     local function update(value)
         value = math.max(minimum, math.min(maximum, math.floor(value / step + 0.5) * step))
         if not set(value) then value = get() end
+        progress:SetWidth(math.max(1, width * (value - minimum) / (maximum - minimum)))
         edit:SetText(string.format(step < 1 and "%.2f" or "%.0f", value))
     end
-    edit = W.Edit(env, parent, get(), x + 450, y - 14, 70, function(text)
+    edit = W.Edit(env, parent, get(), x + width - 64, y, 64, function(text)
         local number = tonumber(text)
         if not ns.Value.Finite(number) or number < minimum or number > maximum then edit:SetText(tostring(get())); return end
         slider:SetValue(number)
     end)
     W.Script(slider, "OnValueChanged", function(_, value) if initialized then update(value) end end)
     slider:SetValue(get()); initialized = true
+    progress:SetWidth(math.max(1, width * (get() - minimum) / (maximum - minimum)))
+    slider.edit = edit
     if tip then W.Tip(env, slider, tip) end
     return slider
 end

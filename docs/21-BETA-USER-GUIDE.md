@@ -1,12 +1,12 @@
-# LumenShift 0.2.0-dev.7 — install and explore
+# LumenShift 0.2.0-dev.8 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
 ## Install the whole folder
 
-1. In the old build, select **Natural** and **Current Baseline** if settings are active. The latest dev.6 export ended at Brightness 75 with original 45 retained, so select Natural before updating. Keep unresolved recovery records.
+1. In the old build, select **Natural** and **Current Baseline** if settings are active. Keep unresolved recovery records.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.7-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.8-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
@@ -16,9 +16,15 @@ Completed dev.6 setup stays completed; it should not pop up again. First-time us
 
 - **Left-click** the launcher/minimap icon for the six-mode wheel. **Right-click** for Studio.
 - Select **Night Vision**, then **Natural** to restore the actual captured originals. Other modes have editable Brightness, optional Contrast, tint and effects.
-- **Visual Modes**: edit saved sliders/toggles, then **Apply**. Natural restores owned visual settings; it leaves quality alone.
-- **Colors and Effects**, **Audio**, **Personal Presets** and **Accessibility** contain optional presentation, sounds, saved variations, reduced motion and scale controls.
+- **Visual Modes**: select a mode card, edit its sliders/toggles, then click the teal **Apply** button at bottom right. Selecting a card alone does not change the scene. Natural restores owned visual settings; it leaves quality alone.
+- **Colors & Effects**, **Audio**, **Personal Presets** and **Accessibility** contain optional presentation, sounds, saved variations, reduced motion and scale controls.
 - Optional bindings are under Key Bindings → LumenShift. No keys are assigned automatically. Commands remain shortcuts only.
+
+## Check the new layout
+
+Right-click the launcher to open Studio. Check that the grouped sidebar, page title and bottom-right action fit your screen. In Visual Modes, selecting another card should only change the editor; Apply performs the switch. Visit Graphics Quality and Camera, then try Accessibility → Studio scale and High-contrast panel. Longer Advanced Graphics and Diagnostic Center content scrolls while the main action stays visible. Existing preferences and completed setup are retained.
+
+The six smaller mode icons remain placeholders pending the owner’s new artwork. The approved metal-ring/aurora logo is included.
 
 ## Camera Mode and names
 
@@ -39,7 +45,7 @@ Studio → **Graphics Quality** offers usable experimental profiles:
 - **Performance:** modest reductions in scene detail. No FPS improvement is guaranteed.
 - **Current Baseline:** restore captured quality originals without switching off your visual mode.
 
-Targets and unavailable built-in controls are shown before Apply. Existing custom profiles keep exactly their saved values; built-in keys are not silently added. Edit named settings in **Advanced Graphics**, save values into a profile, then Apply. Removing all custom keys returns that slot to its built-in recipe. These are experimental recipes within bounded test ranges, not native defaults or measured safe maxima.
+Select a profile card to preview it, then click **Apply** at bottom right. Targets and the number of unavailable built-in controls are shown before Apply; the report contains individual capability details. Existing custom profiles keep exactly their saved values; built-in keys are not silently added. Edit named settings in **Advanced Graphics**, save values into a profile, then Apply. Removing all custom keys returns that slot to its built-in recipe. These are experimental recipes within bounded test ranges, not native defaults or measured safe maxima.
 
 ## Advanced controls and temporary trials
 
@@ -67,6 +73,6 @@ Restore before updating, disabling, downgrading or removing the addon. SavedVari
 
 ## What is verified
 
-Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
+Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.8 UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
 
 Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved with permission to install/use as part of LumenShift. Both notices ship in the addon. No new third-party assets are included.

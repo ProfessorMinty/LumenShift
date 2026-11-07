@@ -26,7 +26,7 @@ return function(fixture, native, eq, test)
     test("P02 setup and every Studio page load without any native write or sound", function()
         local f = studio()
         eq(f.env.LumenShiftDB.config.studio.enabled, false)
-        for page = 1, 7 do f.ui.Open(page) end
+        for page = 1, 9 do f.ui.Open(page) end
         f.enable(); eq(#f.calls, 0); eq(#f.uiMock.soundCalls, 0)
         eq(f.product.active, "natural"); eq(f.engine.Status().state, "BASELINE"); f.zero()
     end)
@@ -77,9 +77,9 @@ return function(fixture, native, eq, test)
     end)
     test("P07 Studio pages reuse native frames across repeated edits and diagnostics", function()
         local f = studio()
-        for page = 1, 7 do f.ui.Open(page) end
+        for page = 1, 9 do f.ui.Open(page) end
         local count = #f.uiMock.nodes
-        for _ = 1, 20 do for page = 1, 7 do f.ui.Open(page) end end
+        for _ = 1, 20 do for page = 1, 9 do f.ui.Open(page) end end
         eq(#f.uiMock.nodes, count); eq(#f.calls, 0); f.zero()
     end)
     test("P08 wheel clamps, cancels, selects by keyboard and respects combat without rebinding", function()
@@ -268,9 +268,80 @@ return function(fixture, native, eq, test)
         eq(f.product.active, "natural"); eq(f.engine.Status().state, "BASELINE")
         eq(f.values.Brightness, "52"); eq(#f.calls, 2); f.zero()
     end)
+    test("U01 card selection is read-only; the fixed Apply action uses the selected mode", function()
+        local f = studio(); f.enable(); f.ui.Open(1)
+        f.uiMock.Click("Moonlight"); eq(f.ui.edited, "moonlight"); eq(f.product.active, "natural")
+        eq(#f.calls, 0); eq(f.ui.primary.label.text, "Apply Moonlight")
+        f.uiMock.Click("Apply Moonlight"); f.uiMock.Flush()
+        eq(f.product.active, "moonlight"); eq(#f.calls, 1)
+        f.uiMock.Click("Natural"); eq(#f.calls, 1)
+        f.uiMock.Click("Apply Natural"); f.uiMock.Flush(); eq(f.values.Brightness, "52"); eq(#f.calls, 2)
+        f.zero()
+    end)
+    test("U02 quality cards preview without applying; fixed action keeps layers separate", function()
+        local f = studio(); f.enable(); f.select("nightVision"); f.ui.Open(2)
+        local applied
+        f.ns.runtime.lab.SelectProfile = function(id) applied = id; return true end
+        f.uiMock.Click("Vista"); eq(applied, nil); eq(f.ui.qualityID, "vista")
+        eq(f.product.active, "nightVision"); eq(#f.calls, 1)
+        f.uiMock.Click("Apply Vista"); eq(applied, "vista"); eq(#f.calls, 1)
+        f.ui.Open(1); eq(f.ui.primary.label.text, "Apply Night Vision")
+        f.zero()
+    end)
+    test("U03 switches persist preferences across navigation without changing the scene", function()
+        local f = studio(); f.ui.Open(6)
+        local config = f.env.LumenShiftDB.config
+        local before = config.preferences.reducedMotion
+        f.uiMock.Click("Reduced motion"); eq(f.env.LumenShiftDB.config.preferences.reducedMotion, not before)
+        f.ui.Open(1); f.ui.Open(6)
+        for _, n in ipairs(f.uiMock.nodes) do
+            if n:IsVisible() and n.label and n.label.text == "Reduced motion" then eq(n.value, not before) end
+        end
+        eq(f.ui.primary:IsShown(), false); eq(#f.calls, 0); eq(#f.uiMock.soundCalls, 0); f.zero()
+    end)
+    test("U04 Studio respects effective scale and stays inside a small viewport", function()
+        local f = studio()
+        f.env.UIParent:SetScale(0.711); f.env.UIParent:SetSize(1920 / 0.711, 1080 / 0.711)
+        f.ui.Open(1); eq(f.ui.window:GetEffectiveScale(), 1)
+        f.env.UIParent:SetSize(800, 600)
+        f.env.LumenShiftDB.config.studio.scale = 1.5; f.ui.Open(6)
+        assert(f.ui.window:GetWidth() * f.ui.window.scale <= 800)
+        assert(f.ui.window:GetHeight() * f.ui.window.scale <= 600)
+        eq(#f.calls, 0); f.zero()
+    end)
+    test("U05 pooled disabled controls are reenabled before reuse and callbacks are replaced", function()
+        local f = studio(); local W = f.ns.Widgets
+        local parent = f.env.CreateFrame("Frame", nil, f.env.UIParent)
+        local pool = W.CreatePool(f.env, parent); local old, fresh = 0, 0
+        local a = W.Button(pool.env, parent, "Old", 0, 0, 120, function() old = old + 1 end)
+        a:Disable(); f.uiMock.Click("Old"); eq(old, 0)
+        pool.Reset()
+        local b = W.Button(pool.env, parent, "Fresh", 0, 0, 120, function() fresh = fresh + 1 end)
+        eq(a, b); assert(b:IsEnabled()); f.uiMock.Click("Fresh"); eq(old, 0); eq(fresh, 1); f.zero()
+    end)
+    test("U06 page changes keep one selected navigation item and separate fixed action from scroll", function()
+        local f = studio()
+        for page = 1, 9 do
+            f.ui.Open(page)
+            local selected = 0; for id, b in pairs(f.ui.nav) do
+                if b.selected then selected = selected + 1; eq(id, page) end
+            end
+            eq(selected, 1); eq(f.ui.primary:GetParent(), f.ui.window)
+            f.ui.scrollBar:SetValue(f.ui.scrollMaximum)
+            eq(f.ui.primary.points[1][5], -695)
+        end
+        eq(#f.calls, 0); eq(#f.uiMock.soundCalls, 0); f.zero()
+    end)
     if os.getenv("LUMENSHIFT_UI_MODEL_PATH") then
         local f = studio()
-        for page = 1, 7 do f.ui.Open(page); f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-" .. page .. ".tsv") end
+        for page = 1, 9 do
+            f.ui.Open(page); f.ui.radial.launcher:Hide()
+            f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-" .. page .. ".tsv")
+        end
+        f.ui.Open(8); f.uiMock.Click("Shadows, lighting & water"); f.ui.radial.launcher:Hide()
+        f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-tiers.tsv")
         f.ui.window:Hide(); f.ui.Wheel(); f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-wheel.tsv")
+        local setup = f.ns.Setup.New(f.ns.runtime); setup.Open(); f.ui.radial.Close()
+        f.uiMock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-setup.tsv")
     end
 end

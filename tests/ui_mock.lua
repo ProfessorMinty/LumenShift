@@ -10,6 +10,10 @@ return function(env)
     function methods:GetWidth() return self.width or self.allPoints and self.allPoints:GetWidth() or 0 end
     function methods:GetHeight() return self.height or self.allPoints and self.allPoints:GetHeight() or 0 end
     function methods:GetSize() return self:GetWidth(), self:GetHeight() end
+    function methods:Enable() self.disabled = false end
+    function methods:Disable() self.disabled = true end
+    function methods:IsEnabled() return not self.disabled end
+    function methods:SetDrawLayer(layer) self.layer = layer end
     function methods:SetPoint(anchor, relative, relativePoint, x, y)
         if type(relative) ~= "table" then x, y, relativePoint, relative = relative or 0, relativePoint or 0, anchor, self.parent end
         self.points = self.points or {}; self.points[#self.points + 1] = { anchor, relative, relativePoint or anchor, x or 0, y or 0 }
@@ -45,6 +49,14 @@ return function(env)
     function methods:SetValue(value)
         value = math.max(self.minimum or value, math.min(self.maximum or value, value))
         local old = self.value; self.value = value
+        if self.thumb and self.maximum > self.minimum then
+            -- Offline approximation of native thumb positioning, never runtime UI behavior.
+            local fraction = (value - self.minimum) / (self.maximum - self.minimum)
+            self.thumb:ClearAllPoints()
+            if self.SetOrientationArgs[1] == "HORIZONTAL" then
+                self.thumb:SetPoint("CENTER", self, "LEFT", fraction * self:GetWidth(), 0)
+            else self.thumb:SetPoint("TOP", self, "TOP", 0, -fraction * (self:GetHeight() - self.thumb:GetHeight())) end
+        end
         if old ~= value and self.scripts.OnValueChanged then self.scripts.OnValueChanged(self, value) end
     end
     function methods:GetValue() return self.value end
@@ -103,6 +115,7 @@ return function(env)
     function mock.Click(label)
         for _, node in ipairs(mock.nodes) do
             if node.kind == "Button" and node.label and node.label.text == label and node:IsVisible() then
+                if node.disabled then return end
                 assert(node.scripts.OnClick, label); return node.scripts.OnClick(node, "LeftButton")
             end
         end
@@ -111,7 +124,7 @@ return function(env)
     function mock.Export(path)
         local file = assert(io.open(path, "w"))
         -- A tab-separated geometry model for optional offline rendering, not a game screenshot.
-        local function escape(s) return tostring(s or ""):gsub("\t", " "):gsub("\n", " / ") end
+        local function escape(s) return tostring(s or ""):gsub("\t", " "):gsub("\n", "\\n") end
         for _, n in ipairs(mock.nodes) do
             local point = n.points and n.points[1] or {}
             file:write(table.concat({ n.id, n.kind, n.parent and n.parent.id or 0, n:IsVisible() and 1 or 0,

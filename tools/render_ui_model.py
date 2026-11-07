@@ -58,15 +58,16 @@ def render(model, output):
         if n['kind'] == 'ScrollFrame':
             style += ['overflow:hidden']
         if n['kind'] in ('FontString', 'EditBox'):
-            style += [f'font:{n["size"]}px/1.35 "Segoe UI",sans-serif', f'text-align:{n["justify"].lower()}',
+            style += [f"font:{n['size']}px/1.35 'Segoe UI',sans-serif", f'text-align:{n["justify"].lower()}',
                       f'color:{rgba}', 'overflow-wrap:break-word']
-            content = html.escape(n['text'])
+            content = html.escape(n['text']).replace('\\n', '<br>')
             if n['kind'] == 'EditBox':
                 style += ['padding:4px 6px', 'z-index:1']
+                content = '<span style="position:relative;z-index:2">' + content + '</span>'
         children = [child for child, node in nodes.items() if node['parent'] == index]
         children.sort(key=lambda child: (nodes[child]['kind'] != 'Texture', child))
         return '<div style="' + ';'.join(style) + '">' + ''.join(emit(child) for child in children) + content + '</div>'
-    document = '<!doctype html><meta charset="utf-8"><title>LumenShift off-client UI model</title>'
+    document = '<!doctype html><meta charset="utf-8"><meta name="darkreader-lock"><meta name="color-scheme" content="dark"><title>LumenShift off-client UI model</title>'
     document += '<body style="margin:0;background:#172331;overflow:hidden">' + emit(root_id)
     document += '<div style="position:absolute;bottom:7px;left:15px;color:#a9baca;font:12px Segoe UI">OFF-CLIENT LUA UI MODEL — layout review only, not a native game screenshot</div></body>'
     output.write_text(document, encoding='utf-8')

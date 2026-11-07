@@ -2,9 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-dev.7** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a usable development build, not the accepted feature-complete beta.
+**0.2.0-dev.8** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a usable development build, not the accepted feature-complete beta.
 
-Version/build/interface differences now show one warning instead of locking controls. Actual APIs, values and ownership are still checked. Completed dev.6 setup stays completed; schema 5 keeps existing preferences and recovery. Dev.7 adds Camera Mode, built-in quality recipes and native tier trials.
+Version/build/interface differences now show one warning instead of locking controls. Actual APIs, values and ownership are still checked. Completed dev.6 setup stays completed; schema 5 keeps existing preferences and recovery. Dev.7 added Camera Mode, built-in quality recipes and native tier trials. Dev.8 redesigns Studio with grouped navigation, mode/profile cards, aligned settings, a fixed primary action and the approved aurora logo. [UI architecture and validation](docs/31-STUDIO-REDESIGN.md).
 
 Setup is one compact preferences screen. Finish saves your choices and enables ordinary mode use; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
@@ -29,7 +29,7 @@ Optional Contrast and named sharpening, foliage, distance, LOD, bloom and weathe
 
 The single native graphics call remains in WriteBoundary. Planner, per-key originals, ownership, conflict detection and readback remain internal requirements. An interrupted session or unresolved conflict needs an explicit recovery decision; startup never guesses a restore. SavedVariables is not immediately durable or crash-proof. Restore before updating or removing the addon.
 
-The owner supplied successful **dev.6 Brightness 45 → 75 → 45** native readbacks on **Forever 1.60.1:70862:16001**, with no report warnings/errors. [Evidence and compatibility policy](docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) distinguish that success from dev.7's new simulated paths. See the [quality feature/evidence matrix](docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera architecture](docs/30-CAMERA-MODE.md). **Dev.7 is an expanded interactive build, not an accepted feature-complete beta.**
+The owner supplied successful **dev.6 Brightness 45 → 75 → 45** native readbacks on **Forever 1.60.1:70862:16001**, with no report warnings/errors. [Evidence and compatibility policy](docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) distinguish that success from dev.7's new simulated paths. See the [quality feature/evidence matrix](docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera architecture](docs/30-CAMERA-MODE.md). **Dev.8 is an expanded interactive build, not an accepted feature-complete beta.**
 
 ## Diagnostics
 

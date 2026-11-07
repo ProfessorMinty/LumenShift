@@ -1,10 +1,20 @@
 # Changelog
 
-## Unpackaged artwork update — approved LumenShift logo (2026-11-07)
+## 0.2.0-dev.8 — Studio hierarchy and approved logo (2026-11-07)
+
+- Redesign Studio with a charcoal sidebar, grouped navigation, larger page titles, clear selected states, mode/profile cards, two-column settings and a fixed teal primary action.
+- Selecting a Studio mode/profile card previews the selection; the explicit Apply action uses existing controllers. Wheel shortcuts remain one-click actions.
+- Replace text toggles with compact switches, align slider value fields, shorten guidance and group diagnostics/recovery and advanced controls. Restyle the compact setup without resetting saved completion.
+- Include the owner's approved aurora logo from the earlier artwork commit; remaining mode icons await replacement assets.
+- Respect parent UI scale while fitting smaller viewports. Reenable pooled buttons and restore texture draw layers on reuse.
+- Preserve schema 5, existing preferences, independent visual/quality layers, native writers, capture/restore/conflict behavior and zero startup writes.
+- 205 Lua 5.1 mock tests and 8 packaging tests pass; syntax/structural checks pass. Review all nine Studio pages, setup and native-tier layout via an offline model. No new in-game result is claimed.
+
+## Earlier artwork update — approved LumenShift logo (2026-11-07)
 
 - Preserve the owner's supplied metal-ring/aurora PNG as the approved source master and replace the runtime logo used by the launcher, minimap entry, Studio and setup.
 - Add a mechanical TGA/PNG export script and prevent the older geometry generator from overwriting the approved logo. Record source/export hashes and honest owner-supplied provenance.
-- Existing dev.7 ZIPs remain unchanged; the new logo will be included in the next packaged build. No game installation or graphics behavior changes.
+- Existing dev.7 ZIPs remain unchanged; dev.8 is the first packaged build with this logo. No game installation or graphics behavior changes.
 
 
 ## 0.2.0-dev.7 — Camera Mode, usable quality profiles and warning-only compatibility (2026-11-07)
