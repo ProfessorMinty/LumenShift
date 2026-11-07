@@ -15,9 +15,9 @@ return function(fixture, native, eq, test)
     test("P01 schema-1 migration preserves journal, selections and source input without enabling controls", function()
         local f = native(); f.activate()
         local old = f.ns.Value.Copy(f.env.LumenShiftDB)
-        old.schemaVersion = 1; old.config.studio = nil; old.experiments = nil
+        old.schemaVersion = 1; old.config.studio = nil; old.experiments = nil; old.onboarding = nil
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_1_TO_3"); eq(copy.schemaVersion, 3); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
+        eq(code, "MIGRATED_1_TO_4"); eq(copy.schemaVersion, 4); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "52"); eq(copy.journal.entries.Brightness.state, "owned")
         eq(copy.config.studio.enabled, false)
         local reload = studio(old, "75"); eq(#reload.calls, 0); eq(reload.engine.Status().state, "RECOVERY")

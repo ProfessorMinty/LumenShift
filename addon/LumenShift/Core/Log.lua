@@ -66,7 +66,7 @@ function L.New(reader)
                 log.notified = true
                 local chat = reader.env.DEFAULT_CHAT_FRAME
                 if chat and type(chat.AddMessage) == "function" then
-                    pcall(chat.AddMessage, chat, "LumenShift: an addon error was recorded. Use /ls report to copy the diagnostic report.")
+                    pcall(chat.AddMessage, chat, "LumenShift: an addon error was recorded. Click LumenShift, then Diagnostic Center and Export Complete Diagnostic Report.")
                 end
             end
             return nil, "OWNED_HANDLER_ERROR"

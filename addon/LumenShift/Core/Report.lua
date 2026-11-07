@@ -30,7 +30,7 @@ function D.Environment(runtime)
     local known = { d3d11 = true, d3d12 = true, metal = true, vulkan = true, opengl = true, d3d11legacy = true }
     result.renderer = renderer.code == "OK" and known[token] and token or "unavailable:" .. (renderer.raw and "UNRECOGNIZED_RENDERER_REDACTED" or renderer.code)
     result.apis = ns.ReadOnly.Capabilities(reader)
-    for _, name in ipairs({ "GetBuildInfo", "GetTime", "GetServerTime", "GetPhysicalScreenSize", "InCombatLockdown", "PlaySoundFile", "StopSound", "CreateFrame" }) do
+    for _, name in ipairs({ "GetBuildInfo", "GetTime", "GetServerTime", "GetPhysicalScreenSize", "InCombatLockdown", "PlaySoundFile", "StopSound", "CreateFrame", "ReloadUI" }) do
         result.apis[name] = type(env[name]) == "function"
     end
     result.apis.C_Timer_After = type(env.C_Timer) == "table" and type(env.C_Timer.After) == "function"
@@ -49,7 +49,7 @@ function D.Run(runtime, reason)
     add("recovery-data", runtime.db and ns.Store.ValidateJournal(runtime.db.journal)
         and ns.ExperimentPolicy.Validate(runtime.db.experiments) and "PASS" or "BLOCKED", "schema-and-structure-only-not-disk-durability")
     add("native-setter", runtime.engine and runtime.engine.Status().setterAvailable and "PASS" or "BLOCKED", "availability-only-no-call")
-    for _, name in ipairs({ "ReadOnly", "Catalog", "Planner", "Recovery", "WriteBoundary", "StudioConfig", "ExperimentPolicy", "Product", "Diagnostics", "Report", "DiagnosticWindow" }) do
+    for _, name in ipairs({ "ReadOnly", "Catalog", "Planner", "Recovery", "WriteBoundary", "StudioConfig", "ExperimentPolicy", "Product", "Diagnostics", "Report", "DiagnosticWindow", "Setup", "EntryPoints" }) do
         add("module-" .. name, type(ns[name]) == "table" and "PASS" or "FAIL", type(ns[name]) == "table" and "loaded" or "MISSING_MODULE")
     end
     add("Studio", runtime.ui and runtime.ui.window and "PASS" or "BLOCKED", runtime.ui and "initialized-not-render-certified" or "UI_UNAVAILABLE")
@@ -136,6 +136,7 @@ function D.Build(runtime)
             .. " | last verified quality selection=" .. safe(runtime.lab and runtime.lab.activeProfile)
         lines[#lines + 1] = "setup=" .. bool(config.studio.enabled) .. " experimentalBrightness=" .. bool(config.studio.experimentalBrightness)
             .. " effects=" .. bool(config.studio.effects) .. " audio=" .. bool(config.preferences.sound) .. " reducedMotion=" .. bool(config.preferences.reducedMotion)
+        lines[#lines + 1] = "setup wizard completed=" .. bool(db.onboarding.completed)
         for _, id in ipairs(ns.StudioConfig.Order) do
             local mode = config.studio.modes[id]
             lines[#lines + 1] = id .. ": brightness=" .. D.Number(mode.brightness) .. " contrast=" .. D.Number(mode.contrast)
@@ -153,6 +154,8 @@ function D.Build(runtime)
         local status = engine.Status()
         lines[#lines + 1] = label .. ": state=" .. safe(status.state) .. " operation=" .. safe(status.operation) .. " error=" .. safe(status.error or "none")
             .. " original=" .. D.Number(status.original) .. " preview=" .. safe(status.token or "none")
+        if status.preview then lines[#lines + 1] = "PREVIEW Brightness original=" .. D.Number(status.preview.original)
+            .. " snapshot=" .. D.Number(status.preview.current) .. " target=" .. D.Number(status.preview.target) end
     end
     if db then
         for _, journal in ipairs({ db.journal, db.experiments.journal }) do

@@ -1042,5 +1042,6 @@ end)
 
 assert(loadfile("tests/product.lua"))()(fixture, native, eq, test)
 assert(loadfile("tests/diagnostic.lua"))()(fixture, eq, test)
+assert(loadfile("tests/wizard.lua"))()(fixture, eq, test)
 print(string.format("SIMULATED: %d passed, %d failed (%s); no native game tests", passed, failed, _VERSION))
 assert(failed == 0, "Mock test failures")

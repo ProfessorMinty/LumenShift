@@ -226,6 +226,7 @@ function S.New(runtime)
                 function(value) update(function(copy) copy.studio.scale = value end); ui.Size(); return true end)
             button("Reset launcher position", function() update(function(copy) copy.studio.launcher.x = 80; copy.studio.launcher.y = -160 end) end)
             line("Set keys in the game's Key Bindings > LumenShift: Toggle Night Vision, Open wheel, Open Studio. No key is assigned automatically.", 65)
+            button("Setup wizard", function() if runtime.setup then runtime.setup.Open() end end)
             line("Wheel keyboard: 1–6 select; arrows/Tab navigate; Enter applies; Escape cancels. Click selection is supported. Hold/release selection stays unavailable until input-focus behavior is verified.", 85, W.colors.muted)
         elseif ui.page == 7 then
             line("Diagnostic Center", 30, W.colors.accent)
@@ -242,9 +243,12 @@ function S.New(runtime)
             local status = runtime.engine.Status()
             if status.token then
                 local token = status.token
+                local observed = ns.ReadOnly.Read(runtime.reader, "Brightness")
+                line("Brightness card: original=" .. ns.Report.Number(status.preview and status.preview.original)
+                    .. "  current=" .. ns.Report.Number(observed.raw) .. "  proposed target=" .. ns.Report.Number(status.preview and status.preview.target), 66, W.colors.accent)
                 button("Confirm displayed recovery card " .. token, function()
                     runtime.engine.Confirm(token); product.Observe(); ui.Invalidate(7); ui.BuildPage()
-                end, "This is a real Brightness operation. Review the current and original values in the chat recovery card before confirming.")
+                end, "This is a real Brightness operation. Review the original, current and restore target displayed in this window.")
             end
             button("Verify pending recovery (read only)", function() runtime.engine.Verify(); product.Observe(); ui.Invalidate(7); ui.BuildPage() end)
             button("Cancel preview (does not restore graphics)", function() runtime.engine.Cancel(); product.Observe(); ui.Invalidate(7); ui.BuildPage() end)
@@ -287,6 +291,8 @@ function S.New(runtime)
         local index = i
         W.Button(env, window, label, 16, -112 - (i - 1) * 47, 198, function() ui.page = index; ui.BuildPage() end)
     end
+    W.Button(env, window, "Open mode wheel", 16, -505, 198, function() window:Hide(); ui.Wheel() end)
+    W.Button(env, window, "Export report", 16, -550, 198, function() ns.DiagnosticWindow.Open(runtime) end)
     if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftStudio") end
     ui.radial = ns.Radial.New(runtime, function() ui.Open() end)
     function ui.CloseWheel() if ui.radial.Close then ui.radial.Close() end; window:Hide() end
@@ -294,21 +300,5 @@ function S.New(runtime)
     product.Refresh = ui.Refresh
     ns.Log.Record(runtime.reader, "studio", "initialize", "INFO", "PASS")
     window:Hide()
-    -- Native Settings is discoverability only; no proxy CVar setters are registered.
-    if type(env.Settings) == "table" and type(env.Settings.RegisterCanvasLayoutCategory) == "function"
-        and type(env.Settings.RegisterAddOnCategory) == "function" then
-        local registered = pcall(function()
-            local canvas = env.CreateFrame("Frame")
-            W.Text(canvas, "LumenShift — Northern Lights Labs", 20, -20, 580, 20)
-            W.Button(env, canvas, "Open Visual Studio", 20, -70, 280, function() ui.Open() end)
-            W.Text(canvas, "Visual modes, optional UI effects, independent quality diagnostics and recovery. No automatic graphics changes at login.", 20, -120, 580, 14)
-            local category = env.Settings.RegisterCanvasLayoutCategory(canvas, "LumenShift")
-            env.Settings.RegisterAddOnCategory(category)
-        end)
-        ns.Log.Record(runtime.reader, "studio", "settings-registration", registered and "INFO" or "WARN",
-            registered and "PASS" or "NATIVE_SETTINGS_REGISTRATION_FAILED")
-    else
-        ns.Log.Record(runtime.reader, "studio", "settings-registration", "WARN", "SETTINGS_API_UNAVAILABLE_USE_SLASH")
-    end
     return ui
 end

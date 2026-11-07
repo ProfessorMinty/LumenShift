@@ -2,7 +2,7 @@
 ## Title: LumenShift
 ## Notes: Visual modes, optional effects and diagnostics. Initial setup required; no startup writes.
 ## Author: Northern Lights Labs
-## Version: 0.2.0-dev.2
+## Version: 0.2.0-dev.3
 ## SavedVariables: LumenShiftDB
 ## X-Website: https://github.com/ProfessorMinty/LumenShift
 ## X-LumenShift-Phase: INTERACTIVE_DIAGNOSTIC_DEVELOPMENT
@@ -33,4 +33,6 @@ UI/Presentation.lua
 UI/Audio.lua
 UI/Radial.lua
 UI/Studio.lua
+UI/Setup.lua
+UI/EntryPoints.lua
 Core/Bootstrap.lua

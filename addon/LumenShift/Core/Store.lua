@@ -31,7 +31,8 @@ end
 function S.Open(raw)
     if raw == nil then
         return { schemaVersion = ns.schemaVersion, addonVersion = ns.version,
-            config = ns.Profiles.Defaults(), journal = S.EmptyJournal(), experiments = ns.ExperimentPolicy.Defaults() }, "NEW"
+            config = ns.Profiles.Defaults(), journal = S.EmptyJournal(), experiments = ns.ExperimentPolicy.Defaults(),
+            onboarding = { completed = false } }, "NEW"
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
@@ -41,22 +42,30 @@ function S.Open(raw)
             or not V.Raw(data.addonVersion) or not ns.Profiles.ValidateLegacy(data.config)
             or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
         data.config.studio = ns.StudioConfig.Defaults()
-        data.schemaVersion, migrated = 2, "MIGRATED_1_TO_3"
+        data.schemaVersion, migrated = 2, "MIGRATED_1_TO_4"
     end
     if data.schemaVersion == 2 then
         if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
             or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
             or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
         data.experiments = ns.ExperimentPolicy.Defaults()
-        data.schemaVersion, migrated = ns.schemaVersion, migrated or "MIGRATED_2_TO_3"
+        data.schemaVersion, migrated = 3, migrated or "MIGRATED_2_TO_4"
+    end
+    if data.schemaVersion == 3 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) then return nil, "QUARANTINED_SCHEMA" end
+        data.onboarding = { completed = false }
+        data.schemaVersion, migrated = 4, migrated or "MIGRATED_3_TO_4"
     end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1/2 migrations above are permitted.
+        -- Only the explicitly supported schema-1/2/3 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
-    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true })
+    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true })
         or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
-        or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) then return nil, "QUARANTINED_SCHEMA" end
+        or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments)
+        or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
     data.addonVersion = ns.version
     return data, migrated or "VALIDATED_COPY"
 end

@@ -1,4 +1,4 @@
-# LumenShift 0.2.0-dev.2 — install, explore, report
+# LumenShift 0.2.0-dev.3 — install, explore, report
 
 Northern Lights Labs · World of Warcraft: Forever 1.60.1.70790 / interface 16001.
 
@@ -8,15 +8,23 @@ This is the new self-diagnosing interactive development build. Arctic has not in
 
 1. If the currently installed older addon still owns a brightness change, finish its restore/verification first. Keep any recovery card. Do not discard unresolved originals to update.
 2. Exit WoW. Back up the old LumenShift addon folder and its SavedVariables if present. Leave other addons and the rest of WTF/Interface alone.
-3. Extract `LumenShift-0.2.0-dev.2-<commit>.zip` outside the game. Replace only the old addon folder with the **entire extracted LumenShift folder** in your existing Forever AddOns directory.
+3. Extract `LumenShift-0.2.0-dev.3-<commit>.zip` outside the game. Replace only the old addon folder with the **entire extracted LumenShift folder** in your existing Forever AddOns directory.
 4. The resulting layout must be `World of Warcraft/_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with `Core`, `UI`, `Media` and `Bindings.xml` beside the TOC. **Do not put the ZIP itself in AddOns or install just the TOC.** Avoid an extra nested `LumenShift/LumenShift` folder.
-5. Start WoW, enable LumenShift in the AddOns list and log in. Startup runs read-only checks and never changes graphics or plays sounds. Schemas 1/2 migrate to 3 while preserving originals; corrupt/newer data is quarantined. Do not downgrade over schema 3 or delete recovery data to silence an error.
+5. Start WoW, enable LumenShift in the AddOns list and log in. Startup runs read-only checks and never changes graphics or plays sounds. Schemas 1/2/3 migrate to 4 while preserving originals; corrupt/newer data is quarantined. Do not downgrade over schema 4 or delete recovery data to silence an error.
 
-## Explore in one session
+## Complete the setup wizard
 
-Open `/ls studio`. Browse all eight pages and open the wheel with `/ls wheel` or a left-click on the launcher; right-click opens Studio. Drag the launcher to move it. The wheel supports labeled mouse selection, 1–6, arrows/Tab, Enter and Escape. Optional bindings are in the game's Key Bindings → LumenShift; nothing assigns keys automatically.
+The wizard appears after your first login, outside combat. Choose effects, sounds, animation, reduced motion, high contrast and launcher visibility. On the final page, choose whether to enable user-controlled visual switching, review the current brightness/recovery note and click **Finish & Reload UI**. The addon saves your choices and requests a UI reload from that button. It does not restart the whole game, apply a graphics mode or play a sound during setup/reload.
 
-When ready to try graphics, use a stationary scene outside combat. On **Visual Modes**, read/enable the recovery acknowledgement, then click **Enable visual switching**. This alone does not write. Save the printed original-value recovery note outside the game. Choose Night Vision from the wheel or `/ls toggle`; the addon captures the actual original, applies 75 and performs immediate plus scheduled verification. Select **Natural** (or toggle again) to restore the exact original. Never assume it was 45. If already at 75, no ownership/write is needed.
+Closing the wizard with Later/Close leaves your preferences unchanged; it can reopen from the launcher or Settings. Completed setup stays completed on later logins. Existing unresolved graphics ownership opens Recovery first instead of reloading over it. If reload is unavailable or fails, the wizard explains what happened; it does not loop or repeatedly reload.
+
+## Explore with buttons
+
+After reload, **left-click the labeled LumenShift launcher or minimap button** for the wheel; **right-click** for Studio. The native **Settings → AddOns → LumenShift** page also opens Studio, the setup wizard, diagnostics and export. If the minimap is unavailable, a labeled screen button takes its place. Hiding the movable launcher does not remove that separate entry point.
+
+Choose **Night Vision** on the wheel to try Brightness 75 after enabling controls in setup. The addon captures the actual original and performs immediate plus scheduled verification. Select **Natural** to restore the exact original. Never assume it was 45. If already at 75, no ownership/write is needed. Use a stationary scene outside combat for your first visual test.
+
+The wheel supports labeled mouse selection, 1–6, arrows/Tab, Enter and Escape. You can assign optional keys in Key Bindings → LumenShift. No commands or automatic key assignments are required.
 
 Explore the six editors, Colors and Effects, Audio, Personal Presets and Accessibility. Slider edits save configuration; Apply is separate. Non-75 brightness targets require the clearly labeled experimental opt-in. Those targets are authored starting points, not proven safe maxima or measured performance settings. Audio begins muted: enable it and use the explicit previews. Effects, animation, sound and screenshot bars can be disabled; bars need a positive mode height and global screenshot option. Effects are UI textures below ordinary HUD, not world shaders, and clear in combat without automatic return. Custom-UI layering still needs your visual judgment.
 
@@ -24,7 +32,7 @@ Personal presets save up to 24 mode variations; Apply loads/selects one, while r
 
 ## Optional Contrast and quality experiments
 
-Open **Calibration Lab** or `/ls calibrate`. Return to Natural and restore existing experimental ownership before starting a new calibration.
+In Studio, click **Calibration Lab**. Return to Natural and restore existing experimental ownership before starting a new calibration.
 
 1. Select a named setting and read its current value/capability and explicit test-policy bounds. Enter the exact target you want to try. No target is applied just by opening/editing.
 2. Click **Preview exact modification (read only)**. It shows original/current/target and watch coverage. Click **Export Complete Diagnostic Report**, Select All, Ctrl+C, and save this preview outside the game before writing; SavedVariables is not immediately durable.
@@ -37,17 +45,17 @@ Do not deliberately induce crashes or adverse conflicts during initial explorati
 
 ## One report instead of manual probes
 
-Use `/ls diag` or **Run Diagnostics** in Diagnostic Center. This performs safe reads only: no settings changes, audio playback, synthetic UI input or reload. PASS, FAIL, BLOCKED and NOT TESTED are distinct. Visual effects/audio/persistence cannot be certified by reads.
+In Studio, click **Diagnostic Center → Run Diagnostics**. This performs safe reads only: no settings changes, audio playback, synthetic UI input or reload. PASS, FAIL, BLOCKED and NOT TESTED are distinct. Visual effects/audio/persistence cannot be certified by reads.
 
-Click **Export Complete Diagnostic Report**, or type `/ls report`. In its dedicated scrollable window, click **Select All**, press **Ctrl+C**, then paste directly into Codex/ChatGPT. The report has build/commit, client/UI/API observations, current/default/security values, requests/readbacks/originals, recovery, watched changes, recent warnings/errors and bounded event history. You do not need to paste unrelated chat or manually collect separate values/screenshots. Add one sentence describing what looked or sounded wrong; the addon cannot measure your visual judgment.
+Click **Export Complete Diagnostic Report** (also available from Settings or Studio’s persistent Export report button). In its dedicated scrollable window, click **Select All**, press **Ctrl+C**, then paste directly into Codex/ChatGPT. The report has build/commit, client/UI/API observations, current/default/security values, requests/readbacks/originals, recovery, watched changes, recent warnings/errors and bounded event history. You do not need to paste unrelated chat or manually collect separate values/screenshots. Add one sentence describing what looked or sounded wrong; the addon cannot measure your visual judgment.
 
-The default export excludes character/preset names, chat, account identifiers, installation paths, credentials and raw native error text. Nothing uploads automatically. A guarded addon error produces one chat notice pointing to the report. If the addon fails before slash commands exist, that is outside its own reporting ability; report the loading error without unrelated chat/account data.
+The default export excludes character/preset names, chat, account identifiers, installation paths, credentials and raw native error text. Nothing uploads automatically. A guarded addon error produces one notice pointing to the report. A separate minimap/Settings entry can still open the report if Studio initialization fails. A failure before the addon can create any UI lies outside its own reporting ability; report that loading error without unrelated chat/account data.
 
 ## Recovery and stopping
 
 Conflicts, late drift or uncertain reload state never automatically restore/reapply. **Cancel** cancels permission/callbacks, not the current graphics value. Save the report while still in that login; event history is memory-only and bounded.
 
-For Brightness, use **Restore My Brightness — preview only** in Diagnostic Center or `/ls restore`. Read the displayed values, then use the exact numbered `/ls confirm ...` command shown and `/ls verify` for a fresh read. For experimental Contrast/quality, use the corresponding **Preview recovery** button in Calibration Lab, export the preview, then confirm. This intentionally replaces the displayed current value with the captured original, so confirm only if that is what you want. Failed recovery retains the record without an uncertain retry/reapply.
+For Brightness, click **Restore My Brightness — preview only** in Diagnostic Center. Review the original, current and proposed target displayed in the window, click **Confirm displayed recovery card**, then **Verify pending recovery (read only)**. No numbered command needs to be typed. For Contrast/quality, use the corresponding **Preview recovery** button in Calibration Lab, export the preview and click its confirmation button. Recovery intentionally replaces the displayed current value with the captured original, so confirm only if that is what you want. Failed recovery retains its record without an uncertain retry/reapply.
 
 Unexpected watched-setting changes are reported as dependency **or external change**, with readable before/after values. The addon does not guess which changed them or overwrite unrelated settings. Such records remain unresolved for review even after the primary value is restored. Send the report before further experiments if they appear.
 
@@ -56,3 +64,7 @@ Before disabling/updating/removing, select Natural, restore owned quality, resol
 ## Terms
 
 Code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original artwork/icons/textures/sounds/logo/branding: All Rights Reserved; install/use with LumenShift is permitted, independent reuse/redistribution in other projects needs permission. See both included licenses. Third-party terms remain independent. No CurseForge upload or publication has occurred.
+
+## Optional shortcuts
+
+Slash commands remain available for convenience or troubleshooting; they are not required for setup, modes, configuration, diagnostics, export or recovery. The normal entry points are the automatic wizard, launcher/minimap buttons and Settings page.

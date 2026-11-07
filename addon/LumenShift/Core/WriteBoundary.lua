@@ -143,7 +143,7 @@ function B.New(reader, db, emit)
                 failure = lastError, held = V.Copy(db.journal) }
             state = "AWAITING_VERIFICATION"
         end
-        say("Operation failed: " .. lastError .. "; compensation state " .. state .. ". Inspect /ls.")
+        say("Operation failed: " .. lastError .. "; compensation state " .. state .. ". Open Diagnostic Center.")
     end
 
     local function prepare(action, target, ordinary)
@@ -188,8 +188,8 @@ function B.New(reader, db, emit)
         if ordinary then
             shown = say("User-selected visual control; original retained for restoration. No automatic login changes.") and shown
         else
-            shown = say("Only after live-test approval and saving the card: /ls confirm " .. serial
-                .. ". This authorizes the displayed operation and bounded compensation for normal on/off failures.") and shown
+            shown = say("After reviewing and saving this card, use Confirm displayed recovery card " .. serial
+                .. " in Diagnostic Center. This authorizes the displayed operation and bounded compensation for normal on/off failures.") and shown
         end
         if not shown then return nil, "RECOVERY_CARD_NOT_DISPLAYED" end
         proposal = { token = tostring(serial), plan = plan, journal = journal, sourceJournal = V.Copy(db.journal),
@@ -247,7 +247,7 @@ function B.New(reader, db, emit)
             held = V.Copy(db.journal) }
         state = "AWAITING_VERIFICATION"
         say((pending.ordinary and "Immediate readback matched; a separate read-only check is scheduled. Original="
-            or "Immediate readback matched. Inspect the scene, then /ls verify for a separate fresh read. Original=") .. op.originalRaw)
+            or "Immediate readback matched. Inspect the scene, then click Verify pending recovery in Diagnostic Center. Original=") .. op.originalRaw)
         return true
     end
 
@@ -285,7 +285,7 @@ function B.New(reader, db, emit)
         state, lastError = sessionOwned and "ACTIVE" or "BASELINE", nil
         ns.Log.Record(reader, "brightness", "verified", "INFO", state, { key = "Brightness", after = observed.raw, state = state })
         transaction, dirty = nil, false
-        say(sessionOwned and "Brightness target verified by readback. Natural restores the original; /ls off previews restoration."
+        say(sessionOwned and "Brightness target verified by readback. Select Natural on the wheel to restore the original."
             or "Original Brightness verified by exact readback; ownership released.")
         return true
     end
@@ -297,7 +297,7 @@ function B.New(reader, db, emit)
         busy = false
         if not ok then
             mark("ENGINE_ERROR", false)
-            say("Engine error; writes locked. Preserve the recovery card and inspect /ls.")
+            say("Engine error; writes locked. Preserve the recovery card and open Diagnostic Center.")
             return nil, "ENGINE_ERROR"
         end
         if not result then
@@ -344,10 +344,12 @@ function B.New(reader, db, emit)
             end
         end
         local record = db and db.journal.entries.Brightness
+        local preview = proposal and proposal.plan.operations[1]
         return { state = state, operation = operation, original = record and record.originalRaw,
             lastVerified = record and record.lastVerifiedRaw, token = proposal and proposal.token,
             error = lastError, notificationsPending = dirty, writeEnabled = false, setterAvailable = setterAvailable(reader),
-            transactionID = transaction and transaction.id }
+            transactionID = transaction and transaction.id,
+            preview = preview and { original = preview.originalRaw, current = preview.beforeRaw, target = preview.targetRaw } }
     end
     return engine
 end

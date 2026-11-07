@@ -17,6 +17,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     end
     if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
         if runtime.product then runtime.product.Observe() end
+        if runtime.setup then runtime.setup.MaybeOpen() end
         return -- no queued reapply, even when combat ends
     end
     if event ~= "ADDON_LOADED" or name ~= addonName or runtime.loaded then return end
@@ -40,6 +41,10 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         local ok, ui = pcall(ns.Studio.New, runtime)
         if ok then runtime.ui = ui else runtime.lastError = "UI_INITIALIZATION_FAILED"; runtime.log.Add("studio", "initialize", "ERROR", runtime.lastError) end
     end
+    runtime.setup = ns.Setup.New(runtime)
+    local entryOK, entry = pcall(ns.EntryPoints.New, runtime)
+    if entryOK then runtime.entry = entry
+    else runtime.log.Add("entry", "initialize", "ERROR", "ENTRY_UI_INITIALIZATION_FAILED") end
     BINDING_HEADER_LUMENSHIFT = "LumenShift"
     BINDING_NAME_LUMENSHIFT_TOGGLE = "Toggle Night Vision"
     BINDING_NAME_LUMENSHIFT_WHEEL = "Open / close visual wheel"

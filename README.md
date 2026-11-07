@@ -2,7 +2,7 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-dev.2** connects six visual modes, an icon wheel, eight-page Studio, optional effects/audio, personal presets, experimental Contrast/quality calibration and a Diagnostic Center with one copyable report.
+**0.2.0-dev.3** connects six visual modes, an icon wheel, eight-page Studio, optional effects/audio, personal presets, experimental Contrast/quality calibration and a Diagnostic Center with one copyable report.
 
 Arctic has **not installed or tested 0.2.0-beta.1 or this integration**. The older development version's Brightness 45 → 75 → 45 round trip is evidence only for that test. New native behavior remains unverified. This is not a published release or an accepted feature-complete beta.
 
@@ -10,11 +10,12 @@ Arctic has **not installed or tested 0.2.0-beta.1 or this integration**. The old
 
 Install the **whole extracted LumenShift folder**, not the ZIP or TOC alone, under the existing Forever `Interface/AddOns` folder. Follow the [consolidated user guide](docs/21-BETA-USER-GUIDE.md).
 
-- `/ls studio`: modes, effects, audio, presets, accessibility, independent quality, diagnostics and calibration.
-- `/ls wheel`: labeled mouse/keyboard wheel; left-click the movable launcher for the wheel, right-click for Studio.
-- `/ls diag`: run read-only checks and open Diagnostic Center. Startup also runs checks without graphics writes or sounds.
-- `/ls report`: open **Export Complete Diagnostic Report**, click **Select All**, press **Ctrl+C**, and paste into Codex/ChatGPT.
-- `/ls` or `/lumenshift`: short read-only status. `/ls toggle`: Night Vision/Natural after explicit setup.
+1. Log in: the setup wizard opens automatically. Choose appearance, sound, accessibility and control preferences, then click **Finish & Reload UI**.
+2. After reload, click the labeled launcher or minimap button for modes; right-click for Studio.
+3. **Settings → AddOns → LumenShift** provides Studio, the setup wizard, diagnostics and export.
+4. In Studio, click **Diagnostic Center → Run Diagnostics**, or **Export Complete Diagnostic Report → Select All → Ctrl+C**.
+
+Normal use requires no slash commands. They remain optional shortcuts. Setup saves preferences without applying a graphics mode; its final button reloads the interface only after your click. Read-only startup checks never change graphics or play sounds.
 
 Reports include actual client/build/UI/API observations, graphics flags and values, operations/readbacks, recovery, module/UI/media failures and bounded session history. Names, chat, accounts, paths, credentials, preset names and raw native error text are excluded. No upload, clipboard API or arbitrary game-side file access.
 
@@ -28,7 +29,7 @@ Calibrated Contrast is optional per visual mode. Balanced/Vista/Performance are 
 
 WriteBoundary contains the single private native graphics call. The preserved Brightness engine and leaf experiments use planner preflight, capture-before-write, exact ownership, readback and conflict protection. Reload, conflict or late failure never triggers an uncertain automatic restore. Composite Brightness+Contrast failures can leave a partial operation with originals retained and reported. SavedVariables are not immediately durable or crash-proof; save recovery reports externally and restore before updating/removing the addon.
 
-Read [current architecture, limits, sources and tests](docs/23-INTERACTIVE-DIAGNOSTICS.md). Historical research and [native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md) are preserved. Native UI, media, performance, persistence and EllesmereUI coexistence are untested for this build.
+Read [setup and button-first access](docs/24-GUIDED-SETUP.md) and [diagnostic architecture, limits and sources](docs/23-INTERACTIVE-DIAGNOSTICS.md). Historical research and [native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md) are preserved. Native UI, media, performance, persistence and EllesmereUI coexistence are untested for this build.
 
 ## Development
 

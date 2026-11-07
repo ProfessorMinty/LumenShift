@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-dev.3 — guided setup and button-first access, unreleased
+
+- Open a three-step setup wizard on first login: appearance, sound, accessibility and controls, followed by an explicit Finish & Reload UI button. Draft choices stay local until Finish; setup/reload never apply graphics.
+- Add a persistent minimap entry (labeled screen fallback when unavailable), a labeled movable launcher and Settings buttons for Studio, setup, diagnostics and export. Commands are optional shortcuts.
+- Show exact Brightness recovery values in Studio and provide direct wheel/export buttons. Keep report access independent of Studio initialization.
+- Migrate schemas 1/2/3 to schema 4 with a persisted wizard-completion flag and preserved configuration/originals. Never reload with unresolved owned settings.
+- Native wizard/reload/minimap behavior still requires owner testing; no in-game operations were executed by development tools.
+
 ## 0.2.0-dev.2 — self-diagnosing interactive development build, unreleased
 
 - Add bounded session event history, addon-owned error guards, automatic read-only checks, Diagnostic Center and a complete selectable report via `/ls report`.

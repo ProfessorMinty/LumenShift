@@ -74,11 +74,13 @@ function R.New(runtime, openStudio)
     if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftWheel") end
     local launcher = env.CreateFrame("Button", "LumenShiftLauncher", env.UIParent)
     self.launcher = launcher
-    launcher:SetSize(46, 46); launcher:SetFrameStrata("MEDIUM"); launcher:SetClampedToScreen(true)
+    launcher:SetSize(146, 46); launcher:SetFrameStrata("MEDIUM"); launcher:SetClampedToScreen(true)
     launcher:SetMovable(true); launcher:EnableMouse(true); launcher:RegisterForDrag("LeftButton")
     launcher:RegisterForClicks("LeftButtonUp", "RightButtonUp")
-    local icon = launcher:CreateTexture(nil, "ARTWORK"); icon:SetAllPoints(launcher)
+    local icon = launcher:CreateTexture(nil, "ARTWORK"); icon:SetSize(46, 46); icon:SetPoint("LEFT", launcher, "LEFT", 0, 0)
     ns.Widgets.Asset(icon, "Interface/AddOns/LumenShift/Media/logo.tga")
+    W.Text(launcher, "LumenShift", 49, -8, 95, 13, W.colors.accent)
+    W.Text(launcher, "Modes / Studio", 49, -26, 95, 10, W.colors.muted)
     ns.Widgets.Script(launcher, "OnDragStart", function(self)
         if not product.IsCombat() then self.lumenDragged = true; self:StartMoving() end
     end)
@@ -90,7 +92,8 @@ function R.New(runtime, openStudio)
     end)
     ns.Widgets.Script(launcher, "OnClick", function(buttonFrame, button)
         if buttonFrame.lumenDragged then buttonFrame.lumenDragged = nil; return end
-        if button == "RightButton" then openStudio() else self.Toggle() end
+        if runtime.entry and runtime.entry.Open then runtime.entry.Open(button)
+        elseif button == "RightButton" then openStudio() else self.Toggle() end
     end)
     W.Tip(env, launcher, "LumenShift\nClick: visual modes\nRight-click: Studio\nDrag: move launcher")
     function self.Refresh()

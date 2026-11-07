@@ -1,5 +1,7 @@
 # Self-diagnosing interactive development build
 
+This records the dev.2 diagnostic/calibration implementation. [Dev.3 guided setup](24-GUIDED-SETUP.md) supersedes its command-first handoff, module/schema counts and test totals; the engine policies and diagnostic limits below remain applicable.
+
 **0.2.0-dev.2 · schema 3 · Forever 1.60.1:70790:16001 · 2026-11-06**
 
 This implements the owner's newer directive on existing `feat/beta-integration` / draft PR #5. Functionality and diagnostic feedback take priority over publication preparation. **Arctic has not installed/tested 0.2.0-beta.1 or this integration.** The older 0.1.0-dev.2 Brightness 45/75/45 result in docs/18 does not certify these builds. No game files or settings were changed by development tools.

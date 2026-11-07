@@ -67,7 +67,7 @@ function P.New(runtime)
         return true
     end
     function product.Select(id)
-        if not db or not config().enabled then return report("Open /ls studio and complete initial setup.") end
+        if not db or not config().enabled then return report("Click LumenShift and complete setup to enable visual switching.") end
         if product.busy then return report("An operation is still being verified.") end
         if not ns.StudioConfig.Labels[id] or not ns.StudioConfig.Validate(config()) then return report("INVALID_MODE_CONFIG") end
         if combat() then return report("Outside combat only. No change queued.") end
@@ -165,6 +165,7 @@ function P.New(runtime)
         if runtime.audio then runtime.audio.Stop() end
         if runtime.ui then runtime.ui.CloseWheel() end
         if runtime.exportUI then runtime.exportUI.window:Hide() end
+        if runtime.setup and runtime.setup.window then runtime.setup.window:Hide() end
     end
     function product.RefreshPresentation()
         if runtime.presentation and db then

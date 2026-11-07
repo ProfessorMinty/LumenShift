@@ -1,6 +1,8 @@
 # LumenShift — Codex onboarding and first assignment
 
 ## Identity and source of truth
+
+Current interaction requirement: automatic first-run setup wizard → chosen preferences → **Finish & Reload UI**. Afterward, use launcher/minimap/Settings buttons; commands are optional. See [guided setup](docs/24-GUIDED-SETUP.md). No automatic graphics activation on startup or reload.
 - **Project:** LumenShift
 - **Owner / creative direction:** Northern Lights Labs (Arctic)
 - **GitHub repository:** https://github.com/ProfessorMinty/LumenShift
