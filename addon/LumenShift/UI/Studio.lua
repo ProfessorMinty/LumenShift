@@ -1,10 +1,10 @@
 local _, ns = ...
 local S, W = {}, ns.Widgets
 ns.Studio = S
-local pages = { "Visual Modes", "Graphics Quality", "Colors and Effects", "Audio", "Personal Presets", "Accessibility", "Diagnostic Center", "Calibration Lab" }
+local pages = { "Visual Modes", "Graphics Quality", "Colors and Effects", "Audio", "Personal Presets", "Accessibility", "Diagnostic Center", "Advanced Graphics" }
 function S.New(runtime)
     local env, db, product = runtime.reader.env, runtime.db, runtime.product
-    local ui = { page = 1, edited = "nightVision", acknowledged = false, pageFrames = {} }
+    local ui = { page = 1, edited = "nightVision", pageFrames = {} }
     if not db or not env.UIParent then return ui end
     local window = env.CreateFrame("Frame", "LumenShiftStudio", env.UIParent)
     ui.window = window
@@ -36,7 +36,7 @@ function S.New(runtime)
     local function cfg() return db.config.studio end
     local function mode() return cfg().modes[ui.edited] end
     local function update(fn) return product.Update(fn) end
-    local function emit(code) if code then ns.Diagnostics.Emit(runtime, "LumenShift: " .. code) end end
+    local function emit(code) if code then ns.Diagnostics.Emit(runtime, "LumenShift: " .. ns.Product.Message(code)) end end
     local function modeSet(key, value) return update(function(copy) copy.studio.modes[ui.edited][key] = value end) end
     local function controls(parent, widgetEnv)
         local env = widgetEnv
@@ -69,9 +69,15 @@ function S.New(runtime)
         ui.status:SetText("MODE  " .. ns.StudioConfig.Labels[product.active] .. "     BRIGHTNESS  " .. (current.raw or "unavailable")
             .. "     ORIGINAL  " .. (status.original or "none") .. "     " .. (product.busy and "VERIFYING" or status.state))
         local lab = runtime.lab and runtime.lab.Status()
-        ui.footer:SetText(product.lastError or (lab and lab.error) or (status.error and "Recovery: " .. status.error)
-            or (cfg().enabled and "Ready. Modes never reapply at login. Quality settings remain independent." or "Setup required. No mode has been applied."))
-        if ui.labStateText and lab then ui.labStateText:SetText("Experiment: " .. lab.state .. " | " .. (lab.error or lab.operation)) end
+        ui.footer:SetText(product.lastMessage or ns.Product.Message(lab and lab.error) or ns.Product.Message(status.error)
+            or "Choose a mode to apply it. Natural restores your original visual settings.")
+        if ui.labStateText and lab then
+            local states = { BASELINE = "Original settings restored.", ACTIVE = "Settings applied.",
+                APPLYING = "Applying...", AWAITING_VERIFICATION = "Checking the change...",
+                RECOVERY = "Open Recovery to inspect the saved originals.", CONFLICT = "An external change was kept. Open Recovery." }
+            ui.labStateText:SetText(ns.Product.Message(lab.error) or (lab.operation == "PREVIEW" and "Preview ready. No change yet.")
+                or states[lab.state] or lab.state)
+        end
         if ui.radial then ui.radial.Refresh() end
     end
     function ui.BuildPage()
@@ -100,42 +106,34 @@ function S.New(runtime)
         local pageHeight
         if ui.page == 1 then
             line("Visual modes", 30, W.colors.accent)
-            line("Set up once, then switch from the wheel or a key binding. Original Brightness is captured before ownership; save recovery notes outside the game.", 70)
-            toggle("I understand recovery data can be lost in a crash", function() return ui.acknowledged end,
-                function(value) ui.acknowledged = value end)
-            button("Enable visual switching", function() product.Enable(ui.acknowledged) end)
-            toggle("Experimental Brightness targets beyond 75", function() return cfg().experimentalBrightness end,
-                function(value) update(function(copy) copy.studio.experimentalBrightness = value end) end,
-                "Only the 45 to 75 to 45 path has native evidence. Other 0-100 targets follow the source UI domain and remain experimental.")
-            line("Slider edits save settings; Apply is separate. Contrast is optional and requires the exact target to pass Calibration Lab in this login.", 62)
-            selectEditor(parent, -300, env)
-            local body = env.CreateFrame("Frame", nil, parent); body:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -390); body:SetSize(560, 420)
+            line("Choose a mode, adjust it if you like, and click Apply. Natural restores your original visual settings.", 52)
+            selectEditor(parent, -82, env)
+            local body = env.CreateFrame("Frame", nil, parent); body:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -172); body:SetSize(560, 420)
             W.Text(body, ns.StudioConfig.Labels[ui.edited] .. "  /  " .. ns.StudioConfig.Descriptions[ui.edited], 0, 0, 550, 13)
             if ui.edited ~= "natural" then
                 local selected = ui.edited
-                W.Slider(env, body, "Brightness target (experimental except 75)", 0, -55, 0, 100, 1,
+                W.Slider(env, body, "Brightness", 0, -55, 0, 100, 1,
                     function() return cfg().modes[selected].brightness end,
                     function(value) return update(function(copy) copy.studio.modes[selected].brightness = value end) end)
-                W.Slider(env, body, "Contrast target (requires this session's calibration)", 0, -119, 0, 100, 1,
+                W.Slider(env, body, "Contrast", 0, -119, 0, 100, 1,
                     function() return cfg().modes[selected].contrast end,
                     function(value) return update(function(copy) copy.studio.modes[selected].contrast = value end) end)
-                W.Toggle(env, body, "Use experimental calibrated Contrast for this mode", 0, -185, 540,
+                W.Toggle(env, body, "Adjust Contrast with this mode", 0, -185, 540,
                     function() return cfg().modes[selected].useContrast end,
                     function(value) return update(function(copy) copy.studio.modes[selected].useContrast = value end) end)
-                W.Button(env, body, "Open Contrast calibration", 0, -226, 540, function() ui.labKey = "Contrast"; ui.Open(8) end)
             else W.Text(body, "Restores your exact captured original. Leaves quality selection alone.", 0, -55, 550, 13) end
-            button = W.Button(env, body, "Apply " .. ns.StudioConfig.Labels[ui.edited], 0, -280, 260, function() product.Select(ui.edited) end)
-            W.Button(env, body, "Reset this mode's saved settings", 272, -280, 275, function()
+            button = W.Button(env, body, "Apply " .. ns.StudioConfig.Labels[ui.edited], 0, -240, 260, function() product.Select(ui.edited) end)
+            W.Button(env, body, "Reset this mode's saved settings", 272, -240, 275, function()
                 local selected = ui.edited
                 update(function(copy) copy.studio.modes[selected] = ns.StudioConfig.Defaults().modes[selected] end)
                 ui.Invalidate(1); ui.Invalidate(3); ui.BuildPage()
             end)
-            W.Button(env, body, "Disable controls (restore Natural first)", 0, -328, 547, function() product.Disable() end)
-            pageHeight = 780
+            W.Button(env, body, "Disable controls (restore Natural first)", 0, -288, 547, function() product.Disable() end)
+            pageHeight = 520
         elseif ui.page == 2 then
             line("Independent graphics quality", 30, W.colors.accent)
-            line("Build your own experimental profile from exact targets that pass Calibration Lab. No values are assigned automatically; a successful readback does not prove a visual effect or performance improvement.", 78)
-            button("Configure and calibrate a quality profile", function() ui.labKey = "ResampleSharpness"; ui.Open(8) end)
+            line("Set up a custom profile in Advanced Graphics, then apply it here. Quality stays independent of your visual mode.", 78)
+            button("Configure a quality profile", function() ui.labKey = "ResampleSharpness"; ui.Open(8) end)
             for _, id in ipairs({ "currentBaseline", "balanced", "vista", "performance" }) do
                 local profileID = id
                 local b = button(ns.Quality.Profiles[id] .. (id == "currentBaseline" and " — restore quality" or " — apply configured targets"), function()
@@ -148,7 +146,7 @@ function S.New(runtime)
             end)
             for _, row in ipairs(ns.Quality.Scan(runtime.reader)) do
                 line(row.group .. " / " .. row.label .. ": " .. (row.observation.raw or row.observation.code)
-                    .. "\n" .. row.dependency .. (ns.ExperimentPolicy.Known(row.key) and ". Explicit Calibration Lab available." or ". Observe-only: unmapped tier behavior."), 62, W.colors.muted)
+                    .. "\n" .. row.reason, 62, W.colors.muted)
             end
         elseif ui.page == 3 then
             line("Colors and effects", 30, W.colors.accent)

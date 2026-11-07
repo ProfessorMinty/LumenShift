@@ -1,5 +1,7 @@
 # Guided setup and button-first access
 
+> **Interaction update, dev.5 (2026-11-07):** [Usable setup and direct controls](26-USABLE-SETUP-AND-CONTROLS.md) supersedes the wizard/unlock/session-calibration requirements below. Historical observations remain valid for their recorded build. Use the [current guide](21-BETA-USER-GUIDE.md).
+
 **Historical dev.3 implementation record · schema 4.** Dev.4 supersedes its wizard design and single-build policy; see [70840 evidence, revised flow and scope](25-BUILD-70840-AND-SETUP-REVIEW.md).
 
 The owner corrected the interaction model: a complete addon must introduce itself with a setup wizard and use buttons for normal operation. The earlier command-first handoff was inadequate. Existing diagnostics, calibration and graphics safety remain; this change does not expand graphics-writing scope.

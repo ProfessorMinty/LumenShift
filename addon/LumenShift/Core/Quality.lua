@@ -20,16 +20,20 @@ Q.Candidates = {
 }
 Q.Profiles = { currentBaseline = "Current Baseline", balanced = "Balanced", vista = "Vista", performance = "Performance" }
 Q.Descriptions = { currentBaseline = "Restore owned quality settings to their captured originals; leave other settings unchanged.",
-    balanced = "Your tested target set. Configure exact values in Calibration Lab; no automatic defaults.",
-    vista = "Your scenic target set. Every included value needs calibration in this login.",
+    balanced = "Your custom target set. Configure values in Advanced Graphics.",
+    vista = "Your scenic target set. Apply checks the current client and values.",
     performance = "Your experimental target set. No measured FPS benefit is claimed." }
 function Q.Scan(reader)
     local rows = {}
     for _, candidate in ipairs(Q.Candidates) do
         local row = ns.Value.Copy(candidate)
         row.observation = ns.ReadOnly.Read(reader, row.key)
-        row.operational = false
-        row.reason = "Not admitted: native domain, dependency closure and restoration are unverified."
+        local bounds = ns.ExperimentPolicy.Bounds(row.key, row.observation.raw)
+        row.operational = ns.ExperimentPolicy.Known(row.key) and bounds ~= nil
+            and ns.Planner.SafeObservation(row.observation) and ns.Compatibility.Experimental(ns.Compatibility.Inspect(reader).signature)
+        row.reason = row.operational and "Experimental control available in Advanced Graphics."
+            or not ns.ExperimentPolicy.Known(row.key) and "Control not implemented; observation only."
+            or "Currently unavailable or outside the supported test range; see Diagnostics."
         rows[#rows + 1] = row
     end
     return rows

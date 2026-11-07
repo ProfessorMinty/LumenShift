@@ -181,17 +181,18 @@ function B.New(reader, db, emit)
         if #plan.operations ~= 1 or plan.operations[1].key ~= "Brightness" then return nil, "TEST_PLAN_EXCLUDED" end
         serial = serial + 1
         local op = plan.operations[1]
-        local shown = say("RECOVERY CARD " .. serial .. " | " .. context.signature
-            .. " | Brightness original=" .. op.originalRaw .. " current=" .. op.beforeRaw .. " target=" .. op.targetRaw)
-        shown = say("No write yet. Save this card outside the game; SavedVariables is not immediately durable.") and shown
-        if recoveryAction then
-            shown = say("Explicit recovery will replace the CURRENT value with the saved original. No automatic compensation on recovery failure.") and shown
-        end
+        local shown = true
         if ordinary then
-            shown = say("User-selected visual control; original retained for restoration. No automatic login changes.") and shown
+            ns.Log.Record(reader, "brightness", "prepare", "INFO", "USER_MODE_SELECTION", { key = "Brightness",
+                original = op.originalRaw, before = op.beforeRaw, requested = op.targetRaw })
         else
-            shown = say("After reviewing and saving this card, use Confirm displayed recovery card " .. serial
-                .. " in Diagnostic Center. This authorizes the displayed operation and bounded compensation for normal on/off failures.") and shown
+            shown = say("RECOVERY CARD " .. serial .. " | " .. context.signature
+                .. " | Brightness original=" .. op.originalRaw .. " current=" .. op.beforeRaw .. " target=" .. op.targetRaw)
+            shown = say("No write yet. You can export these values from Diagnostic Center.") and shown
+            if recoveryAction then
+                shown = say("Recovery replaces the current value with your saved original.") and shown
+            end
+            shown = say("Review the values, then use Confirm displayed recovery card " .. serial .. " in Diagnostic Center.") and shown
         end
         if not shown then return nil, "RECOVERY_CARD_NOT_DISPLAYED" end
         proposal = { token = tostring(serial), plan = plan, journal = journal, sourceJournal = V.Copy(db.journal),
@@ -246,10 +247,11 @@ function B.New(reader, db, emit)
         end
         keepPending(tx)
         transaction = { id = tx.id, model = tx, action = pending.action, recoveryAction = pending.recoveryAction,
-            held = V.Copy(db.journal) }
+            held = V.Copy(db.journal), ordinary = pending.ordinary }
         state = "AWAITING_VERIFICATION"
-        say((pending.ordinary and "Immediate readback matched; a separate read-only check is scheduled. Original="
-            or "Immediate readback matched. Inspect the scene, then click Verify pending recovery in Diagnostic Center. Original=") .. op.originalRaw)
+        if not pending.ordinary then
+            say("Immediate readback matched. Click Verify pending recovery in Diagnostic Center. Original=" .. op.originalRaw)
+        end
         return true
     end
 
@@ -286,13 +288,15 @@ function B.New(reader, db, emit)
         sessionOwned = db.journal.entries.Brightness ~= nil
         state, lastError = sessionOwned and "ACTIVE" or "BASELINE", nil
         ns.Log.Record(reader, "brightness", "verified", "INFO", state, { key = "Brightness", after = observed.raw, state = state })
+        if not transaction.ordinary then
+            say(sessionOwned and "Brightness target verified by readback. Select Natural on the wheel to restore the original."
+                or "Original Brightness verified by exact readback; ownership released.")
+        end
         transaction, dirty = nil, false
-        say(sessionOwned and "Brightness target verified by readback. Select Natural on the wheel to restore the original."
-            or "Original Brightness verified by exact readback; ownership released.")
         return true
     end
 
-    local function guarded(fn, ...)
+    local function guarded(fn, quiet, ...)
         if busy then return nil, "BUSY" end
         busy = true
         local ok, result, code = pcall(fn, ...)
@@ -305,19 +309,16 @@ function B.New(reader, db, emit)
         if not result then
             lastError = code
             ns.Log.Record(reader, "brightness", "refusal", "WARN", code or "UNKNOWN", { key = "Brightness" })
-            say("Refused/failed: " .. (code or "UNKNOWN") .. ". No automatic retry.")
+            if not quiet then say("Refused/failed: " .. (code or "UNKNOWN") .. ". No automatic retry.") end
         end
         return result, code
     end
 
-    function engine.Prepare(action) return guarded(prepare, action) end
+    function engine.Prepare(action) return guarded(prepare, false, action) end
     function engine.Switch(target)
         return guarded(function()
             if not db or not ns.Profiles.Validate(db.config) or db.config.studio.enabled ~= true then return nil, "SETUP_REQUIRED" end
             if target ~= nil and (not V.Finite(target) or target < 0 or target > 100) then return nil, "INVALID_TARGET" end
-            if target ~= nil and target ~= 75 and not db.config.studio.experimentalBrightness then
-                return nil, "EXPERIMENTAL_BRIGHTNESS_DISABLED"
-            end
             if target == nil and state == "BASELINE" and not next(db.journal.entries) then return true, "NO_CHANGE" end
             local ok, code = prepare(target == nil and "off" or "on", target, true)
             if not ok then
@@ -325,10 +326,10 @@ function B.New(reader, db, emit)
                 return nil, code
             end
             return confirm(proposal.token)
-        end)
+        end, true)
     end
-    function engine.Confirm(token) return guarded(confirm, token) end
-    function engine.Verify() return guarded(verify) end
+    function engine.Confirm(token) return guarded(confirm, false, token) end
+    function engine.Verify() return guarded(verify, transaction and transaction.ordinary == true) end
     function engine.Cancel()
         if busy then return nil, "BUSY" end
         proposal = nil
@@ -574,8 +575,8 @@ function B.NewExperiments(runtime)
     end
     local function show(proposal, title)
         lab.serial = lab.serial + 1; proposal.token = tostring(lab.serial)
-        proposal.lines = { title, "Experimental: reads cannot prove rendered effect or absence of unobserved dependencies.",
-            "Originals are held in memory before writes; SavedVariables is not immediately durable. Export/save this preview first." }
+        proposal.lines = { title, "The original values below are recorded before any change.",
+            "Export is optional. A saved report can help recover after an interrupted session." }
         for _, op in ipairs(proposal.plan.operations) do
             proposal.lines[#proposal.lines + 1] = op.key .. " original=" .. op.originalRaw .. " current=" .. op.beforeRaw .. " target=" .. op.targetRaw
         end
@@ -630,15 +631,23 @@ function B.NewExperiments(runtime)
             if not started then mark(startError or "RESTORE_NOT_STARTED") end
         end, proposal.calibration and 2 or 0.15)
     end
+    local function targetBounds(key, target)
+        local entry = data and data.journal.entries[key]
+        local bounds, why = ns.ExperimentPolicy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw)
+        if not bounds then return nil, why end
+        if not V.Finite(target) or target < bounds.min or target > bounds.max then return nil, "OUTSIDE_BOUNDED_TEST_POLICY:" .. key end
+        if math.abs(target / bounds.step - math.floor(target / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP:" .. key end
+        return bounds
+    end
     local function canApply(layer, targets)
         if lab.busy then return nil, "BUSY" end
         if lab.state == "RECOVERY" or lab.state == "CONFLICT" then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
         if not ns.ExperimentPolicy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
         local overrides = {}
         for key, target in pairs(targets) do
-            local certificate = lab.certificates[key] and lab.certificates[key][tostring(target)]
-            if not certificate then return nil, "CALIBRATION_REQUIRED:" .. key end
-            overrides[key] = certificate
+            local bounds, why = targetBounds(key, target)
+            if not bounds then return nil, why end
+            overrides[key] = bounds
         end
         return build(layer, targets, false, overrides)
     end
@@ -650,16 +659,17 @@ function B.NewExperiments(runtime)
     end
     function lab.SaveProfile(id, key, target)
         if not data or not data.profiles[id] or key == "Contrast" then return nil, "INVALID_QUALITY_PROFILE" end
-        if not lab.certificates[key] or not lab.certificates[key][tostring(target)] then return nil, "CALIBRATION_REQUIRED" end
         local copy = V.Copy(data.profiles[id]); copy[key] = target
         if not ns.ExperimentPolicy.ValidateTargets(copy, "quality") then return nil, "PROFILE_LIMIT" end
+        local bounds, why = targetBounds(key, target)
+        if not bounds then return nil, why end
         data.profiles[id] = copy; record("profile-save", "INFO", "PASS", { profile = id, key = key, requested = tostring(target) })
         return true
     end
     function lab.SelectProfile(id)
         local targets = id == "currentBaseline" and {} or data and data.profiles[id]
         if not targets then return nil, "INVALID_QUALITY_PROFILE" end
-        if id ~= "currentBaseline" and not next(targets) then return nil, "CONFIGURE_AND_CALIBRATE_PROFILE_FIRST" end
+        if id ~= "currentBaseline" and not next(targets) then return nil, "CONFIGURE_PROFILE_FIRST" end
         local proposal, code = canApply("quality", targets)
         if not proposal then return nil, code end
         return run(proposal, function(ok)
@@ -702,5 +712,11 @@ function B.NewExperiments(runtime)
         end
     end
     reader.experimentBusy = function() return lab.busy or executing end
+    -- The player's Test & Restore click is the action. No prior certificate or exported card is required.
+    function lab.Test(key, target)
+        local ready, why = lab.Preview(key, target)
+        if not ready then return nil, why end
+        return lab.Confirm(lab.Status().token)
+    end
     return lab
 end

@@ -7,7 +7,7 @@ LumenShift is intended for public publication on **CurseForge for World of Warcr
 
 ## Current authorization
 
-Current owner evidence and correction: read [docs/25](docs/25-BUILD-70840-AND-SETUP-REVIEW.md). Dev.3 loaded and exported on 1.60.1:70840:16001; its outdated build gate blocked Finish before reload. Dev.4 adds that exact experimental identity, improves the whole wizard and refreshes current diagnostics. Do not ask for version reconfirmation or call the integration feature-complete. Dev.4 native acceptance remains pending.
+**Latest interaction directive:** read [docs/26](docs/26-USABLE-SETUP-AND-CONTROLS.md). The owner rejected consent-heavy setup and controls that remain locked after completion. Dev.5 uses compact preferences, saves independently of graphics readiness, enables ordinary mode clicks and makes Test & Restore a direct action. No acknowledgement, non-75 unlock, external-card requirement or same-login certificate is needed for ordinary use. Internal capture/readback/conflict checks remain. Dev.4 saved completion and several preferences but controls were off; do not claim all preferences were lost. Dev.5 native acceptance is pending. Do not ask for version reconfirmation or claim a feature-complete beta.
 
 **Normal use must not require commands.** The owner requires a first-run setup wizard for default preferences ending with a deliberate Finish & Reload UI action. Use visible launcher/minimap buttons and native Settings as primary entry points, including diagnostics/export/recovery. Commands are optional shortcuts. Read docs/24-GUIDED-SETUP.md. This authorizes implementing the final user-clicked reload, not executing it in the owner's game through development tools.
 

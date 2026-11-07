@@ -1,5 +1,16 @@
 # Changelog
 
+
+## 0.2.0-dev.5 — usable setup and direct controls (2026-11-07)
+
+- Replace the three-page consent-heavy wizard with a compact preference screen: six familiar checkboxes, Save & Close, and Finish & Reload UI. No restore acknowledgement or enable-switching checkbox.
+- Save choices and completion before requesting reload, independently of temporary graphics readiness. Retain them if reload is unavailable, fails, or must wait. Existing completed-but-disabled dev.4 setups can use a mode directly.
+- Ordinary mode selection needs no extra unlock for non-75 Brightness. Optional per-mode Contrast and saved quality profiles use fresh native checks on Apply; a same-login calibration certificate is no longer a permission requirement.
+- Add one-click Test & Restore to Advanced Graphics, keeping optional preview/export and recovery available. Successful test observations remain session history, not universal compatibility claims.
+- Keep capture-before-write, exact restoration, readback, conflicts, restricted/unavailable API handling and the single native write boundary. Setup/startup/reload still make no graphics changes.
+- Add preference serialization/reload, temporary-readiness, upgrade interaction, direct test, quality reload and restricted Contrast regressions. Schema 4 is unchanged; the old experimentalBrightness flag is retained only for data compatibility.
+- Review EllesmereUI/ElvUI reference recording for interaction design only; no third-party code or assets copied. Dev.5 native visual, persistence and graphics acceptance remains pending.
+
 ## 0.2.0-dev.4 — build 70840 and revised setup, unreleased
 
 - Accept the exact 1.60.1:70840:16001 identity for experimental controls, using the owner's read-only report and the pinned UI-source comparison. Preserve 70790, all restrictions, and empty production admission.

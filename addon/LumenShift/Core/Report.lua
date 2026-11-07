@@ -119,7 +119,7 @@ function D.Build(runtime)
                 or ("  test policy unavailable: " .. safe(reason))
             local certificates = runtime.lab and runtime.lab.certificates[key]
             lines[#lines + 1] = "  session-tested targets: " .. (certificates and table.concat(V.Keys(certificates), ", ")
-                or "none; exact-target calibration required") .. " | native visual effect unverified"
+                or "none; optional test has not run") .. " | native visual effect unverified"
         end
         local latest = log and log.latest[key]
         if latest then
@@ -134,7 +134,7 @@ function D.Build(runtime)
         local config = db.config
         lines[#lines + 1] = "active visual presentation=" .. safe(runtime.product and runtime.product.active)
             .. " | last verified quality selection=" .. safe(runtime.lab and runtime.lab.activeProfile)
-        lines[#lines + 1] = "setup=" .. bool(config.studio.enabled) .. " experimentalBrightness=" .. bool(config.studio.experimentalBrightness)
+        lines[#lines + 1] = "controls-requested=" .. bool(config.studio.enabled) .. " legacyBrightnessFlag=" .. bool(config.studio.experimentalBrightness)
             .. " effects=" .. bool(config.studio.effects) .. " audio=" .. bool(config.preferences.sound) .. " reducedMotion=" .. bool(config.preferences.reducedMotion)
         lines[#lines + 1] = "setup wizard completed=" .. bool(db.onboarding.completed)
         for _, id in ipairs(ns.StudioConfig.Order) do
@@ -180,11 +180,11 @@ function D.Build(runtime)
         lines[#lines + 1] = check.status .. " | " .. check.id .. " | " .. check.detail
     end
     lines[#lines + 1] = "7. FEATURE AVAILABILITY"
-    lines[#lines + 1] = "Six visual modes: explicit setup required. Non-75 Brightness targets are experimental. No startup writes."
-    lines[#lines + 1] = "Contrast and leaf quality: explicit bounded calibration -> exact restoration -> session-only experimental use of that tested target."
-    lines[#lines + 1] = "Quality profiles: user-configured tested target sets; no guessed Balanced/Vista/Performance values or measured FPS promises."
+    lines[#lines + 1] = "Six visual modes: click a mode to apply; no acknowledgement or non-75 unlock. Source-range Brightness, no startup writes."
+    lines[#lines + 1] = "Contrast and named quality: direct bounded Apply or optional Test & Restore. Previous calibration is not an unlock requirement."
+    lines[#lines + 1] = "Quality profiles: user-configured target sets, rechecked on Apply; no guessed optimized defaults or measured FPS promises."
     lines[#lines + 1] = "Shadow/light/water tier, HDR, renderer, camera and overall presets: BLOCKED for writes; dependency/restart/hardware contracts unmapped."
-    lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Certificates expire on reload."
+    lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Session test history is observational, not permission."
     lines[#lines + 1] = "Addon-owned handlers only. Pre-bootstrap syntax/load failures and unrelated game/addon errors may prevent or lie outside this report."
     lines[#lines + 1] = "8. RECENT WARNINGS / ERRORS (last 32, may overlap history)"
     for _, event in ipairs(log and log.issues or {}) do lines[#lines + 1] = eventLine(event) end

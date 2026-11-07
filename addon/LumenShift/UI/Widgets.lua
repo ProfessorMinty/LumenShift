@@ -77,6 +77,20 @@ function W.Fill(frame, color)
     texture:SetAllPoints(frame); texture:SetColorTexture(unpack(color or W.colors.card))
     return texture
 end
+function W.Checkbox(env, parent, title, description, x, y, width, get, set)
+    local button = env.CreateFrame("Button", nil, parent)
+    button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 56)
+    local box = env.CreateFrame("Frame", nil, button); box:SetSize(20, 20); box:SetPoint("TOPLEFT", 0, -2)
+    local background = W.Fill(box, { 0.18, 0.27, 0.32, 1 })
+    local mark = W.Text(box, "", 4, -1, 16, 17, W.colors.accent)
+    button.label = W.Text(button, title, 30, 0, width - 30, 16)
+    W.Text(button, description, 30, -26, width - 30, 13, W.colors.muted)
+    local function refresh() mark:SetText(get() and "x" or "") end
+    W.Script(button, "OnClick", function() set(not get()); refresh() end)
+    W.Script(button, "OnEnter", function() background:SetColorTexture(0.25, 0.40, 0.43, 1) end)
+    W.Script(button, "OnLeave", function() background:SetColorTexture(0.18, 0.27, 0.32, 1) end)
+    refresh(); return button
+end
 function W.Tip(env, frame, text)
     if not env.GameTooltip then return end
     W.Script(frame, "OnEnter", function(self)

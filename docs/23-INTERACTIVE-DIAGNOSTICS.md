@@ -1,5 +1,7 @@
 # Self-diagnosing interactive development build
 
+> **Interaction update, dev.5 (2026-11-07):** [Usable setup and direct controls](26-USABLE-SETUP-AND-CONTROLS.md) supersedes the wizard/unlock/session-calibration requirements below. Historical observations remain valid for their recorded build. Use the [current guide](21-BETA-USER-GUIDE.md).
+
 This records the dev.2 diagnostic/calibration implementation. [Dev.3 guided setup](24-GUIDED-SETUP.md) supersedes its command-first handoff, module/schema counts and test totals; the engine policies and diagnostic limits below remain applicable.
 
 **0.2.0-dev.2 · schema 3 · Forever 1.60.1:70790:16001 · 2026-11-06**

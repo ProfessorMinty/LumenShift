@@ -20,7 +20,6 @@ return function(fixture, eq, test)
         if configure then configure(f) end
         f.load(); f.r = f.ns.runtime
         function f.enter() f.frame.OnEvent(f.frame, "PLAYER_ENTERING_WORLD") end
-        function f.next() f.r.setup.next.scripts.OnClick(f.r.setup.next) end
         function f.check(id)
             for _, item in ipairs(f.r.checks) do if item.id == id then return item end end
             error("missing check " .. id)
@@ -28,9 +27,7 @@ return function(fixture, eq, test)
         return f
     end
     test("K01 reported 70840 client completes setup and one reload without any graphics writes", function()
-        local f = make(); f.enter(); assert(f.r.setup.draft.enabled)
-        eq(f.r.setup.next.label:GetText(), "Choose preferences"); f.mock.Click("Choose preferences")
-        f.mock.Click("Review choices"); f.mock.Click("I know how to restore my settings")
+        local f = make(); f.enter(); eq(f.r.setup.next.label:GetText(), "Finish & Reload UI")
         f.mock.Click("Finish & Reload UI"); eq(f.reloads, 1); eq(#f.calls, 0)
         eq(f.saved.onboarding.completed, true); eq(f.saved.config.studio.enabled, true)
         local again = make("70840", nil, f.saved); again.enter(); eq(again.r.setup.window, nil)
@@ -70,7 +67,7 @@ return function(fixture, eq, test)
         loaded = true; f.enter()
         eq(f.check("read-Brightness").status, "PASS"); eq(f.check("client-identity").status, "PASS")
         eq(f.check("calibration-preflight-Contrast").status, "PASS")
-        eq(#f.calls, 0); eq(f.reloads, 0); assert(f.r.setup.draft.enabled); f.zero()
+        eq(#f.calls, 0); eq(f.reloads, 0); eq(f.r.setup.draft.effects, true); f.zero()
     end)
     test("K05 export refreshes stale checks in either direction and never completes a pending calibration", function()
         local f = make(); f.env.C_CVar.AreCVarsLoaded = function() return false end
@@ -82,18 +79,16 @@ return function(fixture, eq, test)
         local calls = #f.calls; f.ns.Report.Export(f.r); eq(#f.calls, calls)
         eq(f.r.lab.Status().state, "AWAITING_VERIFICATION"); eq(f.r.lab.certificates.Contrast, nil)
     end)
-    test("K06 unreviewed identities remain read-only and are explained before finishing", function()
+    test("K06 unreviewed identities cannot write even when preference setup completes", function()
         for _, tuple in ipairs({ { "70841", 16001 }, { "70791", 16001 }, { "70840", 16002 }, { "70840", 16001, "1.60.2" } }) do
             local f = make(tuple[1], function(f) identity(f, unpack(tuple)) end); f.enter()
-            eq(f.r.setup.draft.enabled, false); eq(f.r.product.CanEnable(), nil)
+            eq(f.r.db.config.studio.enabled, false); eq(f.r.product.CanEnable(), nil)
             local enabled, code, explanation = f.r.product.Enable(true)
             eq(enabled, nil); eq(code, "UNSUPPORTED_BUILD"); assert(explanation:find("has not been reviewed", 1, true))
             eq(f.r.log.issues[#f.r.log.issues].result, "UNSUPPORTED_BUILD")
             eq(f.r.engine.Prepare("on"), nil); eq(f.r.lab.Preview("Contrast", 65), nil)
-            f.next(); f.next(); f.mock.Click("Enable visual switching")
-            eq(f.r.setup.draft.enabled, false); assert(f.r.setup.message:find("has not been reviewed", 1, true))
-            f.mock.Click("I know how to restore my settings"); assert(f.r.setup.Finish())
-            eq(f.saved.config.studio.enabled, false); eq(#f.calls, 0)
+            assert(f.r.setup.Finish()); eq(f.saved.config.studio.enabled, true)
+            eq(f.r.product.Select("nightVision"), nil); eq(#f.calls, 0)
         end
     end)
     test("K07 changing between reviewed builds invalidates both pending preview types", function()
@@ -152,16 +147,14 @@ return function(fixture, eq, test)
         local signatures = f.ns.Compatibility.ExperimentalSignatures(); signatures[1] = "forged"
         eq(f.ns.Compatibility.Experimental("forged"), false)
     end)
-    test("K12 wizard draft review, back navigation and readable scale leave live preferences untouched", function()
+    test("K12 compact setup has readable scale and bounded frame reuse without saving drafts early", function()
         local f = make(nil, function(f) f.env.UIParent:SetSize(1920, 1080); f.env.UIParent:SetScale(0.71111112833023) end)
-        f.enter(); eq(f.r.setup.window:GetWidth(), 760)
+        f.enter(); eq(f.r.setup.window:GetWidth(), 640)
         assert(math.abs(f.r.setup.window:GetEffectiveScale() - 1) < 0.001)
-        f.mock.Click("Choose preferences"); f.mock.Click("Activation sounds"); f.mock.Click("Review choices")
-        eq(f.r.setup.draft.sound, true); eq(f.r.db.config.preferences.sound, false)
-        f.mock.Click("Back"); eq(f.r.setup.draft.sound, true)
+        f.mock.Click("Night Vision sounds"); eq(f.r.setup.draft.sound, true); eq(f.r.db.config.preferences.sound, false)
         local count = #f.mock.nodes
-        for _ = 1, 20 do f.mock.Click("Review choices"); f.mock.Click("Back") end
-        eq(#f.mock.nodes, count); eq(#f.calls, 0); eq(f.reloads, 0)
+        for _ = 1, 20 do f.r.setup.Build() end
+        eq(#f.mock.nodes, count); eq(f.r.setup.draft.sound, true); eq(#f.calls, 0); eq(f.reloads, 0)
         local small = make(nil, function(g) g.env.UIParent:SetSize(800, 600) end); small.enter()
         assert(small.r.setup.window:GetWidth() * small.r.setup.window.scale < 800)
         assert(small.r.setup.window:GetHeight() * small.r.setup.window.scale < 600)
@@ -169,6 +162,6 @@ return function(fixture, eq, test)
     local path = os.getenv("LUMENSHIFT_SETUP_MODEL_PATH")
     if path then
         local f = make(); f.enter()
-        for page = 1, 3 do f.r.setup.page = page; f.r.setup.Build(); f.mock.Export(path .. "-" .. page .. ".tsv") end
+        f.mock.Export(path .. "-compact.tsv")
     end
 end

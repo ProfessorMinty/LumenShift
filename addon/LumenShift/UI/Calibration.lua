@@ -8,20 +8,20 @@ function U.Build(runtime, ui, parent, env)
     local function action(label, fn)
         W.Button(env, parent, label, 0, y, 540, function()
             local ok, reason = fn()
-            if not ok and reason then ns.Diagnostics.Emit(runtime, "LumenShift: " .. reason .. ". See Diagnostic Center.") end
+            if not ok and reason then ns.Diagnostics.Emit(runtime, "LumenShift: " .. ns.Product.Message(reason)) end
             ui.BuildPage()
         end); y = y - 40
     end
-    line("Experimental calibration", 30, W.colors.accent)
-    line("Choose a named leaf setting and an exact target. Preview is read-only. Confirming runs a bounded test, collects readbacks and watched changes, then restores the captured original if observations stay trustworthy.", 85)
-    line("No test ran just by opening this page. Stop if the scene or game behaves unexpectedly. Readback cannot prove a rendered effect. Export the preview before starting; SavedVariables can lag behind disk.", 80, W.colors.muted)
+    line("Advanced graphics", 30, W.colors.accent)
+    line("Choose a setting and a value. Test & Restore tries it for about two seconds, then returns to your original value.", 85)
+    line("These controls are experimental. No settings change until you click Test & Restore or Apply. Details and recovery are in Diagnostic Center.", 80, W.colors.muted)
     ui.labKey = ui.labKey or "Contrast"; ui.labProfile = ui.labProfile or "balanced"
     local start = y
     for i, key in ipairs(ns.ExperimentPolicy.Keys) do
         local chosen = key
         W.Button(env, parent, (ui.labKey == key and "* " or "") .. key, ((i - 1) % 2) * 275, start - math.floor((i - 1) / 2) * 38, 265,
             function()
-                if lab.busy then ns.Diagnostics.Emit(runtime, "LumenShift: wait for calibration, or explicitly Cancel to retain recovery."); return end
+                if lab.busy then ns.Diagnostics.Emit(runtime, "LumenShift: wait for the test to finish before choosing another setting."); return end
                 ui.labKey = chosen; ui.labTarget = nil; lab.Cancel(); ui.BuildPage()
             end)
     end
@@ -30,11 +30,15 @@ function U.Build(runtime, ui, parent, env)
     local bounds, reason = ns.ExperimentPolicy.Bounds(ui.labKey, item.raw)
     line(ui.labKey .. " current=" .. ns.Report.Number(item.raw) .. " [" .. item.code .. "]", 30)
     if bounds then
-        line("Test-policy range " .. bounds.min .. " to " .. bounds.max .. "; step " .. bounds.step .. ". " .. bounds.basis .. ". This is not a measured native safe range.", 65)
-    else line("Calibration blocked: " .. (reason or "UNKNOWN_REASON") .. ". Export the diagnostic report for investigation.", 65) end
-    W.Text(parent, "Exact proposed value (press Enter to retain edit)", 0, y, 370, 13)
+        line("Available test range: " .. bounds.min .. " to " .. bounds.max .. "; step " .. bounds.step .. ".", 42)
+    else line("Unavailable: " .. (reason or "UNKNOWN_REASON") .. ". Export the diagnostic report for investigation.", 65) end
+    W.Text(parent, "Value to try", 0, y, 370, 13)
     local edit = W.Edit(env, parent, ui.labTarget or item.raw or "", 380, y + 4, 160, function(text) ui.labTarget = text end)
     y = y - 42
+    action("Test & Restore", function()
+        ui.labTarget = edit:GetText()
+        return lab.Test(ui.labKey, ns.Value.Number(ui.labTarget))
+    end)
     action("Preview exact modification (read only)", function()
         ui.labTarget = edit:GetText()
         return lab.Preview(ui.labKey, ns.Value.Number(ui.labTarget))
@@ -49,16 +53,17 @@ function U.Build(runtime, ui, parent, env)
     action("Cancel experiment / preview (does not restore)", lab.Cancel)
     action("Preview recovery of experimental visual settings", function() return lab.PreviewRestore("visual") end)
     action("Preview recovery of experimental quality settings", function() return lab.PreviewRestore("quality") end)
-    line("Use successful targets", 30, W.colors.accent)
+    line("Save and apply", 30, W.colors.accent)
     if ui.labKey == "Contrast" then
-        line("After a successful round trip, edit Contrast in Visual Modes and enable it for that mode. The exact target must have passed calibration in this login. Natural restores its captured original independently of quality.", 85)
+        line("Set Contrast in Visual Modes and turn on Adjust Contrast for that mode. Apply uses it immediately; Natural restores your original. A prior test is optional.", 85)
     else
-        line("Quality profiles are your own explicit tested target sets. No guessed values are assigned to Balanced, Vista or Performance. Configure at most eight leaf settings per profile. Session calibration expires on reload.", 90)
+        line("Choose a profile and save your values, then Apply. Saved profiles remain usable after reload; each Apply checks current availability and ranges. Up to eight settings per profile.", 90)
         for _, id in ipairs({ "balanced", "vista", "performance" }) do
             local profile = id
             action((ui.labProfile == id and "* Editing " or "Edit ") .. ns.Quality.Profiles[id], function() ui.labProfile = profile; return true end)
         end
-        action("Save tested target into " .. ns.Quality.Profiles[ui.labProfile], function()
+        action("Save value into " .. ns.Quality.Profiles[ui.labProfile], function()
+            ui.labTarget = edit:GetText()
             return lab.SaveProfile(ui.labProfile, ui.labKey, ns.Value.Number(ui.labTarget))
         end)
         for _, key in ipairs(ns.Value.Keys(db.experiments.profiles[ui.labProfile])) do
@@ -68,7 +73,7 @@ function U.Build(runtime, ui, parent, env)
             db.experiments.profiles[ui.labProfile][ui.labKey] = nil
             ns.Log.Record(runtime.reader, "configuration", "profile-remove-key", "INFO", "PASS", { profile = ui.labProfile, key = ui.labKey }); return true
         end)
-        action("Apply " .. ns.Quality.Profiles[ui.labProfile] .. " tested target set", function() return lab.SelectProfile(ui.labProfile) end)
+        action("Apply " .. ns.Quality.Profiles[ui.labProfile] .. " profile", function() return lab.SelectProfile(ui.labProfile) end)
         action("Current Baseline — restore owned quality", function() return lab.SelectProfile("currentBaseline") end)
     end
     line("Shadow, lighting and water tiers, HDR and renderer settings are observation-only: their indirect writes/restart/hardware contracts are not mapped. Use the diagnostic report to see the actual read/capability results.", 90, W.colors.muted)

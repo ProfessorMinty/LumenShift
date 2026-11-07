@@ -698,7 +698,7 @@ local function native(saved, original)
         local record = f.env.LumenShiftDB.journal.entries.Brightness
         assert(record and record.originalRaw, "capture must precede native call")
         assert(record.state == "pending" or record.state == "failed", "pending operation or compensating a failed operation")
-        assert(table.concat(f.output, "\n"):find("RECOVERY CARD", 1, true), "card precedes native call")
+        eq(f.ns.runtime.engine.Status().original, record.originalRaw) -- readable recovery data precedes every call
         if f.setter then return f.setter(key, value, #f.calls) end
         f.values[key] = value
         return true

@@ -71,7 +71,7 @@ function D.QualityLines(runtime)
                 .. " locked=" .. bool(item.flags.locked) .. " serverAccount=" .. bool(item.flags.serverAccount)
                 .. " serverCharacter=" .. bool(item.flags.serverCharacter)
         else lines[#lines + 1] = "flags=" .. (item.flagsCode or item.code) end
-        lines[#lines + 1] = row.source .. ": " .. row.dependency .. "; UNVERIFIED / no writes admitted"
+        lines[#lines + 1] = row.source .. ": " .. row.dependency .. "; " .. row.reason
     end
     return lines
 end

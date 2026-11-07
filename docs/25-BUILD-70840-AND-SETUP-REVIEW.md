@@ -1,5 +1,7 @@
 # Build 70840 report, setup correction and actual product scope
 
+> **Interaction update, dev.5 (2026-11-07):** [Usable setup and direct controls](26-USABLE-SETUP-AND-CONTROLS.md) supersedes the wizard/unlock/session-calibration requirements below. Historical observations remain valid for their recorded build. Use the [current guide](21-BETA-USER-GUIDE.md).
+
 Observed 2026-11-06. Development version 0.2.0-dev.4; schema 4 unchanged.
 
 ## What Arctic actually tested
