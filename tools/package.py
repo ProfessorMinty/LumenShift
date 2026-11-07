@@ -54,9 +54,18 @@ def build(payload, version, commit):
     payload = dict(payload)
     assert "Core/Build.lua" in payload, "Runtime build identity module required"
     payload["Core/Build.lua"] = ('local _, ns = ...\nns.build = "' + commit + '"\n').encode("ascii")
-    signatures = sorted(re.findall(r'\["(\d+\.\d+\.\d+:\d+:\d+)"\] = true', payload["Core/Compatibility.lua"].decode("utf-8")))
-    assert signatures and len(signatures) == len(set(signatures)), "Exact experimental identities required"
-    manifest = {"version": version, "source_commit": commit, "experimental_targets": signatures,
+    compatibility = payload["Core/Compatibility.lua"].decode("utf-8")
+    signatures = sorted(re.findall(r'\["(\d+\.\d+\.\d+:\d+:\d+)"\] = true', compatibility))
+    contract = re.findall(r'local policy = \{ version = "(\d+\.\d+\.\d+)", interface = (\d+), minimumBuild = (\d+) \}', compatibility)
+    assert len(contract) == 1, "One runtime compatibility policy required"
+    family, interface, minimum = contract[0]
+    assert signatures and len(signatures) == len(set(signatures)), "Observed identities required"
+    for signature in signatures:
+        ver, build_number, ui = signature.split(":")
+        assert ver == family and ui == interface and int(build_number) >= int(minimum), "Observed identity outside runtime policy"
+    manifest = {"version": version, "source_commit": commit, "observed_identities": signatures,
+                "experimental_client_policy": {"version": family, "interface": int(interface), "minimum_build": int(minimum),
+                                               "build_policy": "hotfix-compatible; per-operation capability checks"},
                 "production_admission": False,
                 "generated": {"Core/Build.lua": "source commit identifier; deterministic build substitution"},
                 "status": "development candidate; integrated native acceptance pending; not published",

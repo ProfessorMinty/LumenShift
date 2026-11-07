@@ -58,17 +58,25 @@ function P.New(runtime)
         if runtime.audio then runtime.audio.Transition(previous, id, db.config) end
         if product.Refresh then product.Refresh() end
     end
-    function product.CanEnable()
+    function product.Availability()
         if not db or not ns.Profiles.Validate(db.config) then return nil, "Saved preferences need recovery. Open Diagnostic Center.", "SAVED_DATA_QUARANTINED" end
         local identity = ns.Compatibility.Inspect(runtime.reader)
         if not ns.Compatibility.Experimental(identity.signature) then return nil, ns.Compatibility.Explain(identity), identity.signature and "UNSUPPORTED_BUILD" or "IDENTITY_UNAVAILABLE" end
         if combat() then return nil, "Try again after combat.", "COMBAT_OR_RESTRICTION" end
-        if engine.Status().state ~= "BASELINE" then return nil, "An earlier change needs attention. Open Recovery to inspect the saved original.", "RECOVERY_REQUIRED" end
+        if product.busy or (runtime.lab and runtime.lab.busy) then return nil, "Wait for the current change to finish.", "BUSY" end
+        local state = engine.Status().state
+        if state ~= "BASELINE" and state ~= "ACTIVE" then return nil, "An earlier change needs attention. Open Recovery to inspect the saved original.", "RECOVERY_REQUIRED" end
         if not engine.Status().setterAvailable then return nil, messages.SETTER_UNAVAILABLE, "SETTER_UNAVAILABLE" end
         if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return nil, messages.FOLLOWUP_TIMER_UNAVAILABLE, "FOLLOWUP_TIMER_UNAVAILABLE" end
         local item = ns.ReadOnly.Read(runtime.reader, "Brightness")
         if not ns.Planner.SafeObservation(item) then return nil, "Brightness is unavailable or restricted. Try again after loading; Diagnostics has the details.", "BRIGHTNESS_UNAVAILABLE_OR_RESTRICTED" end
         return true, item
+    end
+    function product.CanEnable()
+        local ready, detail, code = product.Availability()
+        if not ready then return nil, detail, code end
+        if engine.Status().state ~= "BASELINE" then return nil, "Restore the active mode before enabling controls.", "RECOVERY_REQUIRED" end
+        return true, detail
     end
     function product.Enable()
         local ready, item, code = product.CanEnable()

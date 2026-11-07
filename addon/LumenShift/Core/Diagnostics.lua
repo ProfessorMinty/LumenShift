@@ -2,6 +2,12 @@ local _, ns = ...
 local D = {}
 ns.Diagnostics = D
 local function bool(value) return value and "yes" or "no" end
+function D.ControlStatus(runtime)
+    if not runtime.product then return "Mode controls: unavailable; addon initialization did not finish." end
+    local ready, reason = runtime.product.Availability()
+    return ready and "Mode controls: AVAILABLE - choose a mode on the wheel or Apply in Visual Modes."
+        or "Mode controls: " .. (reason or "unavailable; open Diagnostics for details.")
+end
 
 function D.Lines(runtime)
     local reader = runtime.reader
@@ -12,7 +18,8 @@ function D.Lines(runtime)
     local lines = { "LumenShift " .. ns.version .. " | Visual Studio; no startup graphics writes",
         "Client: " .. (identity.version or "unknown") .. " build " .. (identity.build or "unknown")
             .. " interface " .. tostring(identity.interface or "unknown"),
-        "Compatibility: " .. identity.status .. "; renderer UNVERIFIED; production write admission unavailable",
+        "Compatibility: " .. ns.Compatibility.Explain(identity),
+        D.ControlStatus(runtime),
         "SavedVariables: " .. runtime.storeStatus .. "; no immediate disk-save guarantee" }
     for _, name in ipairs({ "AreCVarsLoaded", "GetCVar", "GetCVarDefault", "GetCVarInfo", "canaccessvalue", "issecretvalue" }) do
         lines[#lines + 1] = name .. ": " .. (caps[name] and "available" or "unavailable")
@@ -32,13 +39,12 @@ function D.Lines(runtime)
     lines[#lines + 1] = "State: " .. (status and status.state or recovery and recovery.state or "RECOVERY")
         .. "; saved selection is metadata, never an active preset"
     if status then
-        lines[#lines + 1] = "Studio controls: " .. (runtime.db and runtime.db.config.studio.enabled and "enabled by user" or "setup required")
-            .. "; active presentation: " .. (runtime.product and runtime.product.active or "natural")
+        lines[#lines + 1] = "Active presentation: " .. (runtime.product and runtime.product.active or "natural")
         lines[#lines + 1] = "Native Brightness writer API: " .. (status.setterAvailable and "available" or "unavailable")
-            .. "; user-enabled controls or an explicit recovery confirmation required"
+            .. "; mode selection applies a change"
         lines[#lines + 1] = "Brightness original: " .. (status.original or "not captured")
             .. "; last verified: " .. (status.lastVerified or "none") .. "; operation: " .. status.operation
-        lines[#lines + 1] = "Preview confirmation: " .. (status.token or "none") .. "; startup/reload never enables writes"
+        lines[#lines + 1] = "Preview confirmation: " .. (status.token or "none") .. "; startup/reload never applies a mode"
         if status.error then lines[#lines + 1] = "Engine status: " .. status.error end
     end
     if recovery then
@@ -49,11 +55,11 @@ function D.Lines(runtime)
             if recovery.entries[key] then lines[#lines + 1] = key .. " recovery: " .. recovery.entries[key] end
         end
     else lines[#lines + 1] = "Recovery: saved data preserved in place; schema quarantined" end
-    lines[#lines + 1] = "Studio: /ls studio; /ls wheel; /ls toggle; /ls mode NAME. Key bindings: LumenShift category."
-    lines[#lines + 1] = "Recovery: /ls on | off | restore (previews); use the exact numbered confirmation printed in chat; /ls verify; /ls cancel"
-    lines[#lines + 1] = "Restore My Brightness: /ls restore. Save the displayed recovery card before confirming a live-approved test."
-    lines[#lines + 1] = "Diagnostic Center: /ls diag. Complete copyable report: /ls report. Explicit bounded experiments: /ls calibrate."
-    lines[#lines + 1] = "Native evidence: earlier dev2 45/75/45 only; this integration is untested. Contrast/quality need explicit calibration; readback never proves visible effects."
+    lines[#lines + 1] = "Use the launcher for modes; right-click it for Studio. Commands are optional."
+    lines[#lines + 1] = "Natural restores the active visual mode. Recovery buttons are below for an interrupted operation."
+    lines[#lines + 1] = "An uncertain recovery asks you to review the current and original values before replacing them."
+    lines[#lines + 1] = "Advanced Graphics has Test & Restore and custom quality controls."
+    lines[#lines + 1] = "This diagnostic snapshot does not change settings. Use mode or Advanced Graphics buttons to try them."
     if runtime.product and runtime.product.lastError then lines[#lines + 1] = "Studio status: " .. runtime.product.lastError end
     if runtime.audio and runtime.audio.lastError then lines[#lines + 1] = "Audio status: " .. runtime.audio.lastError end
     if runtime.lastError then lines[#lines + 1] = "Last error: " .. runtime.lastError end
@@ -61,7 +67,7 @@ function D.Lines(runtime)
 end
 
 function D.QualityLines(runtime)
-    local lines = { "QUALITY READ-ONLY SCAN | " .. (ns.Compatibility.Inspect(runtime.reader).signature or "unknown") }
+    local lines = { "QUALITY CONTROL AVAILABILITY | " .. (ns.Compatibility.Inspect(runtime.reader).signature or "unknown") }
     for _, row in ipairs(ns.Quality.Scan(runtime.reader)) do
         local item = row.observation
         lines[#lines + 1] = row.key .. "=" .. (item.raw or "unavailable") .. " [" .. item.code .. "]"

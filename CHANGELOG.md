@@ -1,6 +1,15 @@
 # Changelog
 
 
+## 0.2.0-dev.6 — hotfix compatibility and automatic updated setup (2026-11-07)
+
+- Fix dev.5 refusing the owner's actual Forever build 70862. Explicit development controls now use the Forever 1.60.1/interface 16001 contract from build 70790 onward, with fresh API/flag/value checks on each operation. Hotfix numbers remain recorded; version/interface changes still require review.
+- Reopen the updated setup once for users upgrading from dev.1–dev.5, preserving all preferences, profiles and recovery records. Finish prevents another setup popup on the next reload; closing leaves it available next login. Schema 4 unchanged.
+- Show actual mode-control availability in diagnostics. Replace stale production-admission/calibration-lock wording and distinguish a diagnostic snapshot from disabled controls.
+- Keep exact session/build binding for pending operations and historical recovery; no automatic graphics application on upgrade, startup or reload.
+- Native evidence: dev.5 loaded and exported on 70862, but a mode click was refused before any write. Dev.6 fixes are simulated until owner testing.
+
+
 ## 0.2.0-dev.5 — usable setup and direct controls (2026-11-07)
 
 - Replace the three-page consent-heavy wizard with a compact preference screen: six familiar checkboxes, Save & Close, and Finish & Reload UI. No restore acknowledgement or enable-switching checkbox.

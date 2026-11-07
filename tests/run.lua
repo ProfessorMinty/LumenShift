@@ -385,11 +385,11 @@ test("M16 layer overlap, tier/child conflicts, dependency closure and cycles ref
     eq(ns.Planner.Build(cat, context, seen, j, "visual", { Brightness = 75, Contrast = 70 }), nil)
 end)
 
-test("M17 unknown build/interface/renderer and shipped catalog cannot admit writes", function()
+test("M17 older build or unsupported interface/renderer and shipped catalog cannot admit writes", function()
     local f = fixture(); f.load()
-    eq(f.ns.runtime.identity.status, "FOREVER_CANDIDATE_UNVERIFIED")
+    eq(f.ns.runtime.identity.status, "FOREVER_SUPPORTED_FAMILY")
     eq(f.ns.runtime.identity.futureWrites, false)
-    for _, tuple in ipairs({ { "1.60.1", "70791", 16001 }, { "1.60.1", "70790", 99999 }, { "12.0.0", "70790", 16001 } }) do
+    for _, tuple in ipairs({ { "1.60.1", "70789", 16001 }, { "1.60.1", "70790", 99999 }, { "12.0.0", "70790", 16001 } }) do
         f.env.GetBuildInfo = function() return tuple[1], tuple[2], "date", tuple[3] end
         eq(f.ns.Compatibility.Inspect(f.ns.runtime.reader).status, "UNSUPPORTED_BUILD")
         eq(f.ns.Compatibility.Inspect(f.ns.runtime.reader).futureWrites, false)

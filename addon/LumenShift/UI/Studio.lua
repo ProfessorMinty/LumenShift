@@ -140,8 +140,8 @@ function S.New(runtime)
                     local ok, code = runtime.lab.SelectProfile(profileID); if not ok then emit(code) end; ui.Refresh()
                 end, ns.Quality.Descriptions[id])
             end
-            button("Refresh read-only capability scan", function() ui.Invalidate(2); ui.BuildPage() end)
-            button("Print detailed read-only scan to chat", function()
+            button("Refresh available controls", function() ui.Invalidate(2); ui.BuildPage() end)
+            button("Print control details to chat", function()
                 for _, text in ipairs(ns.Diagnostics.QualityLines(runtime)) do ns.Diagnostics.Emit(runtime, text) end
             end)
             for _, row in ipairs(ns.Quality.Scan(runtime.reader)) do

@@ -2,9 +2,11 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-dev.5** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a usable development build, not the accepted feature-complete beta.
+**0.2.0-dev.6** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a usable development build, not the accepted feature-complete beta.
 
-Setup is now one compact preferences screen. Finish saves your choices and enables ordinary mode use; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
+Dev.6 fixes the 70862 hotfix rejection and automatically reopens the updated setup once for existing dev.1–dev.5 users, keeping their preferences. Controls use the supported Forever 1.60.1/interface 16001 contract with fresh native checks, rather than an individual hotfix allowlist.
+
+Setup is one compact preferences screen. Finish saves your choices and enables ordinary mode use; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
 ## Install and use
 
@@ -26,7 +28,7 @@ Optional Contrast and named sharpening, foliage, distance, LOD, bloom and weathe
 
 The single native graphics call remains in WriteBoundary. Planner, per-key originals, ownership, conflict detection and readback remain internal requirements. An interrupted session or unresolved conflict needs an explicit recovery decision; startup never guesses a restore. SavedVariables is not immediately durable or crash-proof. Restore before updating or removing the addon.
 
-The owner has supplied native identity/diagnostic evidence for Forever **1.60.1:70840:16001**; the earlier **70790** Brightness 45 → 75 → 45 round trip remains recorded separately. Dev.4 installed files and saved preferences were inspected read-only: completion and several choices had persisted, but controls were disabled. **Dev.5 has automated/mock verification; its native layout, persistence and graphics acceptance are pending.** See [setup investigation and reference-video analysis](docs/26-USABLE-SETUP-AND-CONTROLS.md).
+The owner supplied a dev.5 report from **Forever 1.60.1:70862:16001**: the addon loaded, getters/flags were readable, but its mode click was blocked by the outdated allowlist. Prior native evidence for 70790 and 70840 remains recorded separately. **Dev.6 has automated/mock verification; native setup, graphics and persistence acceptance remain pending.** See [hotfix compatibility and setup upgrade](docs/27-HOTFIX-COMPATIBILITY-AND-SETUP-UPGRADE.md).
 
 ## Diagnostics
 

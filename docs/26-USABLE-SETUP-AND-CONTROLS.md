@@ -1,5 +1,7 @@
 # Usable setup and direct controls — dev.5
 
+> **Dev.6 correction:** [Hotfix compatibility and setup upgrade](27-HOTFIX-COMPATIBILITY-AND-SETUP-UPGRADE.md) supersedes the exact-hotfix policy and completed-setup upgrade behavior below. The actual dev.5 report on 70862 revealed both gaps.
+
 Observed and implemented 2026-11-07. Schema 4 unchanged. This supersedes the dev.3/dev.4 interaction requirements in docs/23–25; their source and native evidence remain historical records.
 
 ## Reference video and why the previous setup felt wrong

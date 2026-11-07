@@ -66,6 +66,13 @@ function S.Open(raw)
         or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
         or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments)
         or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
+    -- One-time setup refresh for the old completed-wizard generations. Keep every
+    -- preference and journal; only the old completion marker is superseded.
+    if data.onboarding.completed and (data.addonVersion:match("^0%.2%.0%-dev%.[1-5]$")
+        or data.addonVersion == "0.2.0-beta.1") then
+        data.onboarding.completed = false
+        migrated = migrated or "SETUP_REFRESH_REQUIRED"
+    end
     data.addonVersion = ns.version
     return data, migrated or "VALIDATED_COPY"
 end

@@ -2,7 +2,7 @@
 
 ## Identity and source of truth
 
-**Latest interaction directive:** read [docs/26](docs/26-USABLE-SETUP-AND-CONTROLS.md). The owner rejected consent-heavy setup and controls that remain locked after completion. Dev.5 uses compact preferences, saves independently of graphics readiness, enables ordinary mode clicks and makes Test & Restore a direct action. No acknowledgement, non-75 unlock, external-card requirement or same-login certificate is needed for ordinary use. Internal capture/readback/conflict checks remain. Dev.4 saved completion and several preferences but controls were off; do not claim all preferences were lost. Dev.5 native acceptance is pending. Do not ask for version reconfirmation or claim a feature-complete beta.
+**Latest correction:** read [docs/27](docs/27-HOTFIX-COMPATIBILITY-AND-SETUP-UPGRADE.md). The owner's dev.5 report confirms Forever 1.60.1:70862:16001 and a rejected mode click caused by the old hotfix allowlist. Dev.6 deliberately replaces exact-hotfix admission with the 1.60.1/interface 16001 contract from build 70790, plus fresh native checks; exact session/recovery binding remains. Updated setup reopens once for old completed dev.1–dev.5 data without resetting preferences/journals. Report availability must distinguish usable controls from a diagnostic snapshot. Do not request version reconfirmation or claim dev.6 native acceptance.
 
 
 Current interaction requirement: automatic first-run setup wizard → chosen preferences → **Finish & Reload UI**. Afterward, use launcher/minimap/Settings buttons; commands are optional. See [guided setup](docs/24-GUIDED-SETUP.md). No automatic graphics activation on startup or reload.

@@ -79,12 +79,12 @@ return function(fixture, eq, test)
         local calls = #f.calls; f.ns.Report.Export(f.r); eq(#f.calls, calls)
         eq(f.r.lab.Status().state, "AWAITING_VERIFICATION"); eq(f.r.lab.certificates.Contrast, nil)
     end)
-    test("K06 unreviewed identities cannot write even when preference setup completes", function()
-        for _, tuple in ipairs({ { "70841", 16001 }, { "70791", 16001 }, { "70840", 16002 }, { "70840", 16001, "1.60.2" } }) do
+    test("K06 unsupported client families cannot write even when preference setup completes", function()
+        for _, tuple in ipairs({ { "70789", 16001 }, { "70862", 16002 }, { "70862", 16001, "1.60.2" }, { "70862", 16001, "12.0.0" } }) do
             local f = make(tuple[1], function(f) identity(f, unpack(tuple)) end); f.enter()
             eq(f.r.db.config.studio.enabled, false); eq(f.r.product.CanEnable(), nil)
             local enabled, code, explanation = f.r.product.Enable(true)
-            eq(enabled, nil); eq(code, "UNSUPPORTED_BUILD"); assert(explanation:find("has not been reviewed", 1, true))
+            eq(enabled, nil); eq(code, "UNSUPPORTED_BUILD"); assert(explanation:find("outside the supported Forever", 1, true))
             eq(f.r.log.issues[#f.r.log.issues].result, "UNSUPPORTED_BUILD")
             eq(f.r.engine.Prepare("on"), nil); eq(f.r.lab.Preview("Contrast", 65), nil)
             assert(f.r.setup.Finish()); eq(f.saved.config.studio.enabled, true)
@@ -139,12 +139,12 @@ return function(fixture, eq, test)
     test("K11 experimental descriptor signatures cannot be forged, omitted or promoted to production", function()
         local f = make(); local c, e = f.ns.Catalog, f.ns.ExperimentPolicy
         local bounds = assert(e.Bounds("Contrast", "60"))
-        eq(e.Descriptor("Contrast", bounds), nil); eq(e.Descriptor("Contrast", bounds, "1.60.1:70841:16001"), nil)
+        eq(e.Descriptor("Contrast", bounds), nil); eq(e.Descriptor("Contrast", bounds, "1.60.1:70862:16002"), nil)
         local descriptor = assert(e.Descriptor("Contrast", bounds, "1.60.1:70840:16001"))
         eq(c.Admitted(descriptor, e.Context("1.60.1:70790:16001")), false)
         eq(c.Get("Brightness").admitted, false); eq(c.Get("Contrast").admitted, false)
         eq(f.ns.Compatibility.Inspect(f.r.reader).futureWrites, false)
-        local signatures = f.ns.Compatibility.ExperimentalSignatures(); signatures[1] = "forged"
+        local signatures = f.ns.Compatibility.ObservedSignatures(); signatures[1] = "forged"
         eq(f.ns.Compatibility.Experimental("forged"), false)
     end)
     test("K12 compact setup has readable scale and bounded frame reuse without saving drafts early", function()
@@ -158,6 +158,76 @@ return function(fixture, eq, test)
         local small = make(nil, function(g) g.env.UIParent:SetSize(800, 600) end); small.enter()
         assert(small.r.setup.window:GetWidth() * small.r.setup.window.scale < 800)
         assert(small.r.setup.window:GetHeight() * small.r.setup.window.scale < 600)
+    end)
+    test("K13 owner dev.5 70862 report reproduces setup refresh and button-only usable modes", function()
+        local old = make(); local saved = old.ns.Value.Copy(old.r.db)
+        saved.addonVersion = "0.2.0-dev.5"; saved.onboarding.completed = true
+        saved.config.studio.enabled = false; saved.config.preferences.sound = true
+        local f = make("70862", nil, saved); f.enter()
+        eq(f.r.identity.status, "FOREVER_SUPPORTED_FAMILY"); eq(f.r.storeStatus, "SETUP_REFRESH_REQUIRED")
+        assert(f.r.setup.window:IsShown()); eq(f.r.setup.draft.sound, true); eq(#f.calls, 0)
+        eq(saved.onboarding.completed, true); eq(saved.addonVersion, "0.2.0-dev.5") -- copy-only upgrade
+        f.mock.Click("Finish & Reload UI"); eq(f.reloads, 1); eq(#f.calls, 0)
+        local again = make("70862", nil, f.saved); again.enter(); eq(again.r.setup.window, nil)
+        again.r.entry.Open("LeftButton"); again.mock.Click("2 Night Vision"); again.mock.Flush()
+        eq(again.values.Brightness, "75"); eq(again.r.db.journal.entries.Brightness.originalRaw, "45")
+        again.r.entry.Open("LeftButton"); again.mock.Click("1 Natural"); again.mock.Flush()
+        eq(again.values.Brightness, "45"); eq(#again.calls, 2)
+        assert(again.ns.Report.Export(again.r):find("Mode controls: AVAILABLE", 1, true))
+    end)
+    test("K14 hotfix numbers do not individually lock the supported client family", function()
+        for _, build in ipairs({ "70790", "70791", "70840", "70862", "70999" }) do
+            local f = make(build); f.enter(); eq(#f.calls, 0)
+            assert(f.r.product.Select("lantern")); f.mock.Flush(); eq(f.values.Brightness, "65")
+            assert(f.r.product.Select("natural")); f.mock.Flush(); eq(f.values.Brightness, "45")
+            assert(f.r.lab.Test("Contrast", 65)); f.mock.Flush(); eq(f.values.Contrast, "60")
+            eq(#f.calls, 4)
+        end
+    end)
+    test("K15 malformed identities and policy-copy edits cannot expand the supported family", function()
+        local f = make("70862"); local c = f.ns.Compatibility
+        for _, signature in ipairs({ "1.60.1:foo:16001", "1.60.1:070862:16001", "1.60.1:70862x:16001",
+            "1.60.1:70862:016001", "1.60.1:70789:16001", "1.60.2:70862:16001", "12.0.0:70862:16001" }) do
+            eq(c.Experimental(signature), false)
+        end
+        eq(c.Experimental(nil), false); eq(c.Experimental({}), false)
+        local policy = c.Policy(); policy.interface = 16002; policy.version = "1.60.2"; policy.minimumBuild = 1
+        eq(c.Experimental("1.60.2:1:16002"), false); assert(c.Experimental("1.60.1:70862:16001"))
+        eq(#f.calls, 0)
+    end)
+    test("K16 current hotfix still rejects unavailable and restricted native controls without a write", function()
+        for _, configure in ipairs({
+            function(f) f.env.C_CVar.SetCVar = nil end,
+            function(f) f.env.C_CVar.GetCVar = nil end,
+            function(f) f.env.C_CVar.GetCVarInfo = function(k) return f.values[k], "50", false, false, false, true, false end end,
+        }) do
+            local f = make("70862", configure); eq(f.r.product.Select("nightVision"), nil)
+            eq(f.r.lab.Test("Contrast", 65), nil); eq(#f.calls, 0)
+            local text = f.ns.Report.Export(f.r); eq(text:find("Mode controls: AVAILABLE", 1, true), nil)
+            eq(text:find("production write admission unavailable", 1, true), nil)
+        end
+    end)
+    test("K17 setup refresh retains ownership and preferences and stops repeating after Save", function()
+        local old = make("70862"); assert(old.r.product.Select("nightVision")); old.mock.Flush()
+        local saved = old.ns.Value.Copy(old.r.db)
+        saved.addonVersion = "0.2.0-dev.4"; saved.onboarding.completed = true
+        saved.config.studio.modes.lantern.brightness = 67; saved.config.preferences.sound = true
+        local f = make("70862", function(g) g.values.Brightness = "75" end, saved); f.enter()
+        assert(f.r.setup.window:IsShown()); eq(f.r.db.journal.entries.Brightness.originalRaw, "45")
+        eq(f.r.db.config.studio.modes.lantern.brightness, 67); eq(f.r.setup.draft.sound, true)
+        eq(f.r.setup.Finish(), nil); eq(f.reloads, 0); eq(#f.calls, 0)
+        assert(f.r.setup.SaveAndClose()); eq(f.r.db.onboarding.completed, true)
+        local nextLogin = make("70862", nil, f.r.db); nextLogin.enter()
+        eq(nextLogin.r.setup.window, nil); eq(#nextLogin.calls, 0)
+        eq(nextLogin.r.db.journal.entries.Brightness.originalRaw, "45")
+    end)
+    test("K18 a hotfix cannot retag an interrupted operation or historical recovery", function()
+        for _, leaf in ipairs({ false, true }) do
+            local f = make("70862"); local engine = leaf and f.r.lab or f.r.engine
+            if leaf then assert(engine.Preview("Contrast", 65)) else assert(engine.Prepare("on")) end
+            local token = engine.Status().token; identity(f, "70999")
+            local ok, why = engine.Confirm(token); eq(ok, nil); eq(why, "SESSION_BUILD_CHANGED"); eq(#f.calls, 0)
+        end
     end)
     local path = os.getenv("LUMENSHIFT_SETUP_MODEL_PATH")
     if path then

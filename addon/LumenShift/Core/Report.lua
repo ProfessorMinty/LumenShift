@@ -67,7 +67,7 @@ function D.Run(runtime, reason)
                 ready and "observation-and-test-policy-only-no-write" or item.code ~= "OK" and item.code or code or "RESTRICTED_OR_UNVERIFIED_FLAGS")
         end
     end
-    add("native-writes", "NOT TESTED", "Run Diagnostics never invokes a setter; use explicit Calibration")
+    add("native-writes", "NOT TESTED", "The diagnostic scan does not write; use mode buttons, Apply or Test & Restore. Prior operations are in session history.")
     add("visible-effects", "NOT TESTED", "Readbacks do not measure the rendered scene")
     add("texture-decoding", "NOT TESTED", "No arbitrary asset filesystem inspection API used; inspect visible icons")
     add("audio-playback", "NOT TESTED", "Use explicit Audio previews; no automatic playback")
@@ -94,15 +94,16 @@ function D.Build(runtime)
     local log = runtime.log
     local lines = { "LUMENSHIFT COMPLETE DIAGNOSTIC REPORT", "Format: 1 | privacy: numeric/allowlisted data only",
         "Addon: " .. ns.version .. " | build: " .. safe(ns.build), "Session: " .. (log and log.session or "unavailable"),
-        "Evidence: observations from this session; NOT a native visual acceptance certificate.",
+        "Session observations. The report reads settings; mode and Apply buttons change them.",
         "Excluded: character/account identifiers, chat, paths, credentials, preset names and raw native error text.",
         "", "1. ENVIRONMENT", "Client: " .. version .. " build " .. build .. " date " .. date .. " interface " .. D.Number(identity.interface),
-        "Compatibility: " .. safe(identity.status), "Physical resolution: " .. env.resolution,
+        "Compatibility: " .. safe(identity.status), ns.Diagnostics.ControlStatus(runtime),
+        "Physical resolution: " .. env.resolution,
         "UI units: " .. env.GetWidth .. " x " .. env.GetHeight .. " | effective scale: " .. env.GetEffectiveScale,
         "Renderer (gxapi): " .. env.renderer .. " | combat: " .. env.combat,
         "SavedVariables: " .. safe(runtime.storeStatus) .. " | supported schema=" .. ns.schemaVersion .. " | immediately durable: no", "", "2. CAPABILITIES" }
     for _, name in ipairs(V.Keys(env.apis)) do lines[#lines + 1] = name .. "=" .. bool(env.apis[name]) end
-    lines[#lines + 1] = "3. GRAPHICS OBSERVATIONS (read-only; defaults are not originals)"
+    lines[#lines + 1] = "3. CURRENT GRAPHICS VALUES (snapshot; defaults are not captured originals)"
     for _, key in ipairs(ns.Catalog.WatchKeys()) do
         local item = ns.ReadOnly.Read(runtime.reader, key)
         local original = runtime.db and (runtime.db.journal.entries[key] or runtime.db.experiments.journal.entries[key])
@@ -134,7 +135,7 @@ function D.Build(runtime)
         local config = db.config
         lines[#lines + 1] = "active visual presentation=" .. safe(runtime.product and runtime.product.active)
             .. " | last verified quality selection=" .. safe(runtime.lab and runtime.lab.activeProfile)
-        lines[#lines + 1] = "controls-requested=" .. bool(config.studio.enabled) .. " legacyBrightnessFlag=" .. bool(config.studio.experimentalBrightness)
+        lines[#lines + 1] = "mode-selection=explicit-user-action; saved-enable-flag=" .. bool(config.studio.enabled)
             .. " effects=" .. bool(config.studio.effects) .. " audio=" .. bool(config.preferences.sound) .. " reducedMotion=" .. bool(config.preferences.reducedMotion)
         lines[#lines + 1] = "setup wizard completed=" .. bool(db.onboarding.completed)
         for _, id in ipairs(ns.StudioConfig.Order) do
@@ -172,7 +173,7 @@ function D.Build(runtime)
         end
     end
     if runtime.lab and runtime.lab.preview then for _, line in ipairs(runtime.lab.preview.lines) do lines[#lines + 1] = "PREVIEW: " .. line end end
-    lines[#lines + 1] = "6. CURRENT READ-ONLY CHECKS / NOT PERFORMED (refreshed on export)"
+    lines[#lines + 1] = "6. DIAGNOSTIC CHECKS (refreshed on export; this scan applies no settings)"
     if not runtime.checks then lines[#lines + 1] = "NOT TESTED: Run Diagnostics has not completed" end
     local counts = { PASS = 0, FAIL = 0, BLOCKED = 0, ["NOT TESTED"] = 0 }
     for _, check in ipairs(runtime.checks or {}) do
@@ -183,7 +184,7 @@ function D.Build(runtime)
     lines[#lines + 1] = "Six visual modes: click a mode to apply; no acknowledgement or non-75 unlock. Source-range Brightness, no startup writes."
     lines[#lines + 1] = "Contrast and named quality: direct bounded Apply or optional Test & Restore. Previous calibration is not an unlock requirement."
     lines[#lines + 1] = "Quality profiles: user-configured target sets, rechecked on Apply; no guessed optimized defaults or measured FPS promises."
-    lines[#lines + 1] = "Shadow/light/water tier, HDR, renderer, camera and overall presets: BLOCKED for writes; dependency/restart/hardware contracts unmapped."
+    lines[#lines + 1] = "Not implemented: shadow/light/water tiers, HDR, renderer, camera and automatic overall presets."
     lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Session test history is observational, not permission."
     lines[#lines + 1] = "Addon-owned handlers only. Pre-bootstrap syntax/load failures and unrelated game/addon errors may prevent or lie outside this report."
     lines[#lines + 1] = "8. RECENT WARNINGS / ERRORS (last 32, may overlap history)"
@@ -191,7 +192,7 @@ function D.Build(runtime)
     lines[#lines + 1] = "9. CHRONOLOGICAL SESSION HISTORY (last 240; dropped=" .. (log and log.dropped or 0) .. ")"
     for _, event in ipairs(log and log.History() or {}) do lines[#lines + 1] = eventLine(event) end
     lines[#lines + 1] = "10. SUMMARY"
-    lines[#lines + 1] = "Read-only checks: PASS=" .. counts.PASS .. " FAIL=" .. counts.FAIL .. " BLOCKED=" .. counts.BLOCKED .. " NOT TESTED=" .. counts["NOT TESTED"]
+    lines[#lines + 1] = "Diagnostic checks: PASS=" .. counts.PASS .. " FAIL=" .. counts.FAIL .. " BLOCKED=" .. counts.BLOCKED .. " NOT TESTED=" .. counts["NOT TESTED"]
     lines[#lines + 1] = "Session events: WARN=" .. (log and log.counts.WARN or 0) .. " ERROR=" .. (log and log.counts.ERROR or 0)
     lines[#lines + 1] = "If recovery records or watched changes remain, preserve this report and resolve them before uninstalling."
     lines[#lines + 1] = "END LUMENSHIFT REPORT"
