@@ -11,13 +11,13 @@ local messages = {
     EXPLICIT_RECOVERY_REQUIRED = "An earlier change needs attention. Open Recovery to inspect the saved original.",
     RECOVERY_REQUIRED = "An earlier change needs attention. Open Recovery to inspect the saved original.",
     RESTORE_EXPERIMENTS_BEFORE_CALIBRATING = "Restore the active Contrast and quality changes before trying a temporary test.",
-    RESTORE_BRIGHTNESS_BEFORE_CALIBRATING = "Choose Natural before trying a temporary graphics test.",
+    RESTORE_BRIGHTNESS_BEFORE_CALIBRATING = "Restore pre-change Brightness in Diagnostic Center before a temporary test.",
     UNCHANGED_VALUE_IS_NOT_A_CALIBRATION = "Choose a different value to see a change.",
     CONFIGURE_PROFILE_FIRST = "This profile is empty. Add settings in Advanced Graphics first.",
     OUTSIDE_BOUNDED_TEST_POLICY = "That value is outside this control's available range.",
     INVALID_TEST_STEP = "Choose a value using the step shown for this control.",
     QUALITY_TRIAL_RECOVERY_REQUIRED = "Finish or restore the quality trial in Advanced Graphics first.",
-    RESTORE_ACTIVE_SETTINGS_BEFORE_TIER_TRIAL = "Choose Natural and Current Baseline before trying a native quality tier.",
+    RESTORE_ACTIVE_SETTINGS_BEFORE_TIER_TRIAL = "Restore pre-change visuals in Diagnostic Center and choose Current Baseline for quality before a native tier trial.",
     INVALID_TIER_CHOICE = "Choose one of the available quality levels first.",
     UNCHANGED_TIER_CHOICE = "That level is already selected. Choose a different level for the trial.",
     NO_TIER_ORIGINAL = "There is no interrupted quality trial to restore.",
@@ -28,6 +28,7 @@ local messages = {
     TIER_OR_DEPENDENT_RESTORATION_INCOMPLETE = "Some values did not return to their originals. Export the report; originals are retained. No repair values were guessed.",
     EXTERNAL_CONFLICT_NO_AUTOMATIC_RESTORE = "A setting changed during the trial. Automatic restoration stopped; review the report before restoring the trial.",
     MODE_PARTIAL = "The mode did not finish applying. Your original values are retained; open Recovery.",
+    BASELINE_VALUE_UNAVAILABLE = "This baseline value was unavailable during setup. Open Setup and capture it again, or choose another mode.",
 }
 function P.Message(code)
     if not code then return nil end
@@ -55,11 +56,12 @@ function P.New(runtime)
     local function commit(id, settings)
         local previous = product.active
         product.active, product.lastError, product.lastMessage = id, nil, nil
+        product.baselineVerified = id == "natural"
         product.appliedBrightness = settings.brightness
         db.config.selected.visual = id
         ns.Log.Record(runtime.reader, "product", "mode-commit", "INFO", "PASS", { mode = id,
             requested = id ~= "natural" and settings.brightness or nil,
-            detail = id == "natural" and "CAPTURED_ORIGINAL_RESTORED" or nil })
+            detail = id == "natural" and (db.baseline.chosen and "SELECTED_BASELINE_VERIFIED" or "CAPTURED_ORIGINAL_RESTORED") or nil })
         if runtime.presentation then
             local ok, code = runtime.presentation.Apply(id, settings, db.config)
             if not ok then
@@ -103,7 +105,7 @@ function P.New(runtime)
         if product.busy or next(db.journal.entries) or next(db.experiments.journal.entries) then return report("Restore visuals and quality before disabling controls.") end
         config().enabled = false
         engine.Cancel()
-        product.active = "natural"; clear()
+        product.active, product.baselineVerified = "natural", false; clear()
         if runtime.audio then runtime.audio.Stop() end
         if product.Refresh then product.Refresh() end
         return true
@@ -116,10 +118,21 @@ function P.New(runtime)
         end
         if product.busy then return report("An operation is still being verified.") end
         if not ns.StudioConfig.Labels[id] or not ns.StudioConfig.Validate(config()) then return report("INVALID_MODE_CONFIG") end
+        if not ns.Baseline.Validate(db.baseline) then return report("INVALID_BASELINE_CONFIG") end
+        ns.Baseline.CompleteMissing(runtime) -- explicit click only; no startup capture/write
+        product.baselineVerified = false
         if combat() then return report("Outside combat only. No change queued.") end
         if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return report("FOLLOWUP_TIMER_UNAVAILABLE") end
         local settings = ns.Value.Copy(config().modes[id])
         local contrast = id ~= "natural" and settings.useContrast and { Contrast = settings.contrast } or {}
+        local brightnessTarget = id ~= "natural" and settings.brightness or nil
+        if id == "natural" and db.baseline.chosen then
+            local why; brightnessTarget, why = ns.Baseline.Target(runtime, "Brightness")
+            if why then return report(why) end
+        end
+        if db.baseline.chosen and not next(contrast) and db.baseline.values.Contrast then
+            contrast.Contrast = ns.Baseline.Target(runtime, "Contrast")
+        end
         local needsContrast = next(contrast) ~= nil or db.experiments.journal.entries.Contrast ~= nil
         if runtime.lab and runtime.lab.busy then return report("OTHER_OPERATION_ACTIVE") end
         if needsContrast then
@@ -144,7 +157,7 @@ function P.New(runtime)
         local previous = product.active
         product.busy, product.generation = true, product.generation + 1
         local generation = product.generation
-        local ok, code = engine.Switch(id ~= "natural" and settings.brightness or nil)
+        local ok, code = engine.Switch(brightnessTarget)
         local status = engine.Status()
         if status.state ~= "AWAITING_VERIFICATION" then
             product.busy = false
@@ -188,10 +201,19 @@ function P.New(runtime)
         if runtime.lab then
             runtime.lab.Observe()
             if db and db.experiments.journal.entries.Contrast and (runtime.lab.state == "RECOVERY" or runtime.lab.state == "CONFLICT") then
-                clear(); product.active = "natural"
+                clear(); product.active, product.baselineVerified = "natural", false
             end
         end
         local status = engine.Status()
+        if product.baselineVerified and db and db.baseline.chosen then
+            for key, raw in pairs(db.baseline.values) do
+                local seen = ns.ReadOnly.Read(runtime.reader, key)
+                if not ns.Planner.SafeObservation(seen) or ns.Value.Number(seen.raw) ~= ns.Value.Number(raw) then
+                    product.baselineVerified = false
+                end
+            end
+            if status.state ~= "BASELINE" and status.state ~= "ACTIVE" then product.baselineVerified = false end
+        end
         if status.state ~= "ACTIVE" and product.active ~= "natural" then
             if status.state == "BASELINE" and db and not next(db.journal.entries) then
                 local item = ns.ReadOnly.Read(runtime.reader, "Brightness")

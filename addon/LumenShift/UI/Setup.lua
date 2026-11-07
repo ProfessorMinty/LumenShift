@@ -11,6 +11,11 @@ function S.New(runtime)
     end
     local function save()
         if not db or not ui.draft then return tell("Preferences could not be loaded. Open Diagnostics for details.") end
+        local baseline = ns.Value.Copy(db.baseline)
+        if ui.draft.capture or not baseline.chosen or baseline.source ~= ui.draft.baselineSource then
+            baseline = ns.Baseline.Capture(runtime, ui.draft.baselineSource)
+        end
+        if not ns.Baseline.Validate(baseline) then return tell("The baseline choice could not be saved. Try opening setup again.") end
         local saved, why = product.Update(function(copy)
             copy.studio.enabled = true
             copy.studio.effects = ui.draft.effects
@@ -21,6 +26,10 @@ function S.New(runtime)
             copy.preferences.reducedMotion = ui.draft.reducedMotion
         end)
         if not saved then return tell(why or "Could not save preferences.") end
+        db.baseline = baseline
+        product.baselineVerified = false
+        ui.draft.capture = false
+        if runtime.ui and runtime.ui.BuildPage then runtime.ui.BuildPage(); runtime.ui.Refresh() end
         db.onboarding.completed = true
         ns.Log.Record(runtime.reader, "setup", "save", "INFO", "PREFERENCES_SAVED_NO_GRAPHICS_WRITE")
         return true
@@ -38,7 +47,7 @@ function S.New(runtime)
         -- Only the explicit final button requests reload, never a later event.
         if product.IsCombat() then return tell("Preferences saved. Finish reloading after combat, or choose Save & Close.") end
         if product.busy or runtime.lab.busy or next(db.journal.entries) or next(db.experiments.journal.entries) then
-            return tell("Preferences saved. Return visuals and quality to Natural / Current Baseline before reloading. You can Save & Close now.")
+            return tell("Preferences saved. Restore active changes in Diagnostic Center before reloading, or use Save & Close.")
         end
         if type(env.ReloadUI) ~= "function" then return tell("Preferences saved. Reload is unavailable; you can close setup and keep playing.") end
         ui.finishing = true
@@ -54,6 +63,26 @@ function S.New(runtime)
     end
     function ui.Build()
         ui.pool.Reset()
+        W.Text(ui.body, "YOUR RETURN MODE", 0, 0, 580, 11, W.colors.muted)
+        for index, item in ipairs({
+            { "current", "Original", "Capture my current light and contrast." },
+            { "gameDefaults", "Game Defaults", "Use the defaults reported by WoW." },
+        }) do
+            local source = item[1]
+            W.Card(ui.pool.env, ui.body, item[2], item[3], (index - 1) * 300, -24, 280, 90,
+                ui.draft.baselineSource == source, function()
+                    ui.draft.baselineSource, ui.draft.capture = source, true
+                    ui.Build()
+                end)
+        end
+        local preview = db.baseline
+        if ui.draft.capture or not preview.chosen or preview.source ~= ui.draft.baselineSource then
+            preview = ns.Baseline.Capture(runtime, ui.draft.baselineSource)
+        end
+        W.Text(ui.body, ns.Baseline.Summary(preview), 0, -124, 580, 12, W.colors.accent)
+        W.Text(ui.body, "Visual settings only; graphics quality stays independent. Saving does not apply them.", 0, -147, 580, 12, W.colors.muted)
+        W.Button(ui.pool.env, ui.body, "Capture again", 0, -176, 130, function() ui.draft.capture = true; ui.Build() end, nil, "quiet")
+        W.Text(ui.body, "Active modes keep their pre-mode originals when captured.", 150, -184, 430, 11, W.colors.muted)
         local choices = {
             { "Screen effects", "Tint and soft screen edges", "effects" },
             { "Night Vision sounds", "Play the on / off cue", "sound" },
@@ -65,7 +94,7 @@ function S.New(runtime)
         for index, choice in ipairs(choices) do
             local key = choice[3]
             W.Checkbox(ui.pool.env, ui.body, choice[1], choice[2], ((index - 1) % 2) * 300,
-                -math.floor((index - 1) / 2) * 66, 280, function() return ui.draft[key] end,
+                -226 - math.floor((index - 1) / 2) * 66, 280, function() return ui.draft[key] end,
                 function(value) ui.draft[key] = value end)
         end
         ui.notice:SetText(ui.message or "Click the LumenShift button for modes. Right-click it for Studio.")
@@ -77,12 +106,13 @@ function S.New(runtime)
         ui.message, ui.finishing = nil, false
         ui.draft = { effects = db.config.studio.effects, sound = db.config.preferences.sound,
             animation = db.config.preferences.animation, reducedMotion = db.config.preferences.reducedMotion,
-            highContrast = db.config.studio.highContrast, launcher = db.config.studio.launcher.visible }
+            highContrast = db.config.studio.highContrast, launcher = db.config.studio.launcher.visible,
+            baselineSource = db.baseline.source, capture = not db.baseline.chosen }
         if not ui.window then
             local window = env.CreateFrame("Frame", "LumenShiftSetup", env.UIParent); ui.window = window
-            window:SetSize(640, 440); window:SetPoint("CENTER"); window:SetFrameStrata("DIALOG")
+            window:SetSize(640, 656); window:SetPoint("CENTER"); window:SetFrameStrata("DIALOG")
             window:SetClampedToScreen(true); window:EnableMouse(true); W.Fill(window, W.colors.bg)
-            ui.panelArt = W.Art(window, "panel-steel", 1, -1, 638, 438, 0.38, "BACKGROUND")
+            ui.panelArt = W.Art(window, "panel-steel", 1, -1, 638, 654, 0.38, "BACKGROUND")
             ui.headerArt = W.Art(window, "light-sweep", 200, -2, 410, 102, 0.50, "BACKGROUND")
             ui.headerArt:SetTexCoord(0, 1, 0.32, 0.73); W.Border(window)
             local logo = window:CreateTexture(nil, "ARTWORK"); logo:SetSize(48, 48); logo:SetPoint("TOPLEFT", 28, -26)
@@ -90,14 +120,14 @@ function S.New(runtime)
             W.Text(window, runtime.storeStatus == "SETUP_REFRESH_REQUIRED" and "LumenShift setup updated" or "Welcome to LumenShift", 94, -28, 470, 24)
             W.Text(window, runtime.storeStatus == "SETUP_REFRESH_REQUIRED" and "Your choices are kept. Save once to finish the new setup." or "Choose your defaults. You can change them anytime.", 94, -62, 490, 14)
             ui.body = env.CreateFrame("Frame", nil, window)
-            ui.body:SetPoint("TOPLEFT", window, "TOPLEFT", 30, -114); ui.body:SetSize(580, 195)
+            ui.body:SetPoint("TOPLEFT", window, "TOPLEFT", 30, -114); ui.body:SetSize(580, 414)
             ui.pool = W.CreatePool(env, ui.body)
-            ui.notice = W.Text(window, "", 30, -318, 580, 14, W.colors.muted)
+            ui.notice = W.Text(window, "", 30, -540, 580, 13, W.colors.muted)
             W.ButtonIcon(W.Button(env, window, "X", 592, -12, 30, function() window:Hide() end, nil, "quiet"), "ui-close", 12).label:Hide()
-            W.Button(env, window, "Later", 30, -382, 92, function() window:Hide() end)
-            W.Button(env, window, "Save & Close", 138, -382, 178, ui.SaveAndClose)
-            W.Rule(window, 30, -363, 580)
-            ui.next = W.Button(env, window, "Finish & Reload UI", 332, -382, 278, ui.Finish, nil, "primary")
+            W.Button(env, window, "Later", 30, -600, 92, function() window:Hide() end)
+            W.Button(env, window, "Save & Close", 138, -600, 178, ui.SaveAndClose)
+            W.Rule(window, 30, -580, 580)
+            ui.next = W.Button(env, window, "Finish & Reload UI", 332, -600, 278, ui.Finish, nil, "primary")
             ui.next:SetHeight(36)
             local font = ui.next.label:GetFont(); ui.next.label:SetFont(font, 16, "")
             if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftSetup") end
@@ -105,14 +135,14 @@ function S.New(runtime)
         if runtime.ui and runtime.ui.CloseWheel then runtime.ui.CloseWheel() end
         local scale = env.UIParent:GetEffectiveScale()
         if not ns.Value.Finite(scale) or scale <= 0 then scale = 1 end
-        ui.window:SetScale(math.min(1 / scale, env.UIParent:GetWidth() / 680, env.UIParent:GetHeight() / 480))
+        ui.window:SetScale(math.min(1 / scale, env.UIParent:GetWidth() / 680, env.UIParent:GetHeight() / 696))
         W.Decoration(ui.panelArt); W.Decoration(ui.headerArt)
         ui.Build(); ui.window:Show()
         ns.Log.Record(runtime.reader, "setup", "open", "INFO", "NO_GRAPHICS_WRITE")
         return true
     end
     function ui.MaybeOpen()
-        if ui.attempted or not db or db.onboarding.completed or product.IsCombat() then return end
+        if ui.attempted or not db or (db.onboarding.completed and db.baseline.chosen) or product.IsCombat() then return end
         ui.attempted = true; ui.Open()
     end
     return ui

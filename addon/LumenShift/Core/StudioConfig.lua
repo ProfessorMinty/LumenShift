@@ -2,16 +2,20 @@ local _, ns = ...
 local C, V = {}, ns.Value
 ns.StudioConfig = C
 C.Order = { "natural", "nightVision", "cinematic", "lantern", "clarity", "moonlight" }
-C.Labels = { natural = "Natural", nightVision = "Night Vision", cinematic = "Cinematic",
+C.Labels = { natural = "Original", nightVision = "Night Vision", cinematic = "Cinematic",
     lantern = "Lantern", clarity = "Clarity", moonlight = "Moonlight" }
 C.Descriptions = {
-    natural = "Your captured visual baseline. No presentation effects.",
+    natural = "Your chosen Original or Game Defaults look. No presentation effects.",
     nightVision = "Visibility boost with optional phosphor-green tint.",
     cinematic = "Quiet amber atmosphere; optional screenshot letterbox.",
     lantern = "Warm light and a gentle visibility lift for interiors.",
     clarity = "Neutral, unobstructed visibility for regular gameplay.",
     moonlight = "Cool blue atmosphere with configurable visibility.",
 }
+function C.Label(id)
+    if id == "natural" and ns.runtime and ns.runtime.db then return ns.Baseline.Label(ns.runtime.db.baseline) end
+    return C.Labels[id]
+end
 local function mode(brightness, r, g, b, opacity, vignette)
     return { brightness = brightness, tint = { r = r, g = g, b = b },
         tintEnabled = opacity > 0, opacity = opacity, vignette = vignette,

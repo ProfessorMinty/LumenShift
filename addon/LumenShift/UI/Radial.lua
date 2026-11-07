@@ -39,7 +39,8 @@ function R.New(runtime, openStudio)
             local id = ns.StudioConfig.Order[i]
             button.background:SetColorTexture(0, 0, 0, 0)
             button.label:SetTextColor(unpack(i == self.selection and W.colors.accent or W.colors.text))
-            button.label:SetText((product.active == id and "* " or "") .. i .. " " .. ns.StudioConfig.Labels[id])
+            local active = product.active == id and (id ~= "natural" or not db.baseline.chosen or product.baselineVerified)
+            button.label:SetText((active and "* " or "") .. i .. " " .. ns.StudioConfig.Label(id))
         end
     end
     function self.Close()
@@ -53,7 +54,7 @@ function R.New(runtime, openStudio)
     for i, id in ipairs(ns.StudioConfig.Order) do
         local index, modeID = i, id
         local angle = (90 - (i - 1) * 60) * math.pi / 180
-        local button = W.Button(env, frame, i .. " " .. ns.StudioConfig.Labels[id],
+        local button = W.Button(env, frame, i .. " " .. ns.StudioConfig.Label(id),
             120 + math.cos(angle) * 112, -151 + math.sin(angle) * 112, 112,
             function() selectMode(index) end, ns.StudioConfig.Descriptions[id])
         button:SetHeight(61); button.label:ClearAllPoints(); button.label:SetPoint("BOTTOM", button, "BOTTOM", 0, 5)

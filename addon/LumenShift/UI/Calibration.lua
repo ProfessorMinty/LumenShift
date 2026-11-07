@@ -76,6 +76,10 @@ function U.Build(runtime, ui, parent, env)
     local edit = W.Edit(env, parent, ui.labTarget or item.raw or "", 694, y + 5, 142, function(value) ui.labTarget = value end)
     primary("Test & Restore", function() ui.labTarget = edit:GetText(); return lab.Test(ui.labKey, ns.Value.Number(ui.labTarget)) end)
     y = y - 79
+    if ui.labKey == "ResampleSharpness" then
+        text("Lower is sharper: 0 = strongest, 2 = weakest. This is WoW's reversed scale.", 0, y, 836, W.colors.muted)
+        y = y - 40
+    end
     ui.labStateText = text("", 0, y, 836, W.colors.accent)
     y = y - 46
     action("Preview exact modification (read only)", 0, y, 405, function()
@@ -92,7 +96,7 @@ function U.Build(runtime, ui, parent, env)
     end
     W.Section(parent, "SAVE & RECOVER", 0, y, 836); y = y - 43
     if ui.labKey == "Contrast" then
-        text("Set Contrast for each look in Visual Modes. Natural restores the captured original.", 0, y, 836, W.colors.muted)
+        text("Set Contrast per mode. The return mode uses your Original or Game Defaults choice.", 0, y, 836, W.colors.muted)
         action("Edit visual modes", 0, y - 36, 220, function() ui.Open(1); return true end, "quiet")
         y = y - 91
     else

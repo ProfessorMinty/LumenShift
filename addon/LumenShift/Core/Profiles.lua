@@ -3,7 +3,7 @@ local P = {}
 ns.Profiles = P
 local definitions = {
     visual = {
-        natural = "Natural", nightVision = "Night Vision", cinematic = "Cinematic",
+        natural = "Original", nightVision = "Night Vision", cinematic = "Cinematic",
         lantern = "Lantern", clarity = "Clarity", moonlight = "Moonlight",
     },
     quality = {

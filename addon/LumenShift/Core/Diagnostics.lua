@@ -56,7 +56,7 @@ function D.Lines(runtime)
         end
     else lines[#lines + 1] = "Recovery: saved data preserved in place; schema quarantined" end
     lines[#lines + 1] = "Use the launcher for modes; right-click it for Studio. Commands are optional."
-    lines[#lines + 1] = "Natural restores the active visual mode. Recovery buttons are below for an interrupted operation."
+    lines[#lines + 1] = "Your return mode uses the setup baseline. Recovery buttons restore captured pre-change values."
     lines[#lines + 1] = "An uncertain recovery asks you to review the current and original values before replacing them."
     lines[#lines + 1] = "Advanced Graphics has Test & Restore and custom quality controls."
     lines[#lines + 1] = "This diagnostic snapshot does not change settings. Use mode or Advanced Graphics buttons to try them."

@@ -23,7 +23,9 @@ Q.Descriptions = { currentBaseline = "Restore captured quality originals. Your v
     balanced = "Preserve scene detail and enable sharpening. Uses your saved custom targets when configured.",
     vista = "Increase scene detail by a bounded amount from your original values. Experimental; may cost FPS.",
     performance = "Reduce scene detail by a bounded amount. Experimental; an FPS improvement is not guaranteed." }
-local recipeKeys = { "ResampleAlwaysSharpen", "ResampleSharpness", "groundEffectDensity", "groundEffectDist",
+-- Built-ins omit strength: preserve an unowned value or restore an owned custom
+-- strength through the exact release path, including off-grid native originals.
+local recipeKeys = { "ResampleAlwaysSharpen", "groundEffectDensity", "groundEffectDist",
     "farclip", "terrainLodDist", "lodObjectCullSize", "lodObjectFadeScale" }
 function Q.Resolve(runtime, id)
     if not Q.Profiles[id] or not runtime.db then return nil, "INVALID_QUALITY_PROFILE" end
@@ -40,13 +42,12 @@ function Q.Resolve(runtime, id)
         if ns.Planner.SafeObservation(observed) and bounds then
             local value = ns.Value.Number(original)
             if key == "ResampleAlwaysSharpen" then value = 1
-            elseif key == "ResampleSharpness" then value = 1 -- source UI: neutral midpoint; lower = sharper
             elseif id ~= "balanced" then
                 local increase = id == "vista"
                 if key == "lodObjectCullSize" then increase = not increase end
                 value = increase and math.floor(bounds.max) or math.ceil(bounds.min)
             end
-            if id ~= "balanced" or key == "ResampleAlwaysSharpen" or key == "ResampleSharpness" then targets[key] = value end
+            if id ~= "balanced" or key == "ResampleAlwaysSharpen" then targets[key] = value end
         else omitted[#omitted + 1] = key end
     end
     if not next(targets) then return nil, "NO_QUALITY_CONTROLS_AVAILABLE" end

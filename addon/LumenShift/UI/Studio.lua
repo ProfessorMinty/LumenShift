@@ -75,7 +75,9 @@ function S.New(runtime)
         local states = { BASELINE = "Ready", ACTIVE = "Applied", RECOVERY = "Recovery available",
             CONFLICT = "External change preserved", AWAITING_VERIFICATION = "Checking change..." }
         local state = product.busy and "Checking change..." or states[status.state] or status.state
-        ui.status:SetText("ACTIVE  " .. ns.StudioConfig.Labels[product.active] .. "     /     QUALITY  "
+        local activeLabel = product.active == "natural" and db.baseline.chosen and not product.baselineVerified
+            and "No mode applied" or ns.StudioConfig.Label(product.active)
+        ui.status:SetText("ACTIVE  " .. activeLabel .. "     /     QUALITY  "
             .. (ns.Quality.Profiles[db.config.selected.quality] or "Current Baseline") .. "     /     BRIGHTNESS  "
             .. (current.raw or "unavailable") .. "     /     " .. state)
         local lab = runtime.lab and runtime.lab.Status()
@@ -121,7 +123,8 @@ function S.New(runtime)
         if ui.page == 1 then
             for i, id in ipairs(ns.StudioConfig.Order) do
                 local selected = id
-                W.Card(env, parent, ns.StudioConfig.Labels[id], modeNotes[id], ((i - 1) % 3) * 284,
+                local note = id == "natural" and (db.baseline.source == "gameDefaults" and "Defaults reported by your client" or "Your captured visual settings") or modeNotes[id]
+                W.Card(env, parent, ns.StudioConfig.Label(id), note, ((i - 1) % 3) * 284,
                     -math.floor((i - 1) / 3) * 94, 268, 82, ui.edited == id,
                     function() ui.edited = selected; ui.BuildPage() end, "Interface/AddOns/LumenShift/Media/" .. id .. ".tga")
             end
@@ -135,15 +138,16 @@ function S.New(runtime)
                     function(value) return editMode("useContrast", value) end)
                 text("Adjustments apply when you click Apply.", 0, -325, 398, 12, W.colors.muted)
             else
-                text("Return to your original light and contrast.", 0, -254, 800, 18)
-                text("Natural restores the exact settings captured before LumenShift took control. Your quality profile stays independent.", 0, -292, 800, 14, W.colors.muted)
+                text(ns.Baseline.Summary(db.baseline), 0, -254, 800, 18)
+                text("Uses your setup choice for light and contrast. Quality stays independent. Pre-change values remain available in Recovery.", 0, -292, 800, 14, W.colors.muted)
+                button("Change baseline in setup", 0, -342, 260, function() runtime.setup.Open() end, "quiet")
             end
-            button("Reset this mode's saved settings", 0, -389, 284, function()
+            if ui.edited ~= "natural" then button("Reset this mode's saved settings", 0, -389, 284, function()
                 local selected = ui.edited
                 update(function(copy) copy.studio.modes[selected] = ns.StudioConfig.Defaults().modes[selected] end)
                 ui.Invalidate(1); ui.Invalidate(3); ui.BuildPage()
-            end, "quiet")
-            ui.Primary("Apply " .. ns.StudioConfig.Labels[ui.edited], function() product.Select(ui.edited) end)
+            end, "quiet") end
+            ui.Primary("Apply " .. ns.StudioConfig.Label(ui.edited), function() product.Select(ui.edited) end)
         elseif ui.page == 2 then
             ui.qualityID = ui.qualityID or db.config.selected.quality
             local descriptions = { currentBaseline = "Restore your captured quality settings.", balanced = "Sharpen the image. Preserve scene detail.",
@@ -173,11 +177,11 @@ function S.New(runtime)
                 function(value) update(function(copy) copy.studio.effects = value end); product.RefreshPresentation() end)
             for i, id in ipairs(ns.StudioConfig.Order) do
                 local selected = id
-                local b = button(ns.StudioConfig.Labels[id], (i - 1) * 141, -58, 131, function() ui.edited = selected; ui.BuildPage() end)
+                local b = button(ns.StudioConfig.Label(id), (i - 1) * 141, -58, 131, function() ui.edited = selected; ui.BuildPage() end)
                 b.SetSelected(id == ui.edited)
             end
             section("TINT & SOFT EDGES", -116)
-            toggle("Tint for " .. ns.StudioConfig.Labels[ui.edited], 0, -155, 398, function() return cfg().modes[ui.edited].tintEnabled end,
+            toggle("Tint for " .. ns.StudioConfig.Label(ui.edited), 0, -155, 398, function() return cfg().modes[ui.edited].tintEnabled end,
                 function(value) editMode("tintEnabled", value) end)
             for i, item in ipairs({ { "Tint opacity", "opacity", 0.12 }, { "Vignette", "vignette", 0.15 } }) do
                 local field = item[2]
@@ -215,8 +219,8 @@ function S.New(runtime)
                 "Enable sounds to hear a preview. Global volume is unchanged.")
         elseif ui.page == 5 then
             section("SAVE A VARIATION", 0)
-            text("Based on " .. ns.StudioConfig.Labels[ui.edited], 0, -44, 800, 14, W.colors.muted)
-            local name = W.Edit(env, parent, "My " .. ns.StudioConfig.Labels[ui.edited], 0, -77, 406, function() end)
+            text("Based on " .. ns.StudioConfig.Label(ui.edited), 0, -44, 800, 14, W.colors.muted)
+            local name = W.Edit(env, parent, "My " .. ns.StudioConfig.Label(ui.edited), 0, -77, 406, function() end)
             button("Edit source mode", 430, -77, 180, function() ui.Open(1) end, "quiet")
             ui.Primary("Save variation", function() product.SavePreset(name:GetText(), ui.edited); ui.BuildPage() end,
                 "Presets save mode settings. Quality profiles stay separate.")
@@ -226,7 +230,7 @@ function S.New(runtime)
             for i, id in ipairs(ids) do
                 local presetID, preset = id, cfg().presets[id]
                 local x, y = ((i - 1) % 2) * 430, -187 - math.floor((i - 1) / 2) * 118
-                text(ns.StudioConfig.Labels[preset.mode], x, y, 406, 12, W.colors.muted)
+                text(ns.StudioConfig.Label(preset.mode), x, y, 406, 12, W.colors.muted)
                 W.Edit(env, parent, preset.name, x, y - 24, 406, function(value)
                     if ns.StudioConfig.Name(value) then update(function(copy) copy.studio.presets[presetID].name = value end) end
                 end)
@@ -250,7 +254,7 @@ function S.New(runtime)
             section("SHORTCUTS & SETUP", -237)
             text("Assign shortcuts in Key Bindings > LumenShift.\nMode wheel: 1–6, arrows or Tab to choose; Enter to apply; Escape to close.", 0, -278, 820, 14, W.colors.muted)
             button("Setup wizard", 0, -350, 184, function() if runtime.setup then runtime.setup.Open() end end)
-            button("Disable controls (restore Natural first)", 206, -350, 360, function() product.Disable() end, "quiet")
+            button("Disable controls (restore originals first)", 206, -350, 360, function() product.Disable() end, "quiet")
             section("ART & CREDITS", -414)
             text("Core UI icons by Streamline · CC BY 4.0 · streamlinehq.com\nMesh Gradients by Craftwork Studio · Lumen Loops by Jon Lehman\nCraftwork Commercial License · craftwork.design/license\nLumenShift logo and original mode artwork · Northern Lights Labs", 0, -455, 820, 12, W.colors.muted)
             height = 550
@@ -266,7 +270,7 @@ function S.New(runtime)
             local observed = ns.ReadOnly.Read(runtime.reader, "Brightness")
             text("CURRENT  " .. ns.Report.Number(observed.raw) .. "     /     CAPTURED ORIGINAL  " .. ns.Report.Number(status.original)
                 .. "     /     " .. status.state, 0, -192, 830, 14)
-            button("Natural — restore current-session visual baseline", 0, -235, 430, function() product.Select("natural") end)
+            button("Apply " .. ns.StudioConfig.Label("natural") .. " visual baseline", 0, -235, 430, function() product.Select("natural") end)
             button("Restore My Brightness — preview only", 446, -235, 390, function() runtime.engine.Prepare("restore"); ui.BuildPage() end)
             local y = -285
             if status.token then

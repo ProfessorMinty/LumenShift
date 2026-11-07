@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-dev.10 — Baseline choice and graphics investigation (2026-11-07)
+
+- Add an Original / Game Defaults setup choice with read-only capture and separate recovery originals.
+- Rename the baseline mode throughout the interface; preserve saved modes and quality independence.
+- Document the Forever graphics investigation and mode-development strategy.
+- Preserve captured sharpening strength in built-in quality profiles instead of forcing a potentially softer value; explain the reversed scale in Advanced Graphics.
+- Add 36 named numeric research observations to export without enabling new writers or claiming complete tier dependency coverage.
+- Migrate schemas 1–5 to 6 without overwriting preferences, custom profiles or journals; request the new baseline choice once.
+- 228 Lua 5.1 mock tests and 9 packaging tests pass, including 19 new baseline/research/sharpening cases. Setup and baseline editor were inspected through the off-client Lua geometry model; native dev.10 graphics and UI behavior remain untested.
+
 ## 0.2.0-dev.9 — Enchanted optics artwork (2026-11-07)
 
 - Integrate supplied Streamline Core utility icons, Steel/Midnight mesh panels and restrained teal Lumen Loops accents across Studio, setup, reports and navigation.

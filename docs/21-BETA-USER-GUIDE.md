@@ -1,30 +1,41 @@
-# LumenShift 0.2.0-dev.9 — install and explore
+# LumenShift 0.2.0-dev.10 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
 ## Install the whole folder
 
-1. In the old build, select **Natural** and **Current Baseline** if settings are active. Keep unresolved recovery records.
+1. In the old build, restore active visuals and choose **Current Baseline** for quality. In dev.9 and earlier, Natural restores visuals; from dev.10 onward, use Diagnostic Center recovery if your selected return look differs from the pre-change originals. Keep unresolved recovery records.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.9-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.10-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
-Completed dev.6 setup stays completed; it should not pop up again. First-time users see setup automatically. Older dev.1–dev.5 setups reopen once with saved choices preselected. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Setup/startup never applies graphics or hides the HUD. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
+Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Setup/startup never applies graphics or hides the HUD. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
 
 ## Open and use LumenShift
 
 - **Left-click** the launcher/minimap icon for the six-mode wheel. **Right-click** for Studio.
-- Select **Night Vision**, then **Natural** to restore the actual captured originals. Other modes have editable Brightness, optional Contrast, tint and effects.
-- **Visual Modes**: select a mode card, edit its sliders/toggles, then click the teal **Apply** button at bottom right. Selecting a card alone does not change the scene. Natural restores owned visual settings; it leaves quality alone.
+- Select **Night Vision**, then **Original** or **Game Defaults** to apply your chosen return look. Other modes have editable Brightness, optional Contrast, tint and effects.
+- **Visual Modes**: select a mode card, edit its sliders/toggles, then click the teal **Apply** button at bottom right. Selecting a card alone does not change the scene. The return mode uses the saved visual baseline and leaves quality alone. Diagnostic recovery restores the separate pre-change originals.
 - **Colors & Effects**, **Audio**, **Personal Presets** and **Accessibility** contain optional presentation, sounds, saved variations, reduced motion and scale controls.
 - Optional bindings are under Key Bindings → LumenShift. No keys are assigned automatically. Commands remain shortcuts only.
 
 ## Check the new layout
 
-Right-click the launcher to open Studio. Check that the grouped sidebar, page title and bottom-right action fit your screen. In Visual Modes, selecting another card should only change the editor; Apply performs the switch. Visit Graphics Quality and Camera, then try Accessibility → Studio scale and High-contrast panel. Longer Advanced Graphics and Diagnostic Center content scrolls while the main action stays visible. Existing preferences and completed setup are retained.
+Right-click the launcher to open Studio. Check that the grouped sidebar, page title and bottom-right action fit your screen. In Visual Modes, selecting another card should only change the editor; Apply performs the switch. Visit Graphics Quality and Camera, then try Accessibility → Studio scale and High-contrast panel. Longer Advanced Graphics and Diagnostic Center content scrolls while the main action stays visible. Existing preferences are retained; the new baseline choice is requested once.
 
 The six smaller mode icons remain placeholders pending the owner’s new artwork. The approved metal-ring/aurora logo is included. Dev.9 adds silver Core utility icons, Steel/Midnight mesh panels, teal Lumen Loops accents and a fitted segmented wheel. High contrast hides the decorative panels and glow. Studio → Accessibility → Art & Credits lists the artists; complete third-party notices ship with the addon.
+
+## Check the new return mode
+
+1. Choose **Original** in setup. Check the displayed Brightness/Contrast against your intended current look, then **Finish & Reload UI**. After reload, setup should stay closed and graphics should be unchanged.
+2. Select Night Vision, then Original. Check that your captured look returns; no assumption is made that your Brightness was 45.
+3. To try the alternate choice, reopen Setup wizard through native Settings, select **Game Defaults**, inspect the reported values and **Save & Close**. Saving should not change the scene. Apply Game Defaults from the wheel or Studio when you want to see it.
+4. If the defaults differ from your prior settings, **Diagnostic Center → Restore My Brightness — preview only → Confirm displayed recovery card → Verify pending recovery** restores pre-change Brightness. **Advanced Graphics → Preview recovery of experimental visual settings → Confirm displayed operation** restores pre-change Contrast. This is separate from applying the selected Game Defaults look.
+5. Reopen setup to choose Original again if desired. **Capture again** deliberately replaces the preferred visual snapshot; ordinary preference saves do not recapture it. Capturing while a mode is active uses retained pre-mode originals.
+6. Export one report if needed. It now includes the chosen baseline and an extra graphics-research section. That extra section only reads candidate settings; it does not disable existing controls or apply new console tweaks.
+
+A missing default is displayed as unavailable, never guessed. If Contrast is missing from a snapshot it is left alone; if Brightness is missing the return mode cannot apply until a later explicit click can read it. Other modes remain available when their own inputs are valid. Native dev.10 testing has not been performed by development tools.
 
 ## Camera Mode and names
 
@@ -49,7 +60,9 @@ Select a profile card to preview it, then click **Apply** at bottom right. Targe
 
 ## Advanced controls and temporary trials
 
-For sharpening, foliage, distance/LOD, Contrast, bloom or weather: choose a setting and value, then **Test & Restore**. It tries the value for about two seconds and checks restoration. Start with Natural and Current Baseline. A prior trial is optional for direct named-control Apply.
+For sharpening, foliage, distance/LOD, Contrast, bloom or weather: choose a setting and value, then **Test & Restore**. It tries the value for about two seconds and checks restoration. First restore pre-change visuals using Diagnostic Center and choose Current Baseline for quality. Applying Game Defaults may still own visual settings, so it is not a substitute for releasing them. A prior trial is optional for direct named-control Apply.
+
+Sharpness uses WoW's reversed raw scale: **lower is sharper**. Built-in profiles now preserve your current strength instead of forcing 1.
 
 For **Shadows, lighting & water**: choose a supported native level, then **Try selected level & restore**. It captures the tier and readable named settings, applies the tier, waits two seconds, restores it and checks the captured values. These are experimental temporary trials, not persistent tier profiles. If a related setting fails to return, the report retains its original and no guessed repair is attempted. Use **Restore interrupted quality trial** deliberately after reviewing an interrupted/failed trial. HDR/renderer changes remain in the game's settings.
 
@@ -57,8 +70,8 @@ For **Shadows, lighting & water**: choose a supported native level, then **Try s
 
 Outside combat, use a stationary scene:
 
-1. Night Vision → Natural; Lantern → Natural. Check the effects and optional sounds you chose.
-2. Apply Vista, switch Night Vision/Natural, then Current Baseline. Quality and modes should stay independent.
+1. Night Vision → your chosen Original/Game Defaults; Lantern → that same return mode. Check the effects and optional sounds you chose.
+2. Apply Vista, switch Night Vision/your return mode, then Current Baseline. Quality and modes should stay independent.
 3. Toggle friendly names twice. Enter Camera Mode, then exit using its keybind or Alt+Z plus Exit. Check that original player/pet name visibility returns.
 4. Optionally try a supported shadow/light/water tier and let restoration finish. If it reports recovery, stop that trial and export; do not repeatedly retry it.
 5. Open **Diagnostic Center → Export Complete Diagnostic Report → Select All → Ctrl+C**. Paste the report with a short description of what looked right or wrong. It collects the technical details; no chat transcript or extra commands are needed.
@@ -67,12 +80,12 @@ Reports exclude names, chat, accounts, local paths and raw native exception text
 
 ## Recovery and removal
 
-External edits are preserved instead of repeatedly overwritten. Ordinary Natural/Current Baseline/name toggle respects conflicts. Explicit recovery can replace a newer value with the captured original; use the appropriate Diagnostic Center, Advanced Graphics or Camera restore control deliberately.
+External edits are preserved instead of repeatedly overwritten. Ordinary return-mode/Current Baseline/name toggle respects conflicts. Explicit recovery can replace a newer value with the captured original; use the appropriate Diagnostic Center, Advanced Graphics or Camera restore control deliberately.
 
 Restore before updating, disabling, downgrading or removing the addon. SavedVariables is not immediately durable or crash-proof. Deleting files or saved data does not undo graphics/name changes. Keep unresolved originals and export instead of deleting a journal.
 
 ## What is verified
 
-Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.9 textured UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
+Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.10 baseline behavior has simulated coverage only. The textured UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
 
-Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved with permission to install/use as part of LumenShift. Both notices ship in the addon. No new third-party assets are included.
+Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved with permission to install/use as part of LumenShift. Both notices and THIRD-PARTY-NOTICES.md ship in the addon; dev.9 supplied-art licenses remain unchanged.

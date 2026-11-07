@@ -18,6 +18,21 @@ return function(fixture, eq, test)
         f.load(); f.r = f.ns.runtime; f.t = f.r.tierTrial
         return f
     end
+    test("Q00 built-in profiles preserve captured sharpening strength instead of softening it", function()
+        local f = setup(nil, { ResampleSharpness = "0.2" })
+        for _, id in ipairs({ "balanced", "vista", "performance" }) do
+            local targets = assert(f.ns.Quality.Resolve(f.r, id)); eq(targets.ResampleSharpness, nil)
+            assert(f.r.lab.SelectProfile(id)); f.mock.Flush(); eq(f.values.ResampleSharpness, "0.2")
+        end
+        assert(f.r.lab.SelectProfile("currentBaseline")); f.mock.Flush()
+        eq(f.values.ResampleSharpness, "0.2"); eq(f.values.ResampleAlwaysSharpen, "0")
+        for _, call in ipairs(f.calls) do assert(call[1] ~= "ResampleSharpness") end; f.zero()
+        local fractional = setup(nil, { ResampleSharpness = "0.250" })
+        assert(fractional.r.lab.SaveProfile("vista", "ResampleSharpness", 0.9))
+        assert(fractional.r.lab.SelectProfile("vista")); fractional.mock.Flush()
+        assert(fractional.r.lab.SelectProfile("balanced")); fractional.mock.Flush()
+        eq(fractional.values.ResampleSharpness, "0.250"); fractional.zero()
+    end)
     test("Q01 built-in profiles are immediately usable, baseline-relative and visual-independent", function()
         local f = setup(); assert(f.r.product.Select("nightVision")); f.mock.Flush()
         assert(f.r.lab.SelectProfile("vista")); f.mock.Flush()

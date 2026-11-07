@@ -294,7 +294,7 @@ function B.New(reader, db, emit)
         state, lastError = sessionOwned and "ACTIVE" or "BASELINE", nil
         ns.Log.Record(reader, "brightness", "verified", "INFO", state, { key = "Brightness", after = observed.raw, state = state })
         if not transaction.ordinary then
-            say(sessionOwned and "Brightness target verified by readback. Select Natural on the wheel to restore the original."
+            say(sessionOwned and "Brightness target verified by readback. Use Diagnostic Center to restore your pre-change Brightness."
                 or "Original Brightness verified by exact readback; ownership released.")
         end
         transaction, dirty = nil, false

@@ -142,6 +142,13 @@ function D.Build(runtime)
             lines[#lines + 1] = "  last-event: " .. table.concat(details, "; ")
         end
     end
+    lines[#lines + 1] = "EXTRA GRAPHICS OBSERVATIONS (research candidates; not connected to Apply controls)"
+    for _, key in ipairs(ns.Catalog.ResearchKeys()) do
+        local item = ns.ReadOnly.Read(runtime.reader, key)
+        lines[#lines + 1] = key .. " current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] default="
+            .. D.Number(item.defaultRaw) .. " [" .. safe(item.defaultCode or item.code) .. "] secure=" .. bool(item.flags and item.flags.secure)
+            .. " readOnly=" .. bool(item.flags and item.flags.readOnly) .. " locked=" .. bool(item.flags and item.flags.locked)
+    end
     lines[#lines + 1] = "4. ACTIVE CONFIGURATION (preset names excluded)"
     local db = runtime.db
     if db then
@@ -159,11 +166,17 @@ function D.Build(runtime)
         lines[#lines + 1] = "mode-selection=explicit-user-action; saved-enable-flag=" .. bool(config.studio.enabled)
             .. " effects=" .. bool(config.studio.effects) .. " audio=" .. bool(config.preferences.sound) .. " reducedMotion=" .. bool(config.preferences.reducedMotion)
         lines[#lines + 1] = "setup wizard completed=" .. bool(db.onboarding.completed)
+        lines[#lines + 1] = "visual baseline source=" .. safe(db.baseline.source) .. " chosen=" .. bool(db.baseline.chosen)
+            .. " Brightness=" .. D.Number(db.baseline.values.Brightness) .. " Contrast=" .. D.Number(db.baseline.values.Contrast)
+            .. " captured-client=" .. safe(db.baseline.signature) .. " applied-this-session=" .. bool(runtime.product and runtime.product.baselineVerified)
         for _, id in ipairs(ns.StudioConfig.Order) do
             local mode = config.studio.modes[id]
-            lines[#lines + 1] = id .. ": brightness=" .. D.Number(mode.brightness) .. " contrast=" .. D.Number(mode.contrast)
+            if id == "natural" then
+                lines[#lines + 1] = "natural (legacy id): " .. ns.Baseline.Label(db.baseline) .. " uses the selected baseline above; no tint or vignette"
+            else lines[#lines + 1] = id .. ": brightness=" .. D.Number(mode.brightness) .. " contrast=" .. D.Number(mode.contrast)
                 .. " contrastEnabled=" .. bool(mode.useContrast) .. " tint=" .. bool(mode.tintEnabled) .. " opacity=" .. D.Number(mode.opacity)
                 .. " vignette=" .. D.Number(mode.vignette) .. " letterbox=" .. D.Number(mode.letterbox)
+            end
         end
         lines[#lines + 1] = "personal preset count=" .. #V.Keys(config.studio.presets)
         for _, id in ipairs({ "balanced", "vista", "performance" }) do
