@@ -1,6 +1,11 @@
 # LumenShift — Codex onboarding and first assignment
 
 ## Identity and source of truth
+
+**Latest correction:** read [docs/27](docs/27-HOTFIX-COMPATIBILITY-AND-SETUP-UPGRADE.md). The owner's dev.5 report confirms Forever 1.60.1:70862:16001 and a rejected mode click caused by the old hotfix allowlist. Dev.6 deliberately replaces exact-hotfix admission with the 1.60.1/interface 16001 contract from build 70790, plus fresh native checks; exact session/recovery binding remains. Updated setup reopens once for old completed dev.1–dev.5 data without resetting preferences/journals. Report availability must distinguish usable controls from a diagnostic snapshot. Do not request version reconfirmation or claim dev.6 native acceptance.
+
+
+Current interaction requirement: automatic first-run setup wizard → chosen preferences → **Finish & Reload UI**. Afterward, use launcher/minimap/Settings buttons; commands are optional. See [guided setup](docs/24-GUIDED-SETUP.md). No automatic graphics activation on startup or reload.
 - **Project:** LumenShift
 - **Owner / creative direction:** Northern Lights Labs (Arctic)
 - **GitHub repository:** https://github.com/ProfessorMinty/LumenShift
@@ -9,7 +14,11 @@
 - **Current tracking issue:** https://github.com/ProfessorMinty/LumenShift/issues/1
 - **Target game:** World of Warcraft: Forever, live client (NOT assumed identical to Classic Era or Retail)
 - **Intended distribution:** CurseForge for World of Warcraft, Forever game flavor after approval, compatibility tests and moderation.
-- **Current authorization:** Phase 00, research and architecture ONLY.
+- **Current authorization:** Full product development / beta integration, explicitly approved 2026-11-06. See [integration decisions](docs/19-BETA-INTEGRATION.md), [architecture/features/tests](docs/20-BETA-FEATURES-AND-TESTS.md), [local acceptance guide](docs/21-BETA-USER-GUIDE.md) and [release gates](docs/22-BETA-RELEASE-QA.md).
+
+The current priority is the [self-diagnosing interactive development build](docs/23-INTERACTIVE-DIAGNOSTICS.md), on the existing integration branch and PR #5. Arctic has not installed/tested 0.2.0-beta.1. The older native Brightness round trip does not certify any integrated build. Connect features, provide explicit bounded calibration for selected leaf settings, and make the addon collect/export its own diagnostics. One private native setter remains in WriteBoundary; all operations use planner/recovery checks. Production admission remains closed; named experimental controls use fresh native/planner checks on Apply. Session test results are observations, not permissions, and arbitrary keys remain forbidden. Follow the current [exploration guide](docs/21-BETA-USER-GUIDE.md).
+
+The Phase 00 work order below is preserved as history; later implementation approvals supersede its hold. Do not modify the installed game, execute owner-only native changes, merge automatically, modify main or publish/upload. Keep Issue #1 open. Native identity and one successful visual/readback round trip are already recorded in docs/14 and docs/18; do not request another launcher verification. The approved license is MIT for original source/technical documentation and reserved rights for creative assets; follow both root notices.
 
 If Codex is not working in a clone of **ProfessorMinty/LumenShift**, STOP and open/clone that repository. Don't create a parallel LumenShift workspace or choose another repository by similar name. Verify origin with a local Git read-only command. Do not clone or mutate other projects without authorization.
 
@@ -40,7 +49,7 @@ We are not just creating a private proof of concept. The intended result is a cl
 - automated build/lint tests with manual verification and deliberate upload approval.
 **CurseForge is not yet configured and nothing is approved for publication.** Read docs/08-CURSEFORGE-RELEASE.md for source-linked requirements. Do not configure token/webhook, make a CurseForge project or publish anything.
 
-## Stage gate: what you may do now
+## Historical Phase 00 stage gate and first assignment
 Read **AGENTS.md**, **README.md**, **docs/00 through docs/08**, and **reference/ALPHA-PROTOTYPE.md**. Then work through **GitHub Issue #1**.
 
 ### Phase 00 research tasks

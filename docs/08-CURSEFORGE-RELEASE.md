@@ -1,5 +1,7 @@
 # CurseForge publication and release engineering
 
+> **Current addendum (2026-11-06):** The Phase 00 plan below is preserved as historical research. Arctic subsequently authorized full-product implementation and local deterministic development ZIPs, and chose MIT for original source/technical documentation plus All Rights Reserved for original creative assets. See root LICENSE / ASSET-LICENSE.md and [current QA/publication gates](22-BETA-RELEASE-QA.md). Forever 1.60.1:70790:16001 and one Brightness round trip are now verified in-client (docs/14, docs/18). Earlier undecided-license/proposed-interface/no-packaging statements describe that earlier phase. No CurseForge creation or publication is authorized.
+
 **Project:** LumenShift — World of Warcraft: Forever visual modes and advanced graphic settings.
 **Target distributor:** CurseForge (intended, not yet submitted).
 **Authorization:** Planning and documentation only. Do not create a CurseForge project, configure upload tokens/webhooks, upload files or announce releases without Arctic's approval.
@@ -86,3 +88,69 @@ CurseForge's own live migration guidance identifies World of Warcraft/_forever_/
 3. Choose initial Forever-only support vs future tested flavors.
 4. Decide whether GitHub releases should mirror CurseForge releases.
 5. Approve a distribution/publishing workflow after prototype has passed client QA.
+
+## Phase 00 release-readiness assessment — 2026-11-06
+
+**Result: architecture can accommodate publication; submission readiness is NOT attained.** Public policy pages were reread. Current authoritative links, modification dates and limitations are in [07](07-EVIDENCE-AND-DECISIONS.md), SRC-08 and SRC-14/20–26. The existing checklist above remains open. There is no project ID, approved license, runtime artifact, current-client QA pass or moderation outcome.
+
+### Corrections and boundaries
+
+- The 2026-10-22 moderation page specifies a **400×400 avatar**; the older author guide allows a larger square PNG that is downscaled. Prepare exactly 400×400 PNG to satisfy both. Original art and accurate in-game sample imagery are required by the chosen release standard. AI-edited showcase material that could misrepresent functionality requires visible disclosure under current moderation guidance; use authentic captures for feature claims.
+- Functional English description/summary, accurate changes, rights/credits and a changelog belong in submission review. Do not apply the moderation page's **Minecraft-specific** root-folder rule to this WoW addon.
+- The public multi-TOC guide predates Forever. `_Camelot.toc` appears in third-party packages, but that is not current uploader validation. Recommend a **single `LumenShift.toc`** in a Forever-only archive if the client/dashboard tests accept it; add a suffix only if actually required and verified. Never invent a multi-interface line or tag Retail/Classic on analogy.
+- 16001 remains the proposed interface until R1 and a fresh addon-load test confirm it on 70790. Client build number, TOC interface number, CurseForge game-version ID and release type are distinct fields.
+- CurseForge's creation guide states a Release file is needed for normal app synchronization. Its Alpha sentence is ambiguous; confirm live opt-in behavior later. Do not promise that an Alpha upload appears to ordinary users by default.
+
+### Packaging architecture (proposal only)
+
+Future source layout can use `addon/LumenShift/` for runtime and separate `docs/`, `tests/`, `tools/`, and asset masters. An explicit allowlist maps runtime files into:
+
+```text
+LumenShift/
+  LumenShift.toc
+  Core/             # approved Lua modules, ordered in TOC
+  UI/               # later Lua/XML, only when implemented
+  Media/            # original runtime textures/audio
+  LICENSE           # exact approved terms, when selected
+  THIRD-PARTY-NOTICES.md  # only when obligations exist
+  README.md         # concise installation/restore/recovery instructions
+  CHANGELOG.md      # shipped-version notes
+```
+
+This is a proposed manifest, not files to create now. Canonical casing must match every reference. Do not archive the repository directly. Exclude research docs, tests, source art/audio masters, .git, editor files, caches, account data, Config.wtf/WTF, secrets and absolute machine paths. Keep the source publicly accessible and unobfuscated even though development-only files are excluded from the runtime ZIP.
+
+Select the runtime manifest from a reviewed commit/tag. Normalize file ordering/timestamps and pin build tool versions if byte-for-byte reproducibility is desired; initially require the same path list and per-file SHA-256 hashes on repeated clean builds. A ZIP checksum identifies the exact artifact approved for upload. Distinguish artifact version, schema version and supported client builds.
+
+### CI design and release authority
+
+| Stage | Proposed checks | Authority/output |
+|---|---|---|
+| Documentation/PR checks | Scope, source links, no accidental runtime/secrets | Read-only CI; no publisher credentials |
+| Code validation, after approval | Game-compatible Lua syntax/lint, pure mocks, TOC references/load order, no forbidden API paths | Test report, never a native compatibility claim |
+| Artifact build | Clean checkout, runtime allowlist, exact paths/case, version/changelog alignment, license/provenance, archive traversal/symlink/extra-wrapper rejection | Candidate ZIP + manifest + hashes; no upload |
+| Client QA | Fresh install, supported build, R/W/V/B tests, upgrade/migration, restore/uninstall | Signed-off evidence tied to that commit/artifact |
+| Owner review | Exact artifact/hash, features, compatibility, description/logo/screenshots, tags/channel, known limits | Explicit approval for setup/submission if not previously granted |
+| Upload, only later authorized | Verified account/project and current game-version metadata; least-privilege protected credentials if automated | File ID and moderation state; do not equate upload with publication |
+| Release confirmation | Observe moderation and chosen manual-release state, verify downloadable ZIP/version/install | Only then describe it as published |
+
+Prefer manual first submission: fewer moving parts and the owner can inspect flavor/version options. CurseForge packaging is convenient later but introduces webhook/tag-trigger behavior and implicit file inclusion; an allowlisted local/CI build is easier to audit. Neither workflow is configured in Phase 00. If automation is later chosen, separate untrusted PR validation from a human-gated publishing job; never expose upload tokens to PR code or logs. No automatic publication on every `main` push.
+
+Proposed versions: `0.1.0-alpha.1`, then tested beta increments, eventually `1.0.0`; tags can carry a `v` prefix. This starts a new implementation lineage and must not imply the historical alpha passed QA. Test how the chosen packager derives alpha/beta/release from tags. Changelogs state changed keys/behavior, supported tested build, migration effects, known limitations and recovery instructions; do not fabricate release dates.
+
+### License and asset provenance
+
+No license is selected. MIT is a concrete permissive option for owner review; its notice obligations still apply, and Blizzard's visible/free-addon policy is a separate distribution obligation. A copyleft or custom policy is another possible direction requiring its own terms review before selection. Public GitHub visibility alone is not permission to reuse third-party code. No third-party implementation or media was copied during Phase 00.
+
+Before assets enter the runtime, create an asset ledger with path, SHA-256, creator, creation/source date, original source or editable master reference, license/permission, attribution text, edits and approval. Cover synthesized audio source/session, icons, textures and fonts. The historical alpha's claimed original sounds need artifact/provenance review before reuse. Keep masters outside the runtime package. Avoid borrowed game/film sounds or game logos; attribution alone does not grant rights.
+
+### Install, update and uninstall acceptance
+
+Install only into the verified Forever live AddOns folder, with one nesting level: `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`. Test a clean install from the actual ZIP, including full restart for first-time media discovery. Do not instruct users to overwrite their entire Interface/WTF folders. Loading out-of-date addons is not the compatibility test.
+
+Update tests must preserve user presets and ownership originals, migrate supported old schemas transactionally and refuse unsupported downgrade state with recovery guidance. A client patch disables stale write capabilities until revalidated. Avoid automatic reapplication on upgrade/login.
+
+Uninstall instructions must require Restore My Settings, readback verification and review of skipped conflicts **before** disabling/removing. Retain the recovery card until settings are confirmed after restart. Explain that addon files, SavedVariables and persistent graphics CVars are different state stores; deleting one does not undo the others. Never use reset-all as the default recovery path or promise deletion-time cleanup.
+
+### Live dashboard verification still required
+
+Later, with explicit setup approval, record the actual author account/owner credit, project name availability, World of Warcraft class/categories, Forever live flavor label and supported 1.60.1 game-version identifier, TOC suffix detection, alpha/beta/release choices, manual-release option, license match, dependency fields and preview validation. Verify the chosen file's tags and installation through the app after moderation. IDs are **Unknown**, not placeholders to configure. No project creation, form submission, token generation, webhook or upload occurred here.

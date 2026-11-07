@@ -1,60 +1,53 @@
-# LumenShift 🌙
+# LumenShift
 
-**A Northern Lights Labs project: visual modes and advanced graphics controls for World of Warcraft: Forever.**
+**Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-> **Status: Phase 00 — research and architecture.** This repository is intentionally documentation-first. No addon implementation is approved yet. **Intended release channel: CurseForge (World of Warcraft: Forever), pending compliance, testing and approval.**
+**0.2.0-dev.6** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a usable development build, not the accepted feature-complete beta.
 
-LumenShift is a proposed, accessible visual-preset addon combining a fast radial mode wheel, a full configuration panel, immersive audiovisual effects, and carefully validated graphics-console-variable (CVar) management.
+Dev.6 fixes the 70862 hotfix rejection and automatically reopens the updated setup once for existing dev.1–dev.5 users, keeping their preferences. Controls use the supported Forever 1.60.1/interface 16001 contract with fresh native checks, rather than an individual hotfix allowlist.
 
-## The idea
-One keybind should let players select an atmospheric visual mode without digging through multiple graphics menus. Two independent layers keep the system predictable:
+Setup is one compact preferences screen. Finish saves your choices and enables ordinary mode use; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
-- **Visual mode:** Night Vision, Cinematic, Lantern, Clarity, Moonlight and Natural, with optional UI overlays, sounds and color/exposure adjustments.
-- **Graphics-quality profile:** Baseline, Balanced, Ultra/Vista and Performance, controlling verified engine detail settings independently of the visual mode.
+## Install and use
 
-The user's existing graphics preferences are the **baseline**. Switching modes should not silently destroy them.
+Install the **whole extracted LumenShift folder**, not the ZIP or TOC alone, under Forever's `Interface/AddOns`. Follow the [installation and testing guide](docs/21-BETA-USER-GUIDE.md).
 
-## Current decisions
-- **Primary target:** World of Warcraft: Forever. Do not assume untested Retail parity.
-- **Stage gate:** research and architecture documents only until explicit approval.
-- **No hidden or magical shaders:** addon UI textures are overlays, not post-processing LUTs or true night vision.
-- **Safety first:** opt-in changes; capture original CVar state; verify readback; reversible restoration; respect protected/reload-only settings and combat restrictions.
-- **No automatic quality downgrade** merely because a color/exposure mode was selected.
-- **No automatic indoor detection** in the initial release.
-- **Original or properly licensed** audio, icons and visual assets only.
+1. Choose your defaults in setup, then **Finish & Reload UI**. **Save & Close** is also available.
+2. Left-click the LumenShift launcher or minimap button for modes; right-click for Studio.
+3. Select **Night Vision** to try it. Select **Natural** to restore the actual captured original settings.
+4. Use Studio's Visual Modes editor to customize Brightness and optional Contrast. Edit preferences freely, then click **Apply**.
+5. In **Advanced Graphics**, select a named setting and value, then **Test & Restore** for a temporary trial. Save quality values into a profile and Apply to keep them active; **Current Baseline** restores quality independently.
 
-## Where Codex should work
-- **Repository:** https://github.com/ProfessorMinty/LumenShift
-- **Clone:** https://github.com/ProfessorMinty/LumenShift.git
-- **Kickoff:** [CODEX-START-HERE.md](CODEX-START-HERE.md)
-- **Research tracker:** https://github.com/ProfessorMinty/LumenShift/issues/1
+Normal use requires no commands. Settings → AddOns → LumenShift also opens setup, Studio and diagnostics. Setup/startup/reload do not activate graphics or play sounds. Saved choices remain available without automatically reapplying a mode on login.
 
-## Start here (for Codex)
-1. Read [AGENTS.md](AGENTS.md) completely.
-2. Read [docs/00-PROJECT-BRIEF.md](docs/00-PROJECT-BRIEF.md).
-3. Execute the research-only work order in [docs/01-PHASE-00-RESEARCH.md](docs/01-PHASE-00-RESEARCH.md).
-4. Use [docs/02-CVAR-REGISTER.md](docs/02-CVAR-REGISTER.md) as a hypothesis register, **not** a list of confirmed safe settings.
-5. Follow [docs/03-ARCHITECTURE.md](docs/03-ARCHITECTURE.md), [docs/04-UX-DESIGN.md](docs/04-UX-DESIGN.md), [docs/05-TEST-PLAN.md](docs/05-TEST-PLAN.md) and [docs/06-ROADMAP.md](docs/06-ROADMAP.md).
-6. Record sourced findings and unresolved questions in [docs/07-EVIDENCE-AND-DECISIONS.md](docs/07-EVIDENCE-AND-DECISIONS.md).
-7. Follow [docs/08-CURSEFORGE-RELEASE.md](docs/08-CURSEFORGE-RELEASE.md) for packaging, policy, licensing, QA and publication rules, even during architectural planning.
+## What works and what is unfinished
 
-## Intended public distribution
-We plan to distribute a **free, unobfuscated, policy-compliant addon via CurseForge**. Proper version/flavor tagging, license selection, asset provenance, accurate screenshots, tested restoration and archive validation are release requirements, not optional polish. No CurseForge project has been created or submission made here. Refer to the [release engineering plan](docs/08-CURSEFORGE-RELEASE.md).
+Night Vision starts at Brightness 75; other modes have editable authored settings. Every activation captures the actual original before writing, verifies readback and preserves external changes instead of fighting them. Natural restores owned visual values. Effects are optional UI textures, not world shaders. Audio begins muted and can be enabled in setup or Studio.
 
-## Starter prototype
-An earlier **v0.1.0-alpha** demonstration exists outside this repository. It had six modes, a clickable wheel, a settings pane and synthesized sound effects; it was **not tested inside WoW**. Treat it as a UX and behavior reference, not authoritative, production-ready code. Do not claim it is already in this repo or rebuild it without approval.
+Optional Contrast and named sharpening, foliage, distance, LOD, bloom and weather controls are **experimental**. Apply checks the current client, values, bounds and flags. Test & Restore is optional, not an unlock. Saved quality profiles remain usable after reload without repeating tests. Balanced/Vista/Performance start empty: they are custom profile slots, not proven optimization recipes. Shadow/light/water tiers, HDR, renderer and other unmapped settings remain observation-only.
 
-## Development workflow
-Phase 00 reports **facts, evidence, unknowns, compatibility tests and architecture proposals**. Present findings for review; do not silently move into implementation. No push/release of code without an approved phase.
+The single native graphics call remains in WriteBoundary. Planner, per-key originals, ownership, conflict detection and readback remain internal requirements. An interrupted session or unresolved conflict needs an explicit recovery decision; startup never guesses a restore. SavedVariables is not immediately durable or crash-proof. Restore before updating or removing the addon.
 
-## Source starting points
-- [Blizzard UI Add-On Development Policy (official forum post)](https://eu.forums.blizzard.com/en/wow/t/wow-user-interface-add-on-development-policy/1642/1)
-- [WoW Forever beta API observations](https://github.com/Thunderz96/forever-addon-kit)
-- [Blizzard UI source mirror](https://github.com/Gethe/wow-ui-source)
-- [Forever Graphics addon (third-party example)](https://github.com/drengalis/foreverGraphics)
-- [Dynamic Ambiance Forever (third-party example)](https://github.com/imperial64/dynamic-ambiance-forever)
+The owner supplied a dev.5 report from **Forever 1.60.1:70862:16001**: the addon loaded, getters/flags were readable, but its mode click was blocked by the outdated allowlist. Prior native evidence for 70790 and 70840 remains recorded separately. **Dev.6 has automated/mock verification; native setup, graphics and persistence acceptance remain pending.** See [hotfix compatibility and setup upgrade](docs/27-HOTFIX-COMPATIBILITY-AND-SETUP-UPGRADE.md).
 
-These references are evidence leads. Codex must compare their dates/builds with the user's installed client.
+## Diagnostics
 
----
-**Maintainer:** Northern Lights Labs · **Product name:** LumenShift · **Stage:** Research only.
+Studio → Diagnostic Center → Export Complete Diagnostic Report produces one copyable report of current capabilities, values, operations, originals and recent errors. It excludes names, chat, accounts, local paths and raw native exception text. Nothing uploads automatically. Reports are useful when something fails; exporting one is not a prerequisite for ordinary use.
+
+## Development
+
+Authoritative repository: [ProfessorMinty/LumenShift](https://github.com/ProfessorMinty/LumenShift). Existing branch `feat/beta-integration`, draft PR #5. Main and prior PRs are not merged automatically; [Issue #1](https://github.com/ProfessorMinty/LumenShift/issues/1) remains open.
+
+```text
+python tools/check.py --mocks --lua-runtime PATH_TO_ISOLATED_LUPA
+python -m unittest discover -s tests -p test_package.py -v
+python tools/package.py --output PATH_OUTSIDE_REPOSITORY
+```
+
+The optional Lupa 2.6 runner uses actual Lua 5.1 and is not shipped. System Lua 5.1 can run `lua tests/run.lua`. The builder reads clean committed source, stamps its commit into Core/Build.lua, hashes the payload and compares two archives byte-for-byte. It cannot install or upload.
+
+## Licensing
+
+Original source/technical documentation: [MIT](LICENSE), copyright 2026 Northern Lights Labs. Original creative assets: [All Rights Reserved](ASSET-LICENSE.md), permitted for installation/use as part of LumenShift; no independent reuse/redistribution in other projects without permission. Third-party terms remain independent. See [provenance](assets/PROVENANCE.md). The complete distribution is not MIT-only.
+
+No CurseForge project, upload or publication is authorized. Publication requires native QA and final owner approval.
