@@ -31,7 +31,7 @@ end
 function S.Open(raw)
     if raw == nil then
         return { schemaVersion = ns.schemaVersion, addonVersion = ns.version,
-            config = ns.Profiles.Defaults(), journal = S.EmptyJournal() }, "NEW"
+            config = ns.Profiles.Defaults(), journal = S.EmptyJournal(), experiments = ns.ExperimentPolicy.Defaults() }, "NEW"
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
@@ -41,15 +41,22 @@ function S.Open(raw)
             or not V.Raw(data.addonVersion) or not ns.Profiles.ValidateLegacy(data.config)
             or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
         data.config.studio = ns.StudioConfig.Defaults()
-        data.schemaVersion, migrated = ns.schemaVersion, true
+        data.schemaVersion, migrated = 2, "MIGRATED_1_TO_3"
+    end
+    if data.schemaVersion == 2 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
+        data.experiments = ns.ExperimentPolicy.Defaults()
+        data.schemaVersion, migrated = ns.schemaVersion, migrated or "MIGRATED_2_TO_3"
     end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1 migration above is permitted.
+        -- Only the explicitly supported schema-1/2 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
-    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
+    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true })
         or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
-        or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
+        or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) then return nil, "QUARANTINED_SCHEMA" end
     data.addonVersion = ns.version
-    return data, migrated and "MIGRATED_1_TO_2" or "VALIDATED_COPY"
+    return data, migrated or "VALIDATED_COPY"
 end

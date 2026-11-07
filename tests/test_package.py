@@ -33,6 +33,17 @@ class PackageTests(unittest.TestCase):
             for name, sha in info["files"].items():
                 self.assertEqual(sha, package.digest(archive.read("LumenShift/" + name)))
 
+    def test_runtime_report_build_matches_manifest_without_mutating_source(self):
+        original = dict(self.payload)
+        commit = "abcdef0123" * 4
+        data = package.build(self.payload, self.version, commit)
+        self.assertEqual(self.payload, original)
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            info = json.loads(archive.read("LumenShift/BUILD.json"))
+            self.assertEqual(info["source_commit"], commit)
+            self.assertEqual(archive.read("LumenShift/Core/Build.lua"),
+                             ('local _, ns = ...\nns.build = "' + commit + '"\n').encode("ascii"))
+
     def test_unsafe_or_case_colliding_paths_refused(self):
         for name in ("../outside", "/absolute", "C:/path", "Core\\bad", "core/Bootstrap.lua"):
             with self.assertRaises(AssertionError):

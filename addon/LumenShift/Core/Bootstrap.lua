@@ -1,9 +1,11 @@
 local addonName, ns = ...
 local runtime = { reader = ns.ReadOnly.New(_G), storeStatus = "NOT_LOADED" }
 ns.runtime = runtime
+runtime.log = ns.Log.New(runtime.reader); runtime.reader.log = runtime.log
+runtime.log.Add("bootstrap", "module-entry", "INFO", "PASS")
 local frame = CreateFrame("Frame")
 frame:RegisterEvent("ADDON_LOADED")
-frame:SetScript("OnEvent", function(self, event, name)
+frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(self, event, name)
     if event == "CVAR_UPDATE" then
         if runtime.engine then runtime.engine.Notify() end
         if runtime.product then runtime.product.Observe() end
@@ -19,32 +21,37 @@ frame:SetScript("OnEvent", function(self, event, name)
     end
     if event ~= "ADDON_LOADED" or name ~= addonName or runtime.loaded then return end
     runtime.loaded = true
+    -- Register the report entry before optional UI initialization so diagnosed failures remain reachable.
+    SLASH_LUMENSHIFT1, SLASH_LUMENSHIFT2 = "/lumenshift", "/ls"
+    SlashCmdList.LUMENSHIFT = runtime.log.Guard("commands", "slash", function(message) ns.Controller.Command(runtime, message) end)
     -- Bind only after our SavedVariables have loaded. Invalid input remains untouched.
     local db, status = ns.Store.Open(LumenShiftDB)
     runtime.db, runtime.storeStatus = db, status
+    runtime.log.Add("store", "load", db and "INFO" or "ERROR", status)
     if db then LumenShiftDB = db end
     runtime.identity = ns.Compatibility.Inspect(runtime.reader)
     runtime.controller = ns.Controller.New(db and not next(db.journal.entries) and "BASELINE" or "RECOVERY")
     runtime.engine = ns.WriteBoundary.New(runtime.reader, db, function(line) return ns.Diagnostics.Emit(runtime, line) end)
+    runtime.lab = ns.WriteBoundary.NewExperiments(runtime)
     runtime.product = ns.Product.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)
     runtime.audio = ns.Audio.New(runtime.reader)
     if db and UIParent then
         local ok, ui = pcall(ns.Studio.New, runtime)
-        if ok then runtime.ui = ui else runtime.lastError = "UI_INITIALIZATION_FAILED" end
+        if ok then runtime.ui = ui else runtime.lastError = "UI_INITIALIZATION_FAILED"; runtime.log.Add("studio", "initialize", "ERROR", runtime.lastError) end
     end
     BINDING_HEADER_LUMENSHIFT = "LumenShift"
     BINDING_NAME_LUMENSHIFT_TOGGLE = "Toggle Night Vision"
     BINDING_NAME_LUMENSHIFT_WHEEL = "Open / close visual wheel"
     BINDING_NAME_LUMENSHIFT_STUDIO = "Open Visual Studio"
-    LumenShift_ToggleNightVision = function() runtime.product.Toggle() end
-    LumenShift_OpenWheel = function() if runtime.ui and runtime.ui.Wheel then runtime.ui.Wheel() end end
-    LumenShift_OpenStudio = function() if runtime.ui and runtime.ui.Open then runtime.ui.Open() end end
-    SLASH_LUMENSHIFT1, SLASH_LUMENSHIFT2 = "/lumenshift", "/ls"
-    SlashCmdList.LUMENSHIFT = function(message) ns.Controller.Command(runtime, message) end
+    LumenShift_ToggleNightVision = runtime.log.Guard("bindings", "toggle", function() runtime.product.Toggle() end)
+    LumenShift_OpenWheel = runtime.log.Guard("bindings", "wheel", function() if runtime.ui and runtime.ui.Wheel then runtime.ui.Wheel() end end)
+    LumenShift_OpenStudio = runtime.log.Guard("bindings", "studio", function() if runtime.ui and runtime.ui.Open then runtime.ui.Open() end end)
     self:UnregisterEvent("ADDON_LOADED")
     self:RegisterEvent("CVAR_UPDATE")
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
-end)
+    ns.Report.Run(runtime, "startup-read-only")
+    runtime.log.Add("bootstrap", "initialize", "INFO", "COMPLETE_NO_STARTUP_WRITE")
+end))

@@ -13,7 +13,7 @@ function P.New(env)
         self.tint:SetAllPoints(frame)
         for i, edge in ipairs({ "TOP", "BOTTOM", "LEFT", "RIGHT" }) do
             local texture = frame:CreateTexture(nil, "BACKGROUND")
-            texture:SetTexture("Interface/AddOns/LumenShift/Media/vignette.tga")
+            ns.Widgets.Asset(texture, "Interface/AddOns/LumenShift/Media/vignette.tga")
             if i <= 2 then
                 texture:SetPoint(edge .. "LEFT", frame, edge .. "LEFT")
                 texture:SetPoint(edge .. "RIGHT", frame, edge .. "RIGHT"); texture:SetHeight(110)

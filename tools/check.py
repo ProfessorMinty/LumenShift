@@ -47,14 +47,16 @@ def check():
         inspected = re.sub(r"\bSetCVar\b", "", code) if entry == "Core/WriteBoundary.lua" else code
         if entry == "UI/Audio.lua":
             inspected = re.sub(r"\bPlaySoundFile\b", "", inspected)
+        if entry == "Core/Report.lua":
+            inspected = inspected.replace('"PlaySoundFile"', '"audio-capability-name"')
         assert not forbidden.search(inspected), f"Forbidden runtime API/token in {entry}"
         if entry not in {"Core/ReadOnly.lua", "Core/Bootstrap.lua", "Core/WriteBoundary.lua"}:
             assert not re.search(r"\b(_G|C_CVar)\b", source), f"Native API boundary leak: {entry}"
     boundary = (RUNTIME / "Core/WriteBoundary.lua").read_text()
     assert boundary.count(".SetCVar") == 2, "Only availability inspection and the single native call are allowed"
-    assert boundary.count('ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, "Brightness", target)') == 1
+    assert boundary.count('ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, key, target)') == 1
     assert 'function B.Request() return nil, "TEST_NOT_ENABLED" end' in boundary
-    print(f"STRUCTURAL PASS: {len(entries)} Lua modules, exact TOC paths, versions, one Brightness-only write boundary")
+    print(f"STRUCTURAL PASS: {len(entries)} Lua modules, exact TOC paths, versions, one centralized native graphics call")
     return entries
 
 
@@ -74,7 +76,10 @@ def main():
         syntax_files = [RUNTIME / entry for entry in entries] + sorted((ROOT / "tests").glob("*.lua"))
         for file in syntax_files:
             lua.execute("assert(loadstring(...))", file.read_text(encoding="utf-8"))
-        print(f"SYNTAX PASS: {len(syntax_files)} files under {lua.eval('_VERSION')}", flush=True)
+        bindings = ET.parse(RUNTIME / "Bindings.xml").getroot()
+        for binding in bindings:
+            lua.execute("assert(loadstring(...))", binding.text or "")
+        print(f"SYNTAX PASS: {len(syntax_files)} Lua files + {len(bindings)} binding bodies under {lua.eval('_VERSION')}", flush=True)
         lua.execute((ROOT / "tests/run.lua").read_text(encoding="utf-8"))
 
 

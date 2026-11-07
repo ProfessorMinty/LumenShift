@@ -51,7 +51,11 @@ def build(payload, version, commit):
     assert len({name.casefold() for name in payload}) == len(payload), "Case-colliding paths"
     for name in payload:
         assert not name.startswith("/") and ".." not in name and "\\" not in name and ":" not in name
+    payload = dict(payload)
+    assert "Core/Build.lua" in payload, "Runtime build identity module required"
+    payload["Core/Build.lua"] = ('local _, ns = ...\nns.build = "' + commit + '"\n').encode("ascii")
     manifest = {"version": version, "source_commit": commit, "target": "1.60.1:70790:16001",
+                "generated": {"Core/Build.lua": "source commit identifier; deterministic build substitution"},
                 "status": "development candidate; integrated native acceptance pending; not published",
                 "code_license": "MIT", "creative_asset_license": "All Rights Reserved; ASSET-LICENSE.md",
                 "files": {name: digest(data) for name, data in sorted(payload.items())}}

@@ -19,10 +19,10 @@ Q.Candidates = {
     { key = "weatherDensity", label = "Weather density", group = "Atmosphere", source = "SRC-05", dependency = "Canonical spelling and real weather test" },
 }
 Q.Profiles = { currentBaseline = "Current Baseline", balanced = "Balanced", vista = "Vista", performance = "Performance" }
-Q.Descriptions = { currentBaseline = "Keep your existing graphics quality unchanged.",
-    balanced = "Balanced detail and cost. Blocked until a complete target set passes native validation.",
-    vista = "Scenic distance, foliage and water. Blocked pending native ranges, side-effect mapping and restoration.",
-    performance = "Reduced measured rendering cost. Blocked pending native validation and benchmarks." }
+Q.Descriptions = { currentBaseline = "Restore owned quality settings to their captured originals; leave other settings unchanged.",
+    balanced = "Your tested target set. Configure exact values in Calibration Lab; no automatic defaults.",
+    vista = "Your scenic target set. Every included value needs calibration in this login.",
+    performance = "Your experimental target set. No measured FPS benefit is claimed." }
 function Q.Scan(reader)
     local rows = {}
     for _, candidate in ipairs(Q.Candidates) do

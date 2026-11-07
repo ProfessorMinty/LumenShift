@@ -53,6 +53,8 @@ return function(env)
     function methods:GetVerticalScroll() return self.scroll or 0 end
     function methods:SetThumbTexture(texture) self.thumb = texture end
     function methods:ClearFocus() self.focus = false end
+    function methods:SetFocus() self.focus = true end
+    function methods:HighlightText(first, last) self.highlight = { first, last } end
     function methods:CreateAnimationGroup()
         local group = { animations = {} }
         function group:Stop() self.playing = false end

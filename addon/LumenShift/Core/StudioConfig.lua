@@ -32,7 +32,7 @@ function C.ValidateMode(m)
     return V.Fields(m, { brightness = true, tint = true, tintEnabled = true, opacity = true,
         vignette = true, letterbox = true, contrast = true, useContrast = true })
         and number(m.brightness, 0, 100) and number(m.contrast, 0, 100)
-        and m.useContrast == false -- visible authored value, never an unverified native target
+        and type(m.useContrast) == "boolean" -- a session-calibrated target is still required before writing
         and V.Fields(m.tint, { r = true, g = true, b = true })
         and number(m.tint.r, 0, 1) and number(m.tint.g, 0, 1) and number(m.tint.b, 0, 1)
         and type(m.tintEnabled) == "boolean" and number(m.opacity, 0, 0.12)

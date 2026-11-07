@@ -1,6 +1,18 @@
 local _, ns = ...
 local B, V, R = {}, ns.Value, ns.Recovery
 ns.WriteBoundary = B
+local function setterAvailable(reader)
+    return type(reader.env.C_CVar) == "table" and type(reader.env.C_CVar.SetCVar) == "function"
+end
+-- The only native graphics call site for Brightness and explicit bounded leaf experiments.
+-- Both private callers below perform planner, fresh observation, identity and combat checks.
+local function nativeSet(reader, key, target)
+    local result, code = ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, key, target)
+    local accepted = result and result.n == 1 and result[1] == true
+    ns.Log.Record(reader, "graphics", "setter", accepted and "INFO" or "ERROR", accepted and "ACCEPTED" or code or "SETTER_REJECTED",
+        { key = key, requested = target, setter = accepted and "true" or code or (result and result.n == 1 and result[1] == false and "false" or "unexpected-return") })
+    return result, code
+end
 
 -- No ambient enable switch or public raw setter. A preview token is consumed once.
 function B.Request() return nil, "TEST_NOT_ENABLED" end
@@ -36,11 +48,6 @@ function B.New(reader, db, emit)
         return not values or values.n ~= 1 or values[1] ~= false
     end
 
-    local function setterAvailable()
-        local api = reader.env.C_CVar
-        return type(api) == "table" and type(api.SetCVar) == "function"
-    end
-
     local function eligible()
         if not db then return nil, "SAVED_DATA_QUARANTINED" end
         if not ns.Store.ValidateJournal(db.journal) then return nil, "INVALID_JOURNAL" end
@@ -50,12 +57,14 @@ function B.New(reader, db, emit)
         local identity = ns.Compatibility.Inspect(reader)
         local catalog, context = ns.Catalog.BrightnessExperiment(identity.signature)
         if not catalog then return nil, "UNSUPPORTED_TEST_BUILD" end
-        if not setterAvailable() then return nil, "SETTER_UNAVAILABLE" end
+        if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
+        if reader.experimentBusy and reader.experimentBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
         return catalog, context
     end
 
     local function mark(reason, conflict)
+        ns.Log.Record(reader, "brightness", "state", "WARN", reason or "RECOVERY", { key = "Brightness", state = conflict and "CONFLICT" or "RECOVERY" })
         local record = db and db.journal.entries.Brightness
         if record then record.state, record.failure = conflict and "conflict" or "failed", reason end
         state, lastError, sessionOwned = conflict and "CONFLICT" or "RECOVERY", reason, false
@@ -75,8 +84,11 @@ function B.New(reader, db, emit)
         if not number or number < 0 or number > 100 then return false, current, "INVALID_TARGET", false end
         -- Combat can enter during getter calls. Check again at the last possible boundary.
         if combat() then return false, current, "COMBAT_OR_RESTRICTION", false end
-        local result, code = ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, "Brightness", target)
+        ns.Log.Record(reader, "brightness", "write", "INFO", "ATTEMPT", { key = "Brightness", before = expected, requested = target,
+            original = db.journal.entries.Brightness and db.journal.entries.Brightness.originalRaw })
+        local result, code = nativeSet(reader, "Brightness", target)
         local after = read() -- even an errored setter might have changed the value
+        ns.Log.Record(reader, "brightness", "immediate", "INFO", after.code, { key = "Brightness", immediate = after.raw })
         local success = result and result.n == 1 and result[1] == true
         if not success and not code then code = "SETTER_REJECTED" end
         return success == true, after, code, true
@@ -249,6 +261,7 @@ function B.New(reader, db, emit)
         end
         if transaction.compensation then
             local current = read()
+            ns.Log.Record(reader, "brightness", "compensation-followup", "INFO", current.code, { key = "Brightness", followup = current.raw })
             if not ns.Planner.SafeObservation(current) or current.raw ~= transaction.expected then
                 mark("COMPENSATION_LATE_DRIFT", true); return nil, "COMPENSATION_LATE_DRIFT"
             end
@@ -259,7 +272,9 @@ function B.New(reader, db, emit)
             say("The operation failed; its before-value is now verified. Original recovery data was retained until this check.")
             return true
         end
-        local checked, code = R.Verify(transaction.model, transaction.model.id, { Brightness = read() })
+        local observed = read()
+        ns.Log.Record(reader, "brightness", "followup", "INFO", observed.code, { key = "Brightness", followup = observed.raw })
+        local checked, code = R.Verify(transaction.model, transaction.model.id, { Brightness = observed })
         if not checked then mark(code, false); return nil, code end
         if checked.state ~= "VERIFIED" then
             -- A delayed mismatch could be an external change. Never automatically fight it.
@@ -268,6 +283,7 @@ function B.New(reader, db, emit)
         db.journal = V.Copy(checked.journal)
         sessionOwned = db.journal.entries.Brightness ~= nil
         state, lastError = sessionOwned and "ACTIVE" or "BASELINE", nil
+        ns.Log.Record(reader, "brightness", "verified", "INFO", state, { key = "Brightness", after = observed.raw, state = state })
         transaction, dirty = nil, false
         say(sessionOwned and "Brightness target verified by readback. Natural restores the original; /ls off previews restoration."
             or "Original Brightness verified by exact readback; ownership released.")
@@ -284,7 +300,11 @@ function B.New(reader, db, emit)
             say("Engine error; writes locked. Preserve the recovery card and inspect /ls.")
             return nil, "ENGINE_ERROR"
         end
-        if not result then lastError = code; say("Refused/failed: " .. (code or "UNKNOWN") .. ". No automatic retry.") end
+        if not result then
+            lastError = code
+            ns.Log.Record(reader, "brightness", "refusal", "WARN", code or "UNKNOWN", { key = "Brightness" })
+            say("Refused/failed: " .. (code or "UNKNOWN") .. ". No automatic retry.")
+        end
         return result, code
     end
 
@@ -326,8 +346,354 @@ function B.New(reader, db, emit)
         local record = db and db.journal.entries.Brightness
         return { state = state, operation = operation, original = record and record.originalRaw,
             lastVerified = record and record.lastVerifiedRaw, token = proposal and proposal.token,
-            error = lastError, notificationsPending = dirty, writeEnabled = false, setterAvailable = setterAvailable(),
+            error = lastError, notificationsPending = dirty, writeEnabled = false, setterAvailable = setterAvailable(reader),
             transactionID = transaction and transaction.id }
     end
     return engine
+end
+
+-- Explicit leaf calibration and calibrated experimental profiles. Separate journal, disjoint
+-- keys from the preserved Brightness engine; the native setter above is shared, never exposed.
+function B.NewExperiments(runtime)
+    local reader, db = runtime.reader, runtime.db
+    local data = db and db.experiments
+    local lab = { state = data and not next(data.journal.entries) and "BASELINE" or "RECOVERY",
+        busy = false, certificates = {}, preview = nil, serial = 0, lastError = nil, activeProfile = "currentBaseline" }
+    local pending, pendingCompletion, executing, owned = nil, nil, false, {}
+    local function record(op, level, result, fields) ns.Log.Record(reader, "experiments", op, level, result, fields) end
+    local function refresh() if runtime.product and runtime.product.Refresh then runtime.product.Refresh() end end
+    local function mark(code)
+        lab.state, lab.lastError, lab.busy, pending, pendingCompletion = "RECOVERY", code, false, nil, nil
+        lab.certificates = {}
+        if data then for _, item in pairs(data.journal.entries) do item.state, item.failure = "failed", code end end
+        owned = {}; record("state", "ERROR", code); refresh()
+        return nil, code
+    end
+    local function combat()
+        local result = ns.ReadOnly.Call(reader, reader.env.InCombatLockdown)
+        return not result or result.n ~= 1 or result[1] ~= false
+    end
+    local function gate()
+        if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
+        if ns.Compatibility.Inspect(reader).signature ~= "1.60.1:70790:16001" then return nil, "UNSUPPORTED_BUILD" end
+        if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
+        if combat() then return nil, "COMBAT_OR_RESTRICTION" end
+        if type(reader.env.C_Timer) ~= "table" or type(reader.env.C_Timer.After) ~= "function" then return nil, "FOLLOWUP_TIMER_UNAVAILABLE" end
+        if runtime.engine and runtime.engine.Status().state == "AWAITING_VERIFICATION" then return nil, "OTHER_OPERATION_ACTIVE" end
+        return true
+    end
+    local function observe()
+        local result = {}
+        for _, key in ipairs(ns.Catalog.WatchKeys()) do result[key] = ns.ReadOnly.Read(reader, key) end
+        return result
+    end
+    local function same(a, b)
+        if type(a) ~= type(b) then return false end
+        if type(a) ~= "table" then return a == b end
+        for key, value in pairs(a) do if not same(value, b[key]) then return false end end
+        for key in pairs(b) do if a[key] == nil then return false end end
+        return true
+    end
+    local function watch(before, after, allowed)
+        local drift = false
+        for key, prior in pairs(before) do
+            if not allowed[key] and prior.code == "OK" and V.Number(prior.raw) then
+                local current = after[key]
+                if not current or current.code ~= "OK" or current.raw ~= prior.raw then
+                    drift = true
+                    if current and V.Number(current.raw) then data.sideEffects[key] = { before = prior.raw, after = current.raw } end
+                    record("watched-change", "WARN", "DEPENDENCY_OR_EXTERNAL_CHANGE", { key = key, before = prior.raw,
+                        after = current and current.raw, error = current and current.code or "READ_UNAVAILABLE" })
+                end
+            end
+        end
+        return drift
+    end
+    local function catalog(seen, targets, overrides)
+        local descriptors = {}
+        local keys = {}
+        for key in pairs(targets) do keys[key] = true end
+        for key in pairs(data.journal.entries) do keys[key] = true end
+        for key in pairs(keys) do
+            local item = data.journal.entries[key]
+            if item and (item.signature ~= "1.60.1:70790:16001" or item.descriptorVersion ~= 2
+                or key == "Brightness" or not ns.ExperimentPolicy.Known(key)) then return nil, "RECOVERY_SIGNATURE_MISMATCH" end
+            local bounds, why = ns.ExperimentPolicy.Bounds(key, item and item.originalRaw or seen[key] and seen[key].raw)
+            if overrides and overrides[key] then bounds = overrides[key] end
+            if not bounds then return nil, why end
+            descriptors[key] = ns.ExperimentPolicy.Descriptor(key, bounds)
+        end
+        return descriptors
+    end
+    local function build(layer, targets, reconciliation, overrides)
+        local ready, why = gate(); if not ready then return nil, why end
+        local seen = observe()
+        local descriptors, code = catalog(seen, targets, overrides); if not descriptors then return nil, code end
+        local journal = V.Copy(data.journal)
+        for key, entry in pairs(journal.entries) do
+            if entry.layer == layer then
+                if reconciliation then
+                    if not ns.Planner.SafeObservation(seen[key]) then return nil, "UNSAFE_RECOVERY_OBSERVATION" end
+                    entry.lastVerifiedRaw, entry.state, entry.failure = seen[key].raw, "owned", nil
+                elseif not owned[key] then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
+            end
+        end
+        local plan, errorCode = ns.Planner.Build(descriptors, ns.ExperimentPolicy.Context("1.60.1:70790:16001"), seen, journal, layer, targets)
+        if not plan then return nil, errorCode end
+        return { plan = plan, journal = journal, source = V.Copy(data.journal), seen = seen, descriptors = descriptors,
+            layer = layer, targets = V.Copy(targets), reconciliation = reconciliation, overrides = overrides }
+    end
+    local function write(key, expected, target, descriptor)
+        local ready, why = gate(); if not ready then return false, nil, why end
+        local current = ns.ReadOnly.Read(reader, key)
+        local number = V.Number(target)
+        if not ns.Planner.SafeObservation(current) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
+        if not ns.Catalog.Admitted(descriptor, ns.ExperimentPolicy.Context("1.60.1:70790:16001"))
+            or not number or number < descriptor.min or number > descriptor.max then return false, current, "INVALID_EXPERIMENT_TARGET" end
+        if combat() then return false, current, "COMBAT_OR_RESTRICTION" end
+        record("write", "INFO", "ATTEMPT", { key = key, before = expected, requested = target,
+            original = data.journal.entries[key] and data.journal.entries[key].originalRaw })
+        local result, code = nativeSet(reader, key, target)
+        local after = ns.ReadOnly.Read(reader, key)
+        record("immediate", "INFO", after.code, { key = key, immediate = after.raw })
+        return result and result.n == 1 and result[1] == true and ns.Planner.SafeObservation(after), after, code or "SETTER_OR_READBACK_FAILED"
+    end
+    local function hold(tx)
+        local held = V.Copy(tx.journal)
+        for _, op in ipairs(tx.plan.operations) do
+            held.entries[op.key] = held.entries[op.key] or { originalRaw = op.originalRaw,
+                lastVerifiedRaw = op.beforeRaw, intendedRaw = op.targetRaw, layer = op.layer, epoch = op.epoch,
+                descriptorVersion = op.descriptorVersion, signature = op.signature }
+            held.entries[op.key].state = "pending"
+        end
+        data.journal = held
+    end
+    local function run(proposal, callback, delay)
+        if lab.busy then return nil, "BUSY" end
+        if not same(data.journal, proposal.source) then return nil, "RECOVERY_DATA_CHANGED" end
+        local fresh, why = build(proposal.layer, proposal.targets, proposal.reconciliation, proposal.overrides)
+        if not fresh then return nil, why end
+        if not same(fresh.plan, proposal.plan) then return nil, "PREVIEW_CHANGED" end
+        -- A changed non-target watch value invalidates the displayed experiment too.
+        for key, item in pairs(proposal.seen) do
+            if item.code == "OK" and fresh.seen[key].raw ~= item.raw then return nil, "WATCH_SNAPSHOT_CHANGED" end
+        end
+        lab.serial = lab.serial + 1
+        local id, allowed = lab.serial, {}
+        local tx, code = R.Begin(fresh.journal, fresh.plan, id, next(fresh.journal.entries) and "ACTIVE" or "BASELINE")
+        if not tx then return nil, code end
+        for _, op in ipairs(tx.plan.operations) do allowed[op.key] = true end
+        lab.busy, lab.state, lab.lastError, lab.preview = true, "APPLYING", nil, nil
+        pendingCompletion = callback
+        data.journal = V.Copy(tx.journal) -- all originals precede every native call
+        local failure, finalJournal, expected
+        for i, op in ipairs(tx.plan.operations) do
+            if op.write then
+                tx = assert(R.Before(tx, id, i, ns.ReadOnly.Read(reader, op.key), combat()))
+                if tx.state ~= "APPLYING" then failure = tx.reason; break end
+                local ok, after, errorCode = write(op.key, op.beforeRaw, op.targetRaw, fresh.descriptors[op.key])
+                tx = assert(R.Observe(tx, id, i, ok, after and after.raw))
+                hold(tx)
+                if tx.state == "ROLLING_BACK" then failure = errorCode; break end
+            else tx = assert(R.ReleaseObserved(tx, id, i, ns.ReadOnly.Read(reader, op.key), combat())); hold(tx) end
+            if tx.state == "ROLLING_BACK" or tx.state == "DEFERRED" then failure = tx.reason; break end
+        end
+        local immediate = observe()
+        if watch(fresh.seen, immediate, allowed) then
+            mark("DEPENDENCY_OR_EXTERNAL_CHANGE"); if callback then callback(false, lab.lastError) end; return nil, lab.lastError
+        end
+        if failure then
+            for key in pairs(allowed) do lab.certificates[key] = nil end
+            if proposal.reconciliation then mark("RECOVERY_WRITE_FAILED"); if callback then callback(false, lab.lastError) end; return nil, lab.lastError end
+            -- Bounded compensation of observed attempts, never a reset or a speculative retry.
+            local rollback = assert(R.RollbackPlan(tx, immediate))
+            for _, op in ipairs(rollback.rollback) do
+                rollback = assert(R.BeforeRollback(rollback, id, op.key, ns.ReadOnly.Read(reader, op.key), combat()))
+                if rollback.pendingRollback then
+                    local ok, after = write(op.key, op.expectedRaw, op.targetRaw, fresh.descriptors[op.key])
+                    rollback = assert(R.ResolveRollback(rollback, id, op.key, ok, after and after.raw))
+                end
+            end
+            rollback = assert(R.FinishRollback(rollback))
+            if rollback.state == "PARTIAL_ERROR" then
+                data.journal = V.Copy(rollback.journal); mark("COMPENSATION_FAILED")
+                if callback then callback(false, lab.lastError) end; return nil, lab.lastError
+            end
+            finalJournal, expected = rollback.journal, {}
+            for _, op in ipairs(tx.plan.operations) do expected[op.key] = op.beforeRaw end
+            hold(tx); record("rollback", "WARN", "AWAITING_COMPENSATION_READBACK")
+        else hold(tx) end
+        local held = V.Copy(data.journal)
+        pending, lab.state = id, "AWAITING_VERIFICATION"
+        local verify = function()
+            if pending ~= id then return end
+            if not same(data.journal, held) then mark("RECOVERY_DATA_CHANGED"); if callback then callback(false, lab.lastError) end; return end
+            local ready, reason = gate()
+            if not ready then mark(reason); if callback then callback(false, reason) end; return end
+            local seen = observe()
+            for key in pairs(allowed) do record("followup", "INFO", seen[key].code, { key = key, followup = seen[key].raw }) end
+            if watch(fresh.seen, seen, allowed) then mark("DEPENDENCY_OR_EXTERNAL_CHANGE"); if callback then callback(false, lab.lastError) end; return end
+            if finalJournal then
+                for key, raw in pairs(expected) do
+                    if not ns.Planner.SafeObservation(seen[key]) or seen[key].raw ~= raw then
+                        mark("COMPENSATION_LATE_DRIFT"); if callback then callback(false, lab.lastError) end; return
+                    end
+                end
+            else
+                local verified = assert(R.Verify(tx, id, seen))
+                if verified.state ~= "VERIFIED" then mark("LATE_DRIFT_OR_RESTRICTION"); if callback then callback(false, lab.lastError) end; return end
+                finalJournal = verified.journal
+            end
+            data.journal = V.Copy(finalJournal)
+            for key in pairs(allowed) do owned[key] = data.journal.entries[key] ~= nil end
+            lab.busy, pending, pendingCompletion, lab.lastError = false, nil, nil, failure
+            lab.state = next(data.journal.entries) and "ACTIVE" or "BASELINE"
+            record("verification", failure and "WARN" or "INFO", failure or "PASS", { state = lab.state, tx = id })
+            if callback then callback(not failure, failure) end
+            refresh()
+        end
+        local protectedFollowup = function()
+            executing = true
+            local ok = pcall(verify)
+            executing = false
+            if not ok then error("EXPERIMENT_HANDLER_ERROR") end
+        end
+        local guarded = runtime.log and runtime.log.Guard("experiments", "followup", protectedFollowup, function()
+            local done = pendingCompletion; mark("EXPERIMENT_HANDLER_ERROR"); if done then pcall(done, false, "EXPERIMENT_HANDLER_ERROR") end
+        end) or protectedFollowup
+        local scheduled = pcall(reader.env.C_Timer.After, delay or 0.15, guarded)
+        if not scheduled then mark("FOLLOWUP_TIMER_FAILED"); if callback then callback(false, lab.lastError) end; return nil, lab.lastError end
+        refresh(); return true
+    end
+    local function show(proposal, title)
+        lab.serial = lab.serial + 1; proposal.token = tostring(lab.serial)
+        proposal.lines = { title, "Experimental: reads cannot prove rendered effect or absence of unobserved dependencies.",
+            "Originals are held in memory before writes; SavedVariables is not immediately durable. Export/save this preview first." }
+        for _, op in ipairs(proposal.plan.operations) do
+            proposal.lines[#proposal.lines + 1] = op.key .. " original=" .. op.originalRaw .. " current=" .. op.beforeRaw .. " target=" .. op.targetRaw
+        end
+        local count = 0; for _, item in pairs(proposal.seen) do if item.code == "OK" then count = count + 1 end end
+        proposal.lines[#proposal.lines + 1] = "Watch coverage: " .. count .. "/" .. #ns.Catalog.WatchKeys() .. " readable named keys; no complete engine enumeration."
+        lab.preview = proposal; record("preview", "INFO", "READY", { count = #proposal.plan.operations })
+        return true
+    end
+    function lab.Preview(key, target)
+        lab.preview = nil
+        if lab.busy then return nil, "BUSY" end
+        if not data or next(data.journal.entries) then return nil, "RESTORE_EXPERIMENTS_BEFORE_CALIBRATING" end
+        if runtime.engine and runtime.engine.Status().state ~= "BASELINE" then return nil, "RESTORE_BRIGHTNESS_BEFORE_CALIBRATING" end
+        local item = ns.ReadOnly.Read(reader, key)
+        local bounds, why = ns.ExperimentPolicy.Bounds(key, item.raw)
+        if not bounds then return nil, why end
+        if not V.Finite(target) or target < bounds.min or target > bounds.max then return nil, "OUTSIDE_BOUNDED_TEST_POLICY" end
+        if math.abs(target / bounds.step - math.floor(target / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP" end
+        if V.Number(item.raw) == target then return nil, "UNCHANGED_VALUE_IS_NOT_A_CALIBRATION" end
+        local layer = key == "Contrast" and "visual" or "quality"
+        local proposal, code = build(layer, { [key] = target }, false, { [key] = bounds })
+        if not proposal then return nil, code end
+        proposal.calibration, proposal.key, proposal.target, proposal.bounds = true, key, target, bounds
+        return show(proposal, "CALIBRATION: apply the exact target, inspect for about 2 seconds, verify, restore the captured original, verify again.")
+    end
+    function lab.PreviewRestore(layer)
+        lab.preview = nil
+        if lab.busy then return nil, "BUSY" end
+        if layer ~= "visual" and layer ~= "quality" then return nil, "INVALID_LAYER" end
+        local proposal, code = build(layer, {}, true)
+        if not proposal then return nil, code end
+        if #proposal.plan.operations == 0 then return nil, "NO_CAPTURED_EXPERIMENT_ORIGINAL" end
+        return show(proposal, "EXPLICIT RECOVERY: replace the displayed current values with the captured originals. No automatic reapply on failure.")
+    end
+    function lab.Confirm(token)
+        local proposal = lab.preview; lab.preview = nil
+        if not proposal or token ~= proposal.token then return nil, "NO_MATCHING_PREVIEW" end
+        return run(proposal, function(ok, why)
+            if not proposal.calibration then return end
+            if not ok then record("calibration", "ERROR", why or "FAIL"); return end
+            local restoration, code = build(proposal.layer, {}, false)
+            if not restoration then mark(code); return end
+            local started, startError = run(restoration, function(restored, reason)
+                if not restored then record("calibration", "ERROR", reason or "RESTORE_FAILED"); return end
+                local values = lab.certificates[proposal.key] or {}
+                if #V.Keys(values) >= 8 then values = {} end -- bounded, session-only experimental certificates
+                values[tostring(proposal.target)] = V.Copy(proposal.bounds)
+                lab.certificates[proposal.key] = values
+                record("calibration", "INFO", "ROUNDTRIP_PASS_VISUAL_EFFECT_NOT_TESTED", { key = proposal.key,
+                    requested = tostring(proposal.target), after = proposal.seen[proposal.key].raw })
+            end)
+            if not started then mark(startError or "RESTORE_NOT_STARTED") end
+        end, proposal.calibration and 2 or 0.15)
+    end
+    local function canApply(layer, targets)
+        if lab.busy then return nil, "BUSY" end
+        if lab.state == "RECOVERY" or lab.state == "CONFLICT" then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
+        if not ns.ExperimentPolicy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
+        local overrides = {}
+        for key, target in pairs(targets) do
+            local certificate = lab.certificates[key] and lab.certificates[key][tostring(target)]
+            if not certificate then return nil, "CALIBRATION_REQUIRED:" .. key end
+            overrides[key] = certificate
+        end
+        return build(layer, targets, false, overrides)
+    end
+    lab.CanApply = canApply
+    function lab.Apply(layer, targets, callback)
+        local proposal, code = canApply(layer, targets)
+        if not proposal then return nil, code end
+        return run(proposal, callback)
+    end
+    function lab.SaveProfile(id, key, target)
+        if not data or not data.profiles[id] or key == "Contrast" then return nil, "INVALID_QUALITY_PROFILE" end
+        if not lab.certificates[key] or not lab.certificates[key][tostring(target)] then return nil, "CALIBRATION_REQUIRED" end
+        local copy = V.Copy(data.profiles[id]); copy[key] = target
+        if not ns.ExperimentPolicy.ValidateTargets(copy, "quality") then return nil, "PROFILE_LIMIT" end
+        data.profiles[id] = copy; record("profile-save", "INFO", "PASS", { profile = id, key = key, requested = tostring(target) })
+        return true
+    end
+    function lab.SelectProfile(id)
+        local targets = id == "currentBaseline" and {} or data and data.profiles[id]
+        if not targets then return nil, "INVALID_QUALITY_PROFILE" end
+        if id ~= "currentBaseline" and not next(targets) then return nil, "CONFIGURE_AND_CALIBRATE_PROFILE_FIRST" end
+        local proposal, code = canApply("quality", targets)
+        if not proposal then return nil, code end
+        return run(proposal, function(ok)
+            if ok then lab.activeProfile = id; db.config.selected.quality = id; record("profile-select", "INFO", "PASS", { profile = id }) end
+        end)
+    end
+    function lab.Observe()
+        if lab.busy or not data then return end
+        for key, item in pairs(data.journal.entries) do
+            if owned[key] then
+                local current = ns.ReadOnly.Read(reader, key)
+                if not ns.Planner.SafeObservation(current) or current.raw ~= item.lastVerifiedRaw then
+                    mark("EXTERNAL_CONFLICT"); lab.state = "CONFLICT"; return
+                end
+            end
+        end
+    end
+    function lab.Cancel()
+        lab.preview = nil
+        if lab.busy then
+            local done = pendingCompletion; mark("CANCELLED_WITH_RECOVERY")
+            if done then pcall(done, false, "CANCELLED_WITH_RECOVERY") end
+        end
+        record("cancel", "INFO", "NO_GRAPHICS_RESTORE"); return true
+    end
+    function lab.Status()
+        return { state = lab.state, busy = lab.busy, error = lab.lastError, token = lab.preview and lab.preview.token,
+            activeProfile = lab.activeProfile, operation = pending and "VERIFYING" or lab.preview and "PREVIEW" or "idle" }
+    end
+    for _, name in ipairs({ "Preview", "PreviewRestore", "Confirm", "CanApply", "Apply", "SaveProfile", "SelectProfile", "Cancel" }) do
+        local fn, operation = lab[name], name
+        lab[name] = function(...)
+            if executing then return nil, "BUSY" end
+            local outer = executing; executing = true
+            local ok, result, why = pcall(fn, ...)
+            executing = outer
+            if not ok then return mark("EXPERIMENT_HANDLER_ERROR") end
+            if not result then lab.lastError = why; record(operation, "WARN", why or "REFUSED"); refresh() end
+            return result, why
+        end
+    end
+    reader.experimentBusy = function() return lab.busy or executing end
+    return lab
 end

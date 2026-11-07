@@ -68,13 +68,13 @@ function R.Read(reader, key)
     elseif values.n ~= 1 or not ns.Value.Raw(values[1]) then result.code = "UNAVAILABLE_OR_INVALID_VALUE"
     else
         result.raw = values[1]
-        if not ns.Value.Number(result.raw) then result.code = "UNEXPECTED_NUMERIC_VALUE" end
+        if ns.Catalog.Get(key).kind ~= "string" and not ns.Value.Number(result.raw) then result.code = "UNEXPECTED_NUMERIC_VALUE" end
     end
 
     local defaults, defaultCode = R.Call(reader, api.GetCVarDefault, key)
     if defaults and defaults.n == 1 and ns.Value.Raw(defaults[1]) then
         result.defaultRaw, result.defaultCode = defaults[1], "OK"
-        if not ns.Value.Number(result.defaultRaw) then result.defaultCode = "UNEXPECTED_NUMERIC_DEFAULT" end
+        if ns.Catalog.Get(key).kind ~= "string" and not ns.Value.Number(result.defaultRaw) then result.defaultCode = "UNEXPECTED_NUMERIC_DEFAULT" end
     else result.defaultCode = defaultCode or "UNAVAILABLE_OR_INVALID_DEFAULT" end
 
     local info, infoCode = R.Call(reader, api.GetCVarInfo, key)

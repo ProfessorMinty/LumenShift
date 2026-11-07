@@ -25,6 +25,7 @@ function R.New(runtime, openStudio)
     function self.Close()
         if frame.lumenFade then frame.lumenFade:Stop() end
         frame:Hide()
+        ns.Log.Record(runtime.reader, "radial", "close", "DEBUG", "PASS")
     end
     local function selectMode(i)
         self.Close(); product.Select(ns.StudioConfig.Order[i])
@@ -38,13 +39,13 @@ function R.New(runtime, openStudio)
         button:SetHeight(61); button.label:ClearAllPoints(); button.label:SetPoint("BOTTOM", button, "BOTTOM", 0, 5)
         button.label:SetWidth(108); button.label:SetJustifyH("CENTER")
         local icon = button:CreateTexture(nil, "ARTWORK"); icon:SetSize(30, 30); icon:SetPoint("TOP", button, "TOP", 0, -4)
-        icon:SetTexture("Interface/AddOns/LumenShift/Media/" .. modeID .. ".tga")
-        button:SetScript("OnEnter", function() self.selection = index; highlight() end)
+        ns.Widgets.Asset(icon, "Interface/AddOns/LumenShift/Media/" .. modeID .. ".tga")
+        ns.Widgets.Script(button, "OnEnter", function() self.selection = index; highlight() end)
         self.buttons[i] = button
     end
     W.Button(env, frame, "Studio", 137, -191, 80, function() self.Close(); openStudio() end)
-    frame:SetScript("OnMouseDown", function(_, button) if button == "RightButton" then self.Close() end end)
-    frame:SetScript("OnKeyDown", function(_, key)
+    ns.Widgets.Script(frame, "OnMouseDown", function(_, button) if button == "RightButton" then self.Close() end end)
+    ns.Widgets.Script(frame, "OnKeyDown", function(_, key)
         if key == "ESCAPE" then self.Close()
         elseif key == "ENTER" or key == "SPACE" then selectMode(self.selection)
         elseif tonumber(key) and tonumber(key) >= 1 and tonumber(key) <= 6 then selectMode(tonumber(key))
@@ -68,6 +69,7 @@ function R.New(runtime, openStudio)
         local ok = pcall(function() frame:EnableKeyboard(true); frame:SetPropagateKeyboardInput(false) end)
         if not ok then self.Close(); ns.Diagnostics.Emit(runtime, "LumenShift: keyboard capture restricted; opening Studio."); openStudio(); return end
         highlight(); frame:Show(); W.Fade(frame, db.config.preferences)
+        ns.Log.Record(runtime.reader, "radial", "open", "INFO", "PASS_INPUT_NOT_CERTIFIED")
     end
     if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftWheel") end
     local launcher = env.CreateFrame("Button", "LumenShiftLauncher", env.UIParent)
@@ -76,17 +78,17 @@ function R.New(runtime, openStudio)
     launcher:SetMovable(true); launcher:EnableMouse(true); launcher:RegisterForDrag("LeftButton")
     launcher:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     local icon = launcher:CreateTexture(nil, "ARTWORK"); icon:SetAllPoints(launcher)
-    icon:SetTexture("Interface/AddOns/LumenShift/Media/logo.tga")
-    launcher:SetScript("OnDragStart", function(self)
+    ns.Widgets.Asset(icon, "Interface/AddOns/LumenShift/Media/logo.tga")
+    ns.Widgets.Script(launcher, "OnDragStart", function(self)
         if not product.IsCombat() then self.lumenDragged = true; self:StartMoving() end
     end)
-    launcher:SetScript("OnDragStop", function(self)
+    ns.Widgets.Script(launcher, "OnDragStop", function(self)
         self:StopMovingOrSizing()
         local x, y = self:GetCenter()
         db.config.studio.launcher.x = x - env.UIParent:GetWidth() / 2
         db.config.studio.launcher.y = y - env.UIParent:GetHeight() / 2
     end)
-    launcher:SetScript("OnClick", function(buttonFrame, button)
+    ns.Widgets.Script(launcher, "OnClick", function(buttonFrame, button)
         if buttonFrame.lumenDragged then buttonFrame.lumenDragged = nil; return end
         if button == "RightButton" then openStudio() else self.Toggle() end
     end)
@@ -97,5 +99,6 @@ function R.New(runtime, openStudio)
         highlight()
     end
     self.Refresh()
+    ns.Log.Record(runtime.reader, "radial", "initialize", "INFO", "PASS")
     return self
 end

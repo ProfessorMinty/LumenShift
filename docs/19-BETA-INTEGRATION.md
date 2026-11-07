@@ -1,5 +1,7 @@
 # Beta integration — development record
 
+**Historical beta.1 decisions, never installed/tested by Arctic.** [23-INTERACTIVE-DIAGNOSTICS.md](23-INTERACTIVE-DIAGNOSTICS.md) records the newer 0.2.0-dev.2 directive, calibration, schema and tests. The earlier decisions/results below are preserved as history, not native acceptance evidence.
+
 **Authorization:** Arctic's full-product directive, 2026-11-06. **Branch:** `feat/beta-integration`, starting at PR #4 head `0737800fcbcca789f1f65e7c972d926215c2cd06`. This branch preserves all seven commits above main from PRs #2–4. Those PRs are open and unmerged; their latest comments/review and contents were reviewed. No formal approval is inferred from Aurora's COMMENTED review. Main is unchanged.
 
 **Current status: integrated development candidate, 0.2.0-beta.1; not an accepted feature-complete beta.** The mode system, UI, presets, optional media, schema migration and local deterministic packaging are implemented. Contrast and operational quality profiles remain evidence-blocked; integrated native UI/media/recovery acceptance is still required. See [feature matrix and tests](20-BETA-FEATURES-AND-TESTS.md), [installation](21-BETA-USER-GUIDE.md) and [QA/publication](22-BETA-RELEASE-QA.md).

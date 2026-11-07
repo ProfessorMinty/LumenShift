@@ -1,6 +1,17 @@
 local _, ns = ...
 local W = {}
 ns.Widgets = W
+function W.Script(frame, script, handler)
+    local log = ns.runtime and ns.runtime.log
+    frame:SetScript(script, handler and log and log.Guard("ui", script, handler) or handler)
+end
+function W.Asset(texture, path)
+    local ok, result = pcall(texture.SetTexture, texture, path)
+    local reader = ns.runtime and ns.runtime.reader
+    ns.Log.Record(reader, "assets", "texture", (not ok or result == false) and "WARN" or "DEBUG",
+        not ok and "TEXTURE_API_ERROR" or result == false and "TEXTURE_REJECTED" or result == true and "TEXTURE_API_ACCEPTED" or "REQUESTED_NO_NATIVE_STATUS")
+    return ok and result ~= false
+end
 W.colors = { bg = { 0.035, 0.055, 0.080, 0.97 }, card = { 0.065, 0.095, 0.13, 1 },
     accent = { 0.38, 0.88, 0.79, 1 }, text = { 0.91, 0.95, 0.98, 1 }, muted = { 0.65, 0.73, 0.80, 1 } }
 local function region(parent, kind, layer)
@@ -42,7 +53,7 @@ function W.CreatePool(env, root)
                 for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnValueChanged", "OnEnterPressed", "OnEscapePressed" }) do
                     -- Native frames reject unsupported script names, so clear only installed scripts.
                     local ok, fn = pcall(owner.GetScript, owner, script)
-                    if ok and fn then owner:SetScript(script, nil) end
+                    if ok and fn then W.Script(owner, script, nil) end
                 end
             end
             if owner.lumenRegions then
@@ -68,22 +79,22 @@ function W.Fill(frame, color)
 end
 function W.Tip(env, frame, text)
     if not env.GameTooltip then return end
-    frame:SetScript("OnEnter", function(self)
+    W.Script(frame, "OnEnter", function(self)
         env.GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); env.GameTooltip:SetText(text, 0.92, 0.96, 1, 1, true); env.GameTooltip:Show()
     end)
-    frame:SetScript("OnLeave", function() env.GameTooltip:Hide() end)
+    W.Script(frame, "OnLeave", function() env.GameTooltip:Hide() end)
 end
 function W.Button(env, parent, label, x, y, width, callback, tip)
     local button = env.CreateFrame("Button", nil, parent)
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 30)
     button.background = W.Fill(button)
     button.label = W.Text(button, label, 10, -7, width - 16, 13)
-    button:SetScript("OnClick", callback)
-    button:SetScript("OnEnter", function(self)
+    W.Script(button, "OnClick", callback)
+    W.Script(button, "OnEnter", function(self)
         self.background:SetColorTexture(0.12, 0.24, 0.28, 1)
         if tip and env.GameTooltip then env.GameTooltip:SetOwner(self, "ANCHOR_RIGHT"); env.GameTooltip:SetText(tip, 1, 1, 1, 1, true); env.GameTooltip:Show() end
     end)
-    button:SetScript("OnLeave", function(self)
+    W.Script(button, "OnLeave", function(self)
         self.background:SetColorTexture(unpack(W.colors.card))
         if env.GameTooltip then env.GameTooltip:Hide() end
     end)
@@ -104,8 +115,8 @@ function W.Edit(env, parent, value, x, y, width, callback)
     edit:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); edit:SetSize(width, 28)
     edit:SetAutoFocus(false); edit:SetFontObject("GameFontHighlight"); edit:SetTextInsets(6, 6, 0, 0)
     edit:SetMaxLetters(64); W.Fill(edit, { 0.10, 0.14, 0.18, 1 }); edit:SetText(tostring(value))
-    edit:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
-    edit:SetScript("OnEnterPressed", function(self) callback(self:GetText()); self:ClearFocus() end)
+    W.Script(edit, "OnEscapePressed", function(self) self:ClearFocus() end)
+    W.Script(edit, "OnEnterPressed", function(self) callback(self:GetText()); self:ClearFocus() end)
     return edit
 end
 function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip)
@@ -127,7 +138,7 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
         if not ns.Value.Finite(number) or number < minimum or number > maximum then edit:SetText(tostring(get())); return end
         slider:SetValue(number)
     end)
-    slider:SetScript("OnValueChanged", function(_, value) if initialized then update(value) end end)
+    W.Script(slider, "OnValueChanged", function(_, value) if initialized then update(value) end end)
     slider:SetValue(get()); initialized = true
     if tip then W.Tip(env, slider, tip) end
     return slider

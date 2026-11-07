@@ -12,7 +12,7 @@ function C.Inspect(reader)
         or not ns.Value.Finite(interface) or interface % 1 ~= 0 then
         result.reason = "UNEXPECTED_BUILD_INFO"; return result
     end
-    result.version, result.build, result.interface = version, build, interface
+    result.version, result.build, result.date, result.interface = version, build, date, interface
     result.signature = version .. ":" .. build .. ":" .. tostring(interface)
     if version == "1.60.1" and build == "70790" and interface == 16001 then
         result.status = "FOREVER_CANDIDATE_UNVERIFIED"

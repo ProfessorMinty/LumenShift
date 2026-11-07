@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-dev.2 — self-diagnosing interactive development build, unreleased
+
+- Add bounded session event history, addon-owned error guards, automatic read-only checks, Diagnostic Center and a complete selectable report via `/ls report`.
+- Add explicit bounded calibration for Contrast and selected leaf graphics settings, watched changes, exact restoration and session-only experimental target permissions. Connect optional calibrated Contrast to modes and user-configured quality profiles without assigning speculative targets.
+- Preserve the previous Brightness engine and its regression coverage. Keep all native writes at one call site; startup, reports and diagnostics do not write or play audio.
+- Migrate saved schemas 1/2 to schema 3 without discarding originals; retain separate disjoint Brightness/experimental journals. Stamp the packaged source commit into reports.
+- Arctic has not installed or tested 0.2.0-beta.1 or this integrated development build. The earlier native round trip belongs to the older development version. No native acceptance or publication is claimed.
+
 ## 0.2.0-beta.1 — integrated development candidate, unreleased
 
 - Add six mode editors, user-triggered switching after initial setup, optional tint/vignette/screenshot bars, original electronic cues, radial menu, launcher and Studio pages.

@@ -37,7 +37,7 @@ function P.Build(catalog, context, observed, journal, layer, targets)
     for key in pairs(journal.entries) do participating[key] = true end
     -- Check both directions, including another layer's already-owned tier/child.
     for key in pairs(participating) do
-        if ns.Catalog.TestContext(context) and key ~= "Brightness" then return nil, "TEST_KEY_EXCLUDED:" .. key end
+        if context.experiment == "BRIGHTNESS_75_ROUNDTRIP" and key ~= "Brightness" then return nil, "TEST_KEY_EXCLUDED:" .. key end
         local descriptor = catalog[key]
         if not ns.Catalog.Admitted(descriptor, context) then return nil, "UNADMITTED_KEY:" .. key end
         for _, conflict in ipairs(descriptor.conflicts) do

@@ -44,6 +44,17 @@ end
 
 function C.Command(runtime, message)
     local command = type(message) == "string" and message:match("^%s*(.-)%s*$") or ""
+    if command == "report" or command == "export" then ns.DiagnosticWindow.Open(runtime); return end
+    if command == "diagnostics" or command == "diag" then
+        ns.Report.Run(runtime, "user")
+        if runtime.ui and runtime.ui.Open then runtime.ui.Open(7) else ns.DiagnosticWindow.Open(runtime) end
+        return
+    end
+    if command == "calibrate" then
+        if runtime.ui and runtime.ui.Open then runtime.ui.Open(8)
+        else ns.Diagnostics.Emit(runtime, "LumenShift: Calibration UI unavailable. /ls report contains the diagnosis.") end
+        return
+    end
     if command == "studio" or command == "wheel" then
         if runtime.ui and runtime.ui.Open then
             if command == "wheel" then runtime.ui.Wheel() else runtime.ui.Open() end

@@ -2,33 +2,37 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-LumenShift combines reversible brightness controls, a six-mode icon wheel and a seven-page Visual Studio. It keeps visual modes separate from graphics-quality preferences, captures the actual original before taking ownership and never changes graphics at startup.
+**0.2.0-dev.2** connects six visual modes, an icon wheel, eight-page Studio, optional effects/audio, personal presets, experimental Contrast/quality calibration and a Diagnostic Center with one copyable report.
 
-**0.2.0-beta.1 is a local development candidate, not an accepted feature-complete beta or a published release.** The earlier owner-operated Brightness 45 → 75 → 45 test passed readback and visual inspection on Forever 1.60.1.70790 / interface 16001. The new integrated UI, effects, audio and alternative brightness targets still require native acceptance. Contrast and quality-profile writes remain unavailable because their native ranges, dependencies and exact restoration have not been validated.
+Arctic has **not installed or tested 0.2.0-beta.1 or this integration**. The older development version's Brightness 45 → 75 → 45 round trip is evidence only for that test. New native behavior remains unverified. This is not a published release or an accepted feature-complete beta.
 
-## Use the candidate
+## Install, explore, report
 
-Install the whole extracted `LumenShift` folder under the existing Forever `Interface/AddOns` folder; the TOC alone is not the addon. Follow the [installation, controlled test and recovery guide](docs/21-BETA-USER-GUIDE.md).
+Install the **whole extracted LumenShift folder**, not the ZIP or TOC alone, under the existing Forever `Interface/AddOns` folder. Follow the [consolidated user guide](docs/21-BETA-USER-GUIDE.md).
 
-- `/ls` or `/lumenshift`: read-only diagnostics.
-- `/ls studio`: Visual Modes, Graphics Quality, Colors and Effects, Audio, Personal Presets, Accessibility, Diagnostics and Recovery.
-- `/ls wheel`: labeled mouse/keyboard wheel; left-click the draggable launcher for the same menu, right-click for Studio.
-- `/ls toggle`: Night Vision/Natural after explicit initial setup. Natural restores the exact captured original and removes effects.
-- Set optional keys in the game's Key Bindings → LumenShift. No key assignments are changed automatically.
+- `/ls studio`: modes, effects, audio, presets, accessibility, independent quality, diagnostics and calibration.
+- `/ls wheel`: labeled mouse/keyboard wheel; left-click the movable launcher for the wheel, right-click for Studio.
+- `/ls diag`: run read-only checks and open Diagnostic Center. Startup also runs checks without graphics writes or sounds.
+- `/ls report`: open **Export Complete Diagnostic Report**, click **Select All**, press **Ctrl+C**, and paste into Codex/ChatGPT.
+- `/ls` or `/lumenshift`: short read-only status. `/ls toggle`: Night Vision/Natural after explicit setup.
 
-Night Vision defaults to Brightness 75 with optional green tint/vignette and original electronic cues. Cinematic, Lantern, Clarity and Moonlight have distinct editable brightness and presentation settings; non-75 native targets need a separate experimental opt-in. UI overlays are not world shaders. Audio starts muted, screenshot bars are off, and optional presentation clears in combat. Personal presets contain only bounded validated data.
+Reports include actual client/build/UI/API observations, graphics flags and values, operations/readbacks, recovery, module/UI/media failures and bounded session history. Names, chat, accounts, paths, credentials, preset names and raw native error text are excluded. No upload, clipboard API or arbitrary game-side file access.
 
-No graphics-quality profile silently applies a partial/guessed target set. Current Baseline leaves quality unchanged; Balanced/Vista/Performance report their validation requirement. Read-only capability scans help collect evidence. See the [feature/evidence matrix and architecture](docs/20-BETA-FEATURES-AND-TESTS.md).
+Night Vision starts at Brightness 75 and restores the exact captured original. Other modes have editable authored settings; non-75 targets require an experimental opt-in. Effects are optional UI textures, not shaders. Audio starts muted; previews require user action. Nothing automatically reapplies at login.
 
-## Safety and evidence
+## Experimental graphics and safety
 
-`Core/WriteBoundary.lua` is the sole native graphics writer and only writes Brightness. Every operation uses planner preflight, exact baseline ownership and readback. Ordinary switching requires setup; uncertain reload/conflict recovery requires a fresh explicit preview and confirmation. External changes are preserved rather than repeatedly overwritten. SavedVariables are not immediately durable or crash-proof: save the recovery note outside the game and restore/verify before updating or removing the addon.
+Calibration Lab lets you read capabilities, choose an exact bounded target, preview/export originals and changes, then deliberately confirm an apply/readback/restore/readback cycle. Successful numeric round trips permit **that exact experimental target for this login**. They do not prove a visible effect, universal safe range or complete dependency closure.
 
-Read [prior native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md), [current integration decisions](docs/19-BETA-INTEGRATION.md) and [acceptance/publication gates](docs/22-BETA-RELEASE-QA.md). Automated mocks do not establish native rendering, audio, taint, disk persistence, addon coexistence or performance. EllesmereUI compatibility remains unverified.
+Calibrated Contrast is optional per visual mode. Balanced/Vista/Performance are independent user-configured target sets, with no guessed defaults or FPS claims. Every required target must be calibrated; partial profiles are refused. Shadow/light/water tiers, HDR, renderer and unmapped settings remain observation-only with reasons.
 
-## Develop and package
+WriteBoundary contains the single private native graphics call. The preserved Brightness engine and leaf experiments use planner preflight, capture-before-write, exact ownership, readback and conflict protection. Reload, conflict or late failure never triggers an uncertain automatic restore. Composite Brightness+Contrast failures can leave a partial operation with originals retained and reported. SavedVariables are not immediately durable or crash-proof; save recovery reports externally and restore before updating/removing the addon.
 
-Authoritative repository: [ProfessorMinty/LumenShift](https://github.com/ProfessorMinty/LumenShift). Read [AGENTS.md](AGENTS.md) and [CODEX-START-HERE.md](CODEX-START-HERE.md). Current development branch: `feat/beta-integration`, preserving PRs #2–4; main is unchanged and merging requires owner approval. [Issue #1](https://github.com/ProfessorMinty/LumenShift/issues/1) remains open while validation is incomplete.
+Read [current architecture, limits, sources and tests](docs/23-INTERACTIVE-DIAGNOSTICS.md). Historical research and [native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md) are preserved. Native UI, media, performance, persistence and EllesmereUI coexistence are untested for this build.
+
+## Development
+
+Authoritative repo: [ProfessorMinty/LumenShift](https://github.com/ProfessorMinty/LumenShift). Existing branch `feat/beta-integration`, draft PR #5. Main and prior PRs are not merged automatically; [Issue #1](https://github.com/ProfessorMinty/LumenShift/issues/1) stays open.
 
 ```text
 python tools/check.py --mocks --lua-runtime PATH_TO_ISOLATED_LUPA
@@ -36,10 +40,10 @@ python -m unittest discover -s tests -p test_package.py -v
 python tools/package.py --output PATH_OUTSIDE_REPOSITORY
 ```
 
-The optional isolated development runner uses Lupa 2.6 / Lua 5.1; no library is shipped in the addon. `lua tests/run.lua` also works with Lua 5.1. Packaging requires a clean committed tree and reads recorded Git blobs. The ZIP has one install root, explicit runtime/legal files, a source/hash manifest and fixed metadata; it is built twice and compared. No publishing credentials, install operation or upload workflow exists.
+The optional Lupa 2.6 runner uses actual Lua 5.1 and is not shipped. System Lua 5.1 can run `lua tests/run.lua`. The builder reads clean committed source, stamps its commit into Core/Build.lua for reports, hashes the payload and compares two archives byte-for-byte. No install/upload operation.
 
-## Licensing and eventual distribution
+## Licensing
 
-Original code and technical documentation: [MIT](LICENSE), copyright 2026 Northern Lights Labs. Original artwork, icons, textures, sound effects, logo and branding: [All Rights Reserved](ASSET-LICENSE.md), permitted for installation/use as part of LumenShift, not independent reuse or redistribution in other projects without permission. Third-party components retain their own terms. [Asset provenance](assets/PROVENANCE.md) and reproducible source recipes are included in the repository; no third-party media is bundled.
+Original source/technical documentation: [MIT](LICENSE), copyright 2026 Northern Lights Labs. Original creative assets: [All Rights Reserved](ASSET-LICENSE.md), permitted for installation/use as part of LumenShift; no independent reuse/redistribution in other projects without permission. Third-party terms remain independent. See [provenance](assets/PROVENANCE.md). The complete distribution is not MIT-only.
 
-The whole addon must not be described as MIT-only. The eventual CurseForge description/license metadata must reflect both terms. No CurseForge project, upload, release or moderation approval has been created here. Public distribution requires completed QA and final owner approval.
+No CurseForge project, upload or publication is authorized. Current work prioritizes interactive evaluation; publication requires native QA and final owner approval.

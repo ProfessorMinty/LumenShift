@@ -8,8 +8,12 @@ local candidates = {
     Contrast = { layer = "visual", kind = "number", uiMin = 0, uiMax = 100,
         evidence = "SOURCE_DECLARED_70790", admitted = false, version = 1 },
 }
+local watch = { "Gamma", "RenderScale", "graphicsViewDistance", "graphicsGroundClutter", "graphicsEnvironmentDetail",
+    "groundEffectFade", "graphicsPBRLiquidDetail", "graphicsQuality", "raidGraphicsQuality", "RAIDsettingsEnabled" }
 function C.Get(key)
     if candidates[key] then return ns.Value.Copy(candidates[key]) end
+    if key == "gxapi" then return { kind = "string", diagnosticOnly = true, admitted = false } end
+    for _, name in ipairs(watch) do if key == name then return { kind = "number", diagnosticOnly = true, admitted = false } end end
     for _, candidate in ipairs(ns.Quality and ns.Quality.Candidates or {}) do
         if candidate.key == key then return { layer = "quality", kind = "number", evidence = candidate.source,
             admitted = false, version = 1, diagnosticOnly = true } end
@@ -17,12 +21,22 @@ function C.Get(key)
 end
 function C.Keys() return ns.Value.Keys(candidates) end
 function C.Snapshot() return ns.Value.Copy(candidates) end
+function C.WatchKeys()
+    local result, seen = {}, {}
+    for _, list in ipairs({ C.Keys(), watch, ns.Quality and ns.Quality.Candidates or {} }) do
+        for _, item in ipairs(list) do
+            local key = type(item) == "table" and item.key or item
+            if not seen[key] then result[#result + 1] = key; seen[key] = true end
+        end
+    end
+    table.sort(result); return result
+end
 
 -- An explicit experiment policy, NOT a promotion to the production write catalog.
 function C.TestContext(context)
     return type(context) == "table" and context.testOnly == true
         and context.signature == "1.60.1:70790:16001"
-        and context.experiment == "BRIGHTNESS_75_ROUNDTRIP"
+        and (context.experiment == "BRIGHTNESS_75_ROUNDTRIP" or context.experiment == "BOUNDED_LEAF_CALIBRATION")
 end
 
 function C.BrightnessExperiment(signature)
@@ -49,6 +63,18 @@ end
 
 -- Pure predicate for a FUTURE reviewed catalog. No runtime admission/update API.
 function C.Admitted(descriptor, context)
+    if C.TestContext(context) and context.experiment == "BOUNDED_LEAF_CALIBRATION" then
+        return type(descriptor) == "table" and ns.ExperimentPolicy.Known(descriptor.name)
+            and descriptor.testOnly == true and descriptor.admitted == false
+            and descriptor.evidence == "EXPLICIT_EXPERIMENT_NOT_NATIVE_ADMISSION"
+            and descriptor.signature == context.signature and descriptor.scope == "bounded_leaf_test"
+            and descriptor.kind == "number" and descriptor.version == 2
+            and ns.ExperimentPolicy.ValidDescriptorBounds(descriptor.name, descriptor.min, descriptor.max)
+            and descriptor.layer == (descriptor.name == "Contrast" and "visual" or "quality")
+            and descriptor.settle == "scheduled_readback_test" and descriptor.numericEquivalent == true
+            and names(descriptor.dependencies) and #descriptor.dependencies == 0
+            and names(descriptor.conflicts) and #descriptor.conflicts == 0
+    end
     if C.TestContext(context) then
         return type(descriptor) == "table" and descriptor.name == "Brightness"
             and descriptor.testOnly == true and descriptor.admitted == false

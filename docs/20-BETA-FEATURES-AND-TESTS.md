@@ -1,5 +1,7 @@
 # Candidate scope, architecture and evidence
 
+**Historical 0.2.0-beta.1 snapshot, never installed/tested by Arctic.** The current [0.2.0-dev.2 architecture and tests](23-INTERACTIVE-DIAGNOSTICS.md) supersede its disabled Contrast/quality scope, schema/module counts and writer description. Preserve these earlier decisions as history; do not treat either integration as natively accepted.
+
 **Build:** 0.2.0-beta.1, schema 2, Forever 1.60.1:70790:16001. **Status:** integrated development candidate; feature-complete beta acceptance is blocked. This is not an inference that the game's API makes quality/Contrast impossible. The missing evidence is native domains, effects, dependencies and reversible behavior. The strongest currently justified implementation combines a working Brightness transaction path, experimental alternative targets, optional UI presentation, and diagnostic-only quality controls.
 
 ## Feature and evidence matrix

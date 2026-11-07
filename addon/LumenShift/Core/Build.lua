@@ -1,0 +1,3 @@
+local _, ns = ...
+-- The deterministic local packager replaces only this file with the source commit.
+ns.build = "source-checkout-dev.2"

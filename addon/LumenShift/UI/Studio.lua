@@ -1,7 +1,7 @@
 local _, ns = ...
 local S, W = {}, ns.Widgets
 ns.Studio = S
-local pages = { "Visual Modes", "Graphics Quality", "Colors and Effects", "Audio", "Personal Presets", "Accessibility", "Diagnostics and Recovery" }
+local pages = { "Visual Modes", "Graphics Quality", "Colors and Effects", "Audio", "Personal Presets", "Accessibility", "Diagnostic Center", "Calibration Lab" }
 function S.New(runtime)
     local env, db, product = runtime.reader.env, runtime.db, runtime.product
     local ui = { page = 1, edited = "nightVision", acknowledged = false, pageFrames = {} }
@@ -10,12 +10,12 @@ function S.New(runtime)
     ui.window = window
     window:SetSize(850, 640); window:SetPoint("CENTER"); window:SetFrameStrata("DIALOG")
     window:SetClampedToScreen(true); window:SetMovable(true); window:EnableMouse(true); window:RegisterForDrag("LeftButton")
-    window:SetScript("OnDragStart", function(self) if not product.IsCombat() then self:StartMoving() end end)
-    window:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
-    window:SetScript("OnHide", function(self) if self.lumenFade then self.lumenFade:Stop() end end)
+    ns.Widgets.Script(window, "OnDragStart", function(self) if not product.IsCombat() then self:StartMoving() end end)
+    ns.Widgets.Script(window, "OnDragStop", function(self) self:StopMovingOrSizing() end)
+    ns.Widgets.Script(window, "OnHide", function(self) if self.lumenFade then self.lumenFade:Stop() end end)
     ui.background = W.Fill(window, W.colors.bg)
     local logo = window:CreateTexture(nil, "ARTWORK"); logo:SetSize(40, 40); logo:SetPoint("TOPLEFT", 20, -14)
-    logo:SetTexture("Interface/AddOns/LumenShift/Media/logo.tga")
+    ns.Widgets.Asset(logo, "Interface/AddOns/LumenShift/Media/logo.tga")
     W.Text(window, "L U M E N S H I F T", 72, -17, 540, 19, W.colors.accent)
     W.Text(window, "NORTHERN LIGHTS LABS  /  VISUAL STUDIO", 73, -42, 570, 10, W.colors.muted)
     ui.status = W.Text(window, "", 20, -70, 800, 12)
@@ -29,8 +29,8 @@ function S.New(runtime)
     scrollBar:SetOrientation("VERTICAL"); scrollBar:SetMinMaxValues(0, 1); scrollBar:SetValueStep(24)
     W.Fill(scrollBar)
     local thumb = scrollBar:CreateTexture(nil, "OVERLAY"); thumb:SetSize(10, 38); thumb:SetColorTexture(unpack(W.colors.accent)); scrollBar:SetThumbTexture(thumb)
-    scrollBar:SetScript("OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
-    scroll:SetScript("OnMouseWheel", function(_, delta)
+    ns.Widgets.Script(scrollBar, "OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
+    ns.Widgets.Script(scroll, "OnMouseWheel", function(_, delta)
         scrollBar:SetValue(math.max(0, math.min(ui.scrollMaximum or 0, scroll:GetVerticalScroll() - delta * 36)))
     end)
     local function cfg() return db.config.studio end
@@ -68,11 +68,14 @@ function S.New(runtime)
         local current = ns.ReadOnly.Read(runtime.reader, "Brightness")
         ui.status:SetText("MODE  " .. ns.StudioConfig.Labels[product.active] .. "     BRIGHTNESS  " .. (current.raw or "unavailable")
             .. "     ORIGINAL  " .. (status.original or "none") .. "     " .. (product.busy and "VERIFYING" or status.state))
-        ui.footer:SetText(product.lastError or (status.error and "Recovery: " .. status.error)
+        local lab = runtime.lab and runtime.lab.Status()
+        ui.footer:SetText(product.lastError or (lab and lab.error) or (status.error and "Recovery: " .. status.error)
             or (cfg().enabled and "Ready. Modes never reapply at login. Quality settings remain independent." or "Setup required. No mode has been applied."))
+        if ui.labStateText and lab then ui.labStateText:SetText("Experiment: " .. lab.state .. " | " .. (lab.error or lab.operation)) end
         if ui.radial then ui.radial.Refresh() end
     end
     function ui.BuildPage()
+        ns.Log.Record(runtime.reader, "studio", "page", "DEBUG", "OPEN", { count = ui.page })
         -- Reuse a bounded page pool; release child references by hiding the old content.
         -- Page creation is only on deliberate navigation, never every frame or slider tick.
         for _, page in pairs(ui.pageFrames) do page:Hide() end
@@ -104,34 +107,40 @@ function S.New(runtime)
             toggle("Experimental Brightness targets beyond 75", function() return cfg().experimentalBrightness end,
                 function(value) update(function(copy) copy.studio.experimentalBrightness = value end) end,
                 "Only the 45 to 75 to 45 path has native evidence. Other 0-100 targets follow the source UI domain and remain experimental.")
-            line("Editing a slider changes a saved mode. Apply is a separate action. Contrast remains unavailable until its native round trip is validated.", 62)
+            line("Slider edits save settings; Apply is separate. Contrast is optional and requires the exact target to pass Calibration Lab in this login.", 62)
             selectEditor(parent, -300, env)
-            local body = env.CreateFrame("Frame", nil, parent); body:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -390); body:SetSize(560, 280)
+            local body = env.CreateFrame("Frame", nil, parent); body:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, -390); body:SetSize(560, 420)
             W.Text(body, ns.StudioConfig.Labels[ui.edited] .. "  /  " .. ns.StudioConfig.Descriptions[ui.edited], 0, 0, 550, 13)
             if ui.edited ~= "natural" then
                 local selected = ui.edited
                 W.Slider(env, body, "Brightness target (experimental except 75)", 0, -55, 0, 100, 1,
                     function() return cfg().modes[selected].brightness end,
                     function(value) return update(function(copy) copy.studio.modes[selected].brightness = value end) end)
-                W.Text(body, "Contrast target: " .. mode().contrast .. " — disabled; native validation required", 0, -119, 550, 13, W.colors.muted)
+                W.Slider(env, body, "Contrast target (requires this session's calibration)", 0, -119, 0, 100, 1,
+                    function() return cfg().modes[selected].contrast end,
+                    function(value) return update(function(copy) copy.studio.modes[selected].contrast = value end) end)
+                W.Toggle(env, body, "Use experimental calibrated Contrast for this mode", 0, -185, 540,
+                    function() return cfg().modes[selected].useContrast end,
+                    function(value) return update(function(copy) copy.studio.modes[selected].useContrast = value end) end)
+                W.Button(env, body, "Open Contrast calibration", 0, -226, 540, function() ui.labKey = "Contrast"; ui.Open(8) end)
             else W.Text(body, "Restores your exact captured original. Leaves quality selection alone.", 0, -55, 550, 13) end
-            button = W.Button(env, body, "Apply " .. ns.StudioConfig.Labels[ui.edited], 0, -160, 260, function() product.Select(ui.edited) end)
-            W.Button(env, body, "Reset this mode's saved settings", 272, -160, 275, function()
+            button = W.Button(env, body, "Apply " .. ns.StudioConfig.Labels[ui.edited], 0, -280, 260, function() product.Select(ui.edited) end)
+            W.Button(env, body, "Reset this mode's saved settings", 272, -280, 275, function()
                 local selected = ui.edited
                 update(function(copy) copy.studio.modes[selected] = ns.StudioConfig.Defaults().modes[selected] end)
                 ui.Invalidate(1); ui.Invalidate(3); ui.BuildPage()
             end)
-            W.Button(env, body, "Disable controls (restore Natural first)", 0, -208, 547, function() product.Disable() end)
-            pageHeight = 660
+            W.Button(env, body, "Disable controls (restore Natural first)", 0, -328, 547, function() product.Disable() end)
+            pageHeight = 780
         elseif ui.page == 2 then
             line("Independent graphics quality", 30, W.colors.accent)
-            line("Quality presets cannot safely apply yet: native ranges, dependent settings and exact restoration are not established. Readable does not mean writable or visually effective.", 78)
+            line("Build your own experimental profile from exact targets that pass Calibration Lab. No values are assigned automatically; a successful readback does not prove a visual effect or performance improvement.", 78)
+            button("Configure and calibrate a quality profile", function() ui.labKey = "ResampleSharpness"; ui.Open(8) end)
             for _, id in ipairs({ "currentBaseline", "balanced", "vista", "performance" }) do
                 local profileID = id
-                local b = button(ns.Quality.Profiles[id] .. (id == "currentBaseline" and " — current" or " — validation required"), function()
-                    local ok, code = ns.Quality.Select(db, profileID); if not ok then emit(code) end; ui.Refresh()
+                local b = button(ns.Quality.Profiles[id] .. (id == "currentBaseline" and " — restore quality" or " — apply configured targets"), function()
+                    local ok, code = runtime.lab.SelectProfile(profileID); if not ok then emit(code) end; ui.Refresh()
                 end, ns.Quality.Descriptions[id])
-                if id ~= "currentBaseline" then b.label:SetTextColor(unpack(W.colors.muted)) end
             end
             button("Refresh read-only capability scan", function() ui.Invalidate(2); ui.BuildPage() end)
             button("Print detailed read-only scan to chat", function()
@@ -139,7 +148,7 @@ function S.New(runtime)
             end)
             for _, row in ipairs(ns.Quality.Scan(runtime.reader)) do
                 line(row.group .. " / " .. row.label .. ": " .. (row.observation.raw or row.observation.code)
-                    .. "\n" .. row.dependency .. ". Disabled pending native validation.", 62, W.colors.muted)
+                    .. "\n" .. row.dependency .. (ns.ExperimentPolicy.Known(row.key) and ". Explicit Calibration Lab available." or ". Observe-only: unmapped tier behavior."), 62, W.colors.muted)
             end
         elseif ui.page == 3 then
             line("Colors and effects", 30, W.colors.accent)
@@ -219,7 +228,12 @@ function S.New(runtime)
             line("Set keys in the game's Key Bindings > LumenShift: Toggle Night Vision, Open wheel, Open Studio. No key is assigned automatically.", 65)
             line("Wheel keyboard: 1–6 select; arrows/Tab navigate; Enter applies; Escape cancels. Click selection is supported. Hold/release selection stays unavailable until input-focus behavior is verified.", 85, W.colors.muted)
         elseif ui.page == 7 then
-            line("Diagnostics and Recovery", 30, W.colors.accent)
+            line("Diagnostic Center", 30, W.colors.accent)
+            button("Export Complete Diagnostic Report", function() ns.DiagnosticWindow.Open(runtime) end)
+            button("Run Diagnostics (read only, no audio or graphics changes)", function()
+                ns.Report.Run(runtime, "user"); ui.BuildPage()
+            end)
+            button("Open Calibration Lab (no write until confirmation)", function() ui.Open(8) end)
             line("Natural restores a trusted current-session baseline. After reload or conflict, use an explicit recovery preview and confirm its displayed value. Never delete the journal to hide an error.", 78)
             button("Natural — restore current-session visual baseline", function() product.Select("natural") end)
             button("Restore My Brightness — preview only", function()
@@ -235,12 +249,16 @@ function S.New(runtime)
             button("Verify pending recovery (read only)", function() runtime.engine.Verify(); product.Observe(); ui.Invalidate(7); ui.BuildPage() end)
             button("Cancel preview (does not restore graphics)", function() runtime.engine.Cancel(); product.Observe(); ui.Invalidate(7); ui.BuildPage() end)
             button("Refresh diagnostic report", function() ui.Invalidate(7); ui.BuildPage() end)
-            local report = table.concat(ns.Diagnostics.Lines(runtime), "\n")
+            local summaries = {}
+            for _, item in ipairs(runtime.checks or {}) do summaries[#summaries + 1] = item.status .. " | " .. item.id .. " | " .. item.detail end
+            local report = table.concat(summaries, "\n")
             local box = W.Edit(env, parent, report, 0, -height(), 540, function() end)
-            box:SetMultiLine(true); box:SetMaxLetters(12000); box:SetText(report); box:SetHeight(680)
-            box:SetScript("OnEscapePressed", function(self) self:ClearFocus() end)
+            box:SetMultiLine(true); box:SetMaxLetters(12000); box:SetText(report); box:SetHeight(math.max(680, #summaries * 34))
+            ns.Widgets.Script(box, "OnEscapePressed", function(self) self:ClearFocus() end)
             W.Tip(env, box, "Click, Ctrl+A, Ctrl+C to copy the sanitized addon report. No character/account identifiers or saved-table dump.")
-            pageHeight = height() + 700
+            pageHeight = height() + box:GetHeight() + 20
+        elseif ui.page == 8 then
+            pageHeight = ns.CalibrationUI.Build(runtime, ui, parent, env)
         end
         parent:SetHeight(pageHeight or height())
         ui.scrollMaximum = math.max(0, parent:GetHeight() - 476)
@@ -263,6 +281,7 @@ function S.New(runtime)
         product.Observe()
         if page then ui.page = page end
         ui.Size(); ui.BuildPage(); window:Show(); W.Fade(window, db.config.preferences)
+        ns.Log.Record(runtime.reader, "studio", "open", "INFO", "PASS", { count = ui.page })
     end
     for i, label in ipairs(pages) do
         local index = i
@@ -273,11 +292,12 @@ function S.New(runtime)
     function ui.CloseWheel() if ui.radial.Close then ui.radial.Close() end; window:Hide() end
     function ui.Wheel() if ui.radial.Toggle then ui.radial.Toggle() end end
     product.Refresh = ui.Refresh
+    ns.Log.Record(runtime.reader, "studio", "initialize", "INFO", "PASS")
     window:Hide()
     -- Native Settings is discoverability only; no proxy CVar setters are registered.
     if type(env.Settings) == "table" and type(env.Settings.RegisterCanvasLayoutCategory) == "function"
         and type(env.Settings.RegisterAddOnCategory) == "function" then
-        pcall(function()
+        local registered = pcall(function()
             local canvas = env.CreateFrame("Frame")
             W.Text(canvas, "LumenShift — Northern Lights Labs", 20, -20, 580, 20)
             W.Button(env, canvas, "Open Visual Studio", 20, -70, 280, function() ui.Open() end)
@@ -285,6 +305,10 @@ function S.New(runtime)
             local category = env.Settings.RegisterCanvasLayoutCategory(canvas, "LumenShift")
             env.Settings.RegisterAddOnCategory(category)
         end)
+        ns.Log.Record(runtime.reader, "studio", "settings-registration", registered and "INFO" or "WARN",
+            registered and "PASS" or "NATIVE_SETTINGS_REGISTRATION_FAILED")
+    else
+        ns.Log.Record(runtime.reader, "studio", "settings-registration", "WARN", "SETTINGS_API_UNAVAILABLE_USE_SLASH")
     end
     return ui
 end

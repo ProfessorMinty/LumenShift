@@ -52,7 +52,8 @@ function D.Lines(runtime)
     lines[#lines + 1] = "Studio: /ls studio; /ls wheel; /ls toggle; /ls mode NAME. Key bindings: LumenShift category."
     lines[#lines + 1] = "Recovery: /ls on | off | restore (previews); use the exact numbered confirmation printed in chat; /ls verify; /ls cancel"
     lines[#lines + 1] = "Restore My Brightness: /ls restore. Save the displayed recovery card before confirming a live-approved test."
-    lines[#lines + 1] = "Native evidence: one 45/75/45 round trip. Other targets, Studio UI/audio, settling and persistence need acceptance. Contrast and quality writes remain disabled."
+    lines[#lines + 1] = "Diagnostic Center: /ls diag. Complete copyable report: /ls report. Explicit bounded experiments: /ls calibrate."
+    lines[#lines + 1] = "Native evidence: earlier dev2 45/75/45 only; this integration is untested. Contrast/quality need explicit calibration; readback never proves visible effects."
     if runtime.product and runtime.product.lastError then lines[#lines + 1] = "Studio status: " .. runtime.product.lastError end
     if runtime.audio and runtime.audio.lastError then lines[#lines + 1] = "Audio status: " .. runtime.audio.lastError end
     if runtime.lastError then lines[#lines + 1] = "Last error: " .. runtime.lastError end

@@ -1,5 +1,7 @@
 # Beta acceptance and eventual distribution
 
+**Historical beta.1 publication plan, not the current development priority.** The owner never installed/tested beta.1. Current work is the interactive diagnostic build in [23](23-INTERACTIVE-DIAGNOSTICS.md), with [one exploration/report workflow](21-BETA-USER-GUIDE.md). That document supersedes the old Brightness-only scope, schema/module counts and packaging detail below. Publication remains unapproved; no release-polish work is required before owner exploration.
+
 The code and local archive are development deliverables. **Recommendation: owner acceptance testing next; no feature-complete beta sign-off or CurseForge publication yet.** Existing build identity is accepted; do not ask Arctic to reconfirm the launcher. Preserve previous Phase 00/01 evidence and mark only tests actually observed in this integrated build as passed.
 
 ## Owner test record
