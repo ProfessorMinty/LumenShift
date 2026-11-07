@@ -2,6 +2,15 @@ local _, ns = ...
 local R, V = {}, ns.Value
 ns.Recovery = R
 
+-- A matching completed record may participate in a NEW explicit user request.
+-- This is not startup ownership, proof of uninterrupted ownership, or permission
+-- to replay an interrupted write. Planner validation and fresh preflight still run.
+function R.CanContinue(record, current, signature)
+    return type(record) == "table" and record.state == "owned" and record.failure == nil
+        and record.signature == signature and ns.Planner.SafeObservation(current)
+        and current.raw == record.lastVerifiedRaw
+end
+
 -- All methods return new data. Nothing here reads a client or executes a plan.
 function R.Inspect(journal, observed, signature)
     local result = { state = "BASELINE", entries = {} }

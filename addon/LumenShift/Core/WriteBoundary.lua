@@ -159,10 +159,12 @@ function B.New(reader, db, emit)
         if not ns.Planner.SafeObservation(current) then return nil, "UNSAFE_OBSERVATION" end
         local journal = V.Copy(db.journal)
         local record = journal.entries.Brightness
+        local continuing = ordinary and state == "RECOVERY" and not transaction
+            and R.CanContinue(record, current, context.signature)
         local recoveryAction = action == "restore" and (not sessionOwned or transaction ~= nil or state ~= "ACTIVE"
             or record and (record.state ~= "owned" or record.lastVerifiedRaw ~= current.raw))
-        if action == "on" and (state ~= "BASELINE" and state ~= "ACTIVE") then return nil, "RECOVERY_REQUIRED" end
-        if action == "off" and (not sessionOwned or state ~= "ACTIVE") then return nil, "USE_EXPLICIT_RESTORE" end
+        if action == "on" and state ~= "BASELINE" and state ~= "ACTIVE" and not continuing then return nil, "RECOVERY_REQUIRED" end
+        if action == "off" and (not sessionOwned or state ~= "ACTIVE") and not continuing then return nil, "USE_EXPLICIT_RESTORE" end
         if action ~= "on" and not record then return nil, "NO_CAPTURED_ORIGINAL" end
         if record then
             if not ns.Compatibility.Experimental(record.signature) or record.descriptorVersion ~= 1 or record.layer ~= "visual" then
@@ -181,7 +183,14 @@ function B.New(reader, db, emit)
         if action == "restore" then context.explicitRecovery = true end
         local plan, code = ns.Planner.Build(catalog, context, { Brightness = current }, journal, "visual", targets)
         if not plan then return nil, code end
-        if #plan.operations == 0 then return nil, "ALREADY_AT_TARGET_NO_OWNERSHIP_CHANGE" end
+        if #plan.operations == 0 then
+            if continuing then
+                -- Explicit selection of an already-matching target: no setter.
+                state, sessionOwned, lastError = "ACTIVE", true, nil
+                ns.Log.Record(reader, "brightness", "continue", "INFO", "MATCHING_SAVED_VALUE_NO_WRITE", { key = "Brightness" })
+            end
+            return nil, "ALREADY_AT_TARGET_NO_OWNERSHIP_CHANGE"
+        end
         if #plan.operations ~= 1 or plan.operations[1].key ~= "Brightness" then return nil, "TEST_PLAN_EXCLUDED" end
         serial = serial + 1
         local op = plan.operations[1]
@@ -201,7 +210,7 @@ function B.New(reader, db, emit)
         if not shown then return nil, "RECOVERY_CARD_NOT_DISPLAYED" end
         proposal = { token = tostring(serial), plan = plan, journal = journal, sourceJournal = V.Copy(db.journal),
             action = action, target = target, ordinary = ordinary, recoveryAction = recoveryAction,
-            priorState = sessionOwned and "ACTIVE" or "BASELINE" }
+            priorState = (sessionOwned or continuing) and "ACTIVE" or "BASELINE" }
         operation = "PREVIEW_" .. action
         return true
     end
@@ -320,6 +329,13 @@ function B.New(reader, db, emit)
     end
 
     function engine.Prepare(action) return guarded(prepare, false, action) end
+    function engine.CanContinue()
+        local catalog, context = eligible()
+        if not catalog or state ~= "RECOVERY" or transaction then return false end
+        local entry = db.journal.entries.Brightness
+        return entry and entry.descriptorVersion == 1 and entry.layer == "visual"
+            and R.CanContinue(entry, read(), context.signature) or false
+    end
     function engine.Switch(target)
         return guarded(function()
             if not db or not ns.Profiles.Validate(db.config) or db.config.studio.enabled ~= true then return nil, "SETUP_REQUIRED" end
@@ -452,7 +468,9 @@ function B.NewExperiments(runtime, cameraMode)
                 if reconciliation then
                     if not ns.Planner.SafeObservation(seen[key]) then return nil, "UNSAFE_RECOVERY_OBSERVATION" end
                     entry.lastVerifiedRaw, entry.state, entry.failure = seen[key].raw, "owned", nil
-                elseif not owned[key] then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
+                elseif not owned[key] and not R.CanContinue(entry, seen[key], sessionSignature) then
+                    return nil, "EXPLICIT_RECOVERY_REQUIRED"
+                end
             end
         end
         local context = policy.Context(sessionSignature)
@@ -565,6 +583,9 @@ function B.NewExperiments(runtime, cameraMode)
             end
             data.journal = V.Copy(finalJournal)
             for key in pairs(allowed) do owned[key] = data.journal.entries[key] ~= nil end
+            for key, entry in pairs(data.journal.entries) do
+                if entry.layer == proposal.layer and R.CanContinue(entry, seen[key], sessionSignature) then owned[key] = true end
+            end
             lab.busy, pending, pendingCompletion, lab.lastError = false, nil, nil, failure
             lab.state = next(data.journal.entries) and "ACTIVE" or "BASELINE"
             record("verification", failure and "WARN" or "INFO", failure or "PASS", { state = lab.state, tx = id })
@@ -652,7 +673,15 @@ function B.NewExperiments(runtime, cameraMode)
     end
     local function canApply(layer, targets)
         if lab.busy then return nil, "BUSY" end
-        if lab.state == "RECOVERY" or lab.state == "CONFLICT" then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
+        if lab.state == "RECOVERY" or lab.state == "CONFLICT" then
+            if not data or next(data.sideEffects) then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
+            -- Read-only preflight; ownership is established only by the new Apply.
+            for key, entry in pairs(data.journal.entries) do
+                if not R.CanContinue(entry, ns.ReadOnly.Read(reader, key), sessionSignature) then
+                    return nil, "EXPLICIT_RECOVERY_REQUIRED"
+                end
+            end
+        end
         if not policy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
         local overrides = {}
         for key, target in pairs(targets) do

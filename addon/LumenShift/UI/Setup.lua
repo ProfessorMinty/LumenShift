@@ -46,9 +46,8 @@ function S.New(runtime)
         -- Preference persistence is independent of momentary graphics readiness.
         -- Only the explicit final button requests reload, never a later event.
         if product.IsCombat() then return tell("Preferences saved. Finish reloading after combat, or choose Save & Close.") end
-        if product.busy or runtime.lab.busy or next(db.journal.entries) or next(db.experiments.journal.entries) then
-            return tell("Preferences saved. Restore active changes in Diagnostic Center before reloading, or use Save & Close.")
-        end
+        -- The explicit reload keeps every original/pending journal intact.
+        -- A saved recovery record must not prevent finishing preference setup.
         if type(env.ReloadUI) ~= "function" then return tell("Preferences saved. Reload is unavailable; you can close setup and keep playing.") end
         ui.finishing = true
         ns.Log.Record(runtime.reader, "setup", "finish", "INFO", "SAVED_USER_REQUESTED_RELOAD_NO_GRAPHICS_WRITE")
@@ -110,8 +109,8 @@ function S.New(runtime)
             baselineSource = db.baseline.source, capture = not db.baseline.chosen }
         if not ui.window then
             local window = env.CreateFrame("Frame", "LumenShiftSetup", env.UIParent); ui.window = window
-            window:SetSize(640, 656); window:SetPoint("CENTER"); window:SetFrameStrata("DIALOG")
-            window:SetClampedToScreen(true); window:EnableMouse(true); W.Fill(window, W.colors.bg)
+            window:SetSize(640, 656); window:SetPoint("CENTER")
+            W.Window(env, window, 94, 56); W.Fill(window, W.colors.bg)
             ui.panelArt = W.Art(window, "panel-steel", 1, -1, 638, 654, 0.38, "BACKGROUND")
             ui.headerArt = W.Art(window, "light-sweep", 200, -2, 410, 102, 0.50, "BACKGROUND")
             ui.headerArt:SetTexCoord(0, 1, 0.32, 0.73); W.Border(window)

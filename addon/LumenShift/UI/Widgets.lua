@@ -12,7 +12,7 @@ function W.Asset(texture, path)
         not ok and "TEXTURE_API_ERROR" or result == false and "TEXTURE_REJECTED" or result == true and "TEXTURE_API_ACCEPTED" or "REQUESTED_NO_NATIVE_STATUS")
     return ok and result ~= false
 end
-W.colors = { bg = { 0.075, 0.087, 0.10, 0.99 }, sidebar = { 0.052, 0.064, 0.074, 1 },
+W.colors = { bg = { 0.075, 0.087, 0.10, 1 }, sidebar = { 0.052, 0.064, 0.074, 1 },
     card = { 0.105, 0.12, 0.135, 1 }, hover = { 0.14, 0.17, 0.18, 1 },
     selected = { 0.09, 0.20, 0.19, 1 }, border = { 0.19, 0.23, 0.25, 1 },
     accent = { 0.22, 0.86, 0.70, 1 }, text = { 0.94, 0.96, 0.96, 1 }, muted = { 0.63, 0.69, 0.72, 1 },
@@ -79,6 +79,30 @@ function W.Text(parent, text, x, y, width, size, color)
     if f.GetFont then local font = f:GetFont(); if font then f:SetFont(font, size or 13, "") end end
     f:SetTextColor(unpack(color or W.colors.text)); f:SetText(text)
     return f
+end
+-- One movable top-level window family. Native Raise keeps descendants together;
+-- never enumerate, reparent or change another addon's frames.
+function W.Window(env, window, headerHeight, rightInset)
+    window:SetFrameStrata("FULLSCREEN_DIALOG"); window:SetToplevel(true)
+    window:SetClampedToScreen(true); window:SetMovable(true); window:EnableMouse(true)
+    local header = env.CreateFrame("Frame", nil, window)
+    header:SetPoint("TOPLEFT", window, "TOPLEFT", 14, -8)
+    header:SetSize(window:GetWidth() - 14 - rightInset, headerHeight)
+    header:EnableMouse(true); header:RegisterForDrag("LeftButton")
+    window.lumenDragHandle = header
+    local function raise() window:Raise() end
+    local function stop() window:StopMovingOrSizing() end
+    W.Script(header, "OnMouseDown", raise)
+    W.Script(header, "OnDragStart", function() raise(); window:StartMoving() end)
+    W.Script(header, "OnDragStop", stop); W.Script(header, "OnMouseUp", stop)
+    W.Script(window, "OnMouseDown", raise)
+    W.Script(window, "OnShow", raise)
+    local previousHide = window:GetScript("OnHide")
+    W.Script(window, "OnHide", function(self, ...)
+        stop(); if previousHide then previousHide(self, ...) end
+    end)
+    W.Tip(env, header, "Drag the title bar to move this window.")
+    return header
 end
 function W.Fill(frame, color)
     local texture = W.Texture(frame, "BACKGROUND")

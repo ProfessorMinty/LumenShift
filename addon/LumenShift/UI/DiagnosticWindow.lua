@@ -34,6 +34,7 @@ function D.Open(runtime)
         W.Script(box, "OnEscapePressed", function(self) self:ClearFocus(); window:Hide() end)
         W.Script(box, "OnTextChanged", function(self, userInput) if userInput and ui.text then self:SetText(ui.text) end end)
         W.Script(window, "OnHide", function() box:ClearFocus() end)
+        W.Window(env, window, 66, 16)
         function ui.SelectAll() box:SetFocus(); box:HighlightText(0, -1) end
         W.Button(env, window, "Select All", 18, -91, 160, ui.SelectAll, nil, "primary")
         W.Button(env, window, "Refresh report", 190, -91, 170, function() D.Open(runtime) end)

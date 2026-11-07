@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-dev.11 — Reload, recovery and window fixes (2026-11-07)
+
+- Fix normal mode/Apply clicks after reload when completed saved ownership still matches fresh readback. Keep exact originals, planner checks and zero startup writes; interrupted or conflicting records remain recoverable.
+- Let Finish & Reload save and reload with active/pending journals intact. Remove the forced detour to Diagnostics.
+- Add movable title bars, top-level window raising and consistent foreground strata to setup, Studio and reports; keep other addons' frames untouched.
+- Reposition wheel icon/label groups, prevent unwanted label wrapping, and separate the active marker from label text. Disable Verify when no recovery verification is pending.
+- Document native normal/raid 1–10 quality recipes, recommendation/default APIs and proposed setup. A hardware benchmark or full quality selector is not claimed as implemented.
+- 238 Lua 5.1 mocks and 9 packaging tests pass, including 10 new regressions for the owner's 45→42→reload→75→45 report, exact raw restoration, interrupted reloads, conflicts, errors, independent leaf layers and window handlers. Structural/syntax checks pass. Browser review uses off-client geometry; native dev.11 retest remains pending.
+
 ## 0.2.0-dev.10 — Baseline choice and graphics investigation (2026-11-07)
 
 - Add an Original / Game Defaults setup choice with read-only capture and separate recovery originals.

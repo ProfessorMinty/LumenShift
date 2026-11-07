@@ -20,14 +20,14 @@ function R.New(runtime, openStudio)
     if not db or not env.UIParent then return self end
     local frame = env.CreateFrame("Frame", "LumenShiftWheel", env.UIParent)
     self.frame = frame
-    frame:SetSize(352, 352); frame:SetFrameStrata("DIALOG"); frame:SetClampedToScreen(true)
+    frame:SetSize(352, 352); frame:SetFrameStrata("FULLSCREEN_DIALOG"); frame:SetToplevel(true); frame:SetClampedToScreen(true)
     frame:EnableMouse(true); frame:Hide()
     W.Art(frame, "wheel-base", 0, 0, 352, 352, 1, "BACKGROUND")
     self.sector = W.Art(frame, "wheel-sector-1", 0, 0, 352, 352, 1, "BORDER")
     self.halo = W.Art(frame, "light-halo", 84, -84, 184, 184, 0.65, "BORDER")
-    W.Art(frame, "logo", 153, -110, 46, 46)
-    local title = W.Text(frame, "LUMENSHIFT", 111, -161, 130, 12, W.colors.accent); title:SetJustifyH("CENTER")
-    local help = W.Text(frame, "1–6 / Enter\nEsc to cancel", 112, -182, 128, 10, W.colors.muted); help:SetJustifyH("CENTER")
+    W.Art(frame, "logo", 155, -118, 42, 42)
+    local title = W.Text(frame, "LUMENSHIFT", 111, -168, 130, 11, W.colors.accent); title:SetJustifyH("CENTER")
+    local help = W.Text(frame, "1–6 to select\nEsc to close", 112, -187, 128, 10, W.colors.muted); help:SetJustifyH("CENTER")
     self.buttons = {}
     local function highlight()
         if self.drawnSelection ~= self.selection then
@@ -40,7 +40,8 @@ function R.New(runtime, openStudio)
             button.background:SetColorTexture(0, 0, 0, 0)
             button.label:SetTextColor(unpack(i == self.selection and W.colors.accent or W.colors.text))
             local active = product.active == id and (id ~= "natural" or not db.baseline.chosen or product.baselineVerified)
-            button.label:SetText((active and "* " or "") .. i .. " " .. ns.StudioConfig.Label(id))
+            button.label:SetText(i .. " " .. ns.StudioConfig.Label(id))
+            if active then button.activeMark:Show() else button.activeMark:Hide() end
         end
     end
     function self.Close()
@@ -55,17 +56,21 @@ function R.New(runtime, openStudio)
         local index, modeID = i, id
         local angle = (90 - (i - 1) * 60) * math.pi / 180
         local button = W.Button(env, frame, i .. " " .. ns.StudioConfig.Label(id),
-            120 + math.cos(angle) * 112, -151 + math.sin(angle) * 112, 112,
+            116 + math.cos(angle) * 123, -144 + math.sin(angle) * 123, 120,
             function() selectMode(index) end, ns.StudioConfig.Descriptions[id])
-        button:SetHeight(61); button.label:ClearAllPoints(); button.label:SetPoint("BOTTOM", button, "BOTTOM", 0, 5)
-        button.label:SetWidth(108); button.label:SetJustifyH("CENTER")
-        local icon = button:CreateTexture(nil, "ARTWORK"); icon:SetSize(30, 30); icon:SetPoint("TOP", button, "TOP", 0, -4)
+        button:SetHeight(64); button.label:ClearAllPoints(); button.label:SetPoint("BOTTOM", button, "BOTTOM", 0, 9)
+        button.label:SetWidth(120); button.label:SetJustifyH("CENTER")
+        local font = button.label:GetFont(); button.label:SetFont(font, 12, "")
+        button.label:SetWordWrap(false); button.label:SetNonSpaceWrap(false)
+        local icon = button:CreateTexture(nil, "ARTWORK"); icon:SetSize(26, 26); icon:SetPoint("TOP", button, "TOP", 0, -8)
+        button.activeMark = button:CreateTexture(nil, "ARTWORK"); button.activeMark:SetSize(22, 2)
+        button.activeMark:SetPoint("BOTTOM", button, "BOTTOM", 0, 3); button.activeMark:SetColorTexture(unpack(W.colors.accent))
         ns.Widgets.Asset(icon, "Interface/AddOns/LumenShift/Media/" .. modeID .. ".tga")
         ns.Widgets.Script(button, "OnEnter", function() self.selection = index; highlight() end)
         ns.Widgets.Script(button, "OnLeave", function() highlight() end)
         self.buttons[i] = button
     end
-    W.ButtonIcon(W.Button(env, frame, "Studio", 126, -211, 100, function() self.Close(); openStudio() end, nil, "quiet"), "ui-settings", 14)
+    W.ButtonIcon(W.Button(env, frame, "Studio", 126, -216, 100, function() self.Close(); openStudio() end, nil, "quiet"), "ui-settings", 14)
     ns.Widgets.Script(frame, "OnMouseDown", function(_, button)
         if button == "RightButton" then self.Close(); return end
         if button ~= "LeftButton" then return end
@@ -99,7 +104,7 @@ function R.New(runtime, openStudio)
         frame:ClearAllPoints(); frame:SetPoint("CENTER", env.UIParent, "BOTTOMLEFT", x, y)
         local ok = pcall(function() frame:EnableKeyboard(true); frame:SetPropagateKeyboardInput(false) end)
         if not ok then self.Close(); ns.Diagnostics.Emit(runtime, "LumenShift: keyboard capture restricted; opening Studio."); openStudio(); return end
-        highlight(); frame:Show(); W.Fade(frame, db.config.preferences)
+        highlight(); frame:Show(); frame:Raise(); W.Fade(frame, db.config.preferences)
         ns.Log.Record(runtime.reader, "radial", "open", "INFO", "PASS_INPUT_NOT_CERTIFIED")
     end
     if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftWheel") end

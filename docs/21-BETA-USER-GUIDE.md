@@ -1,18 +1,20 @@
-# LumenShift 0.2.0-dev.10 — install and explore
+# LumenShift 0.2.0-dev.11 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
 ## Install the whole folder
 
-1. In the old build, restore active visuals and choose **Current Baseline** for quality. In dev.9 and earlier, Natural restores visuals; from dev.10 onward, use Diagnostic Center recovery if your selected return look differs from the pre-change originals. Keep unresolved recovery records.
+1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. Do not delete saved data to work around it. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.10-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.11-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
 Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Setup/startup never applies graphics or hides the HUD. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
 
 ## Open and use LumenShift
+
+**Retest this fix:** login should leave graphics unchanged. From the reported Cinematic 42 state, click Night Vision (75), then Original (captured 45). Reopen setup through native Settings → AddOns → LumenShift → Setup wizard, click Finish & Reload UI, and check that it reloads and stays completed. Drag setup/Studio/report by the title bar and check the wheel's longer Game Defaults label. Recovery records no longer block reload or a new mode click when a completed record still matches. A pending/failed write or actual external change retains its original and needs explicit recovery. These are requested native checks, not already verified results.
 
 - **Left-click** the launcher/minimap icon for the six-mode wheel. **Right-click** for Studio.
 - Select **Night Vision**, then **Original** or **Game Defaults** to apply your chosen return look. Other modes have editable Brightness, optional Contrast, tint and effects.

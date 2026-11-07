@@ -82,9 +82,9 @@ return function(env)
         return group
     end
     for _, method in ipairs({ "SetClampedToScreen", "SetMovable", "EnableMouse", "EnableMouseWheel", "EnableKeyboard",
-        "SetPropagateKeyboardInput", "SetFrameStrata", "SetFrameLevel", "RegisterForDrag", "RegisterForClicks", "StartMoving",
+        "SetPropagateKeyboardInput", "SetFrameStrata", "SetFrameLevel", "SetToplevel", "Raise", "RegisterForDrag", "RegisterForClicks", "StartMoving",
         "StopMovingOrSizing", "SetOrientation", "SetValueStep", "SetObeyStepOnDrag", "SetAutoFocus", "SetTextInsets",
-        "SetMaxLetters", "SetMultiLine", "SetTexCoord", "SetOwner" }) do
+        "SetMaxLetters", "SetMultiLine", "SetTexCoord", "SetOwner", "SetWordWrap", "SetNonSpaceWrap" }) do
         local name = method
         methods[name] = function(self, ...) self[name .. "Args"] = { ... } end
     end

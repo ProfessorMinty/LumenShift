@@ -79,7 +79,7 @@ function P.New(runtime)
         if combat() then return nil, "Try again after combat.", "COMBAT_OR_RESTRICTION" end
         if product.busy or (runtime.lab and runtime.lab.busy) then return nil, "Wait for the current change to finish.", "BUSY" end
         local state = engine.Status().state
-        if state ~= "BASELINE" and state ~= "ACTIVE" then return nil, "An earlier change needs attention. Open Recovery to inspect the saved original.", "RECOVERY_REQUIRED" end
+        if state ~= "BASELINE" and state ~= "ACTIVE" and not engine.CanContinue() then return nil, "An earlier change needs attention. Open Recovery to inspect the saved original.", "RECOVERY_REQUIRED" end
         if not engine.Status().setterAvailable then return nil, messages.SETTER_UNAVAILABLE, "SETTER_UNAVAILABLE" end
         if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return nil, messages.FOLLOWUP_TIMER_UNAVAILABLE, "FOLLOWUP_TIMER_UNAVAILABLE" end
         local item = ns.ReadOnly.Read(runtime.reader, "Brightness")
@@ -89,7 +89,6 @@ function P.New(runtime)
     function product.CanEnable()
         local ready, detail, code = product.Availability()
         if not ready then return nil, detail, code end
-        if engine.Status().state ~= "BASELINE" then return nil, "Restore the active mode before enabling controls.", "RECOVERY_REQUIRED" end
         return true, detail
     end
     function product.Enable()

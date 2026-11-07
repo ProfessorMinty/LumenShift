@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-dev.10** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a usable development build, not the accepted feature-complete beta.
+**0.2.0-dev.11** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a development build, not the accepted feature-complete beta.
+
+Dev.11 fixes the reported post-reload mode lock and Finish & Reload refusal, adds movable title bars and window layering, and improves wheel label spacing. A new click can continue from a matching completed record while preserving the actual original; startup still makes no graphics changes. [Fixes and native retest](docs/36-DEV11-RELOAD-AND-UI-FIXES.md). [Native 1–10, raid and recommendation research](docs/35-GRAPHICS-SELECTION-AND-RECOMMENDATIONS.md) defines the next graphics-selection flow; that selector is not implemented in this hotfix.
 
 Version/build/interface differences now show one warning instead of locking controls. Actual APIs, values and ownership are still checked. Schema 6 keeps existing preferences and recovery and asks for the new baseline choice once. Dev.7 added Camera Mode, built-in quality recipes and native tier trials. Dev.8 redesigns Studio with grouped navigation, mode/profile cards, aligned settings, a fixed primary action and the approved aurora logo. [UI architecture and validation](docs/31-STUDIO-REDESIGN.md). Dev.9 integrates the supplied Core icons, mesh panels and Lumen Loops accents, with a fitted wheel and bundled third-party credits. [Asset integration](docs/32-ASSET-INTEGRATION.md).
 

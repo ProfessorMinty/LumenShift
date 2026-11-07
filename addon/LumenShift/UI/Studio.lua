@@ -24,11 +24,9 @@ function S.New(runtime)
     local function emit(code) if code then ns.Diagnostics.Emit(runtime, "LumenShift: " .. ns.Product.Message(code)) end end
     local window = env.CreateFrame("Frame", "LumenShiftStudio", env.UIParent)
     ui.window = window
-    window:SetSize(1120, 740); window:SetPoint("CENTER"); window:SetFrameStrata("DIALOG")
-    window:SetClampedToScreen(true); window:SetMovable(true); window:EnableMouse(true); window:RegisterForDrag("LeftButton")
-    W.Script(window, "OnDragStart", function(self) if not product.IsCombat() then self:StartMoving() end end)
-    W.Script(window, "OnDragStop", function(self) self:StopMovingOrSizing() end)
+    window:SetSize(1120, 740); window:SetPoint("CENTER")
     W.Script(window, "OnHide", function(self) if self.lumenFade then self.lumenFade:Stop() end end)
+    W.Window(env, window, 96, 134)
     ui.background = W.Fill(window, W.colors.bg)
     ui.panelArt = W.Art(window, "panel-steel", 1, -1, 1118, 738, 0.48, "BACKGROUND")
     ui.headerArt = W.Art(window, "light-sweep", 588, -8, 500, 102, 0.48, "BACKGROUND")
@@ -280,7 +278,8 @@ function S.New(runtime)
                 button("Confirm displayed recovery card " .. token, 0, y - 40, 405, function() runtime.engine.Confirm(token); product.Observe(); ui.BuildPage() end)
                 y = y - 90
             end
-            button("Verify pending recovery (read only)", 0, y, 405, function() runtime.engine.Verify(); product.Observe(); ui.BuildPage() end)
+            local verifyButton = button("Verify pending recovery (read only)", 0, y, 405, function() runtime.engine.Verify(); product.Observe(); ui.BuildPage() end)
+            if status.state ~= "AWAITING_VERIFICATION" then verifyButton:Disable() end
             button("Cancel preview (does not restore graphics)", 430, y, 406, function() runtime.engine.Cancel(); product.Observe(); ui.BuildPage() end, "quiet")
             button(ui.showChecks and "Hide individual checks" or "Show individual checks", 0, y - 55, 240, function() ui.showChecks = not ui.showChecks; ui.BuildPage() end, "quiet")
             y = y - 108
