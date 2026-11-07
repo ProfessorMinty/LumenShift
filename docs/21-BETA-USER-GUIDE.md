@@ -1,4 +1,4 @@
-# LumenShift 0.2.0-dev.11 — install and explore
+# LumenShift 0.2.0-dev.12 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
@@ -6,15 +6,30 @@ Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report con
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. Do not delete saved data to work around it. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.11-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.12-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
-Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Setup/startup never applies graphics or hides the HUD. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
+Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Opening setup and startup never apply graphics or hide the HUD. The new Graphics page applies only through its explicitly labelled Apply & Reload UI action. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
+
+## Native graphics setup and first test
+
+1. Open **Settings → AddOns → LumenShift → Setup wizard**. Your existing completed setup is not forcibly repeated. Appearance keeps the Original/Game Defaults choice and effects preferences. Click **Next: Graphics**.
+2. Start with **Keep current**. Check that the everyday graphics level or Custom label and the raid checkbox match your game settings. **Save & Close** saves choices without changing the scene. Reopen setup and verify those choices remain.
+3. If unsure which quality to choose, **WoW recommendation** uses the game's current per-option defaults. It is not an FPS benchmark. **Choose a level** exposes the native 1–10 scale; higher favors detail, lower favors performance. Raid/battlegrounds have a separate choice when enabled. Shared options such as resolution and renderer are not included.
+4. **Review changes** lists what the chosen recipe would directly change. Opening it makes no changes. Projected textures and particles stay enabled; native lower presets/defaults may be adjusted for those combat cues.
+5. For the first controlled test, use **Studio → Graphics Quality** instead of reloading. Leave raid on Keep current. Choose one level away from Everyday's current level, review, then **Apply graphics**. Wait for the operation to finish; inspect the scene and the native graphics page. This is an experimental user-triggered graphics change.
+6. Scroll down and click **Restore everyday graphics**. This deliberately replaces current everyday settings with their captured originals. Verify the scene and export if needed; the report shows original/expected/current values for all captured settings. No confirmation card is required.
+7. Test the raid bank separately, including its checkbox, and use **Restore raid graphics**. Check actual automatic bank activation in the relevant content when available; this has not been certified from source alone. Then test a two-bank Apply if desired.
+8. When satisfied, select your intended choices and **Apply graphics**, or use Setup → **Apply & Reload UI**. Setup saves first, applies/verifies selected banks, and reloads only after success. **Save & Close** is always available without applying. With both banks kept, the last button is **Finish & Reload UI**.
+
+Only available known parent/leaf originals are captured. Missing leaves are disclosed in the report; complete renderer dependencies and exact whole-game restoration are unverified. If an Apply or Restore reports failure, keep its originals and export the report. There is no automatic retry or uncertain restore on startup. A failed raid operation can follow a successful everyday operation; each bank retains its own recovery data.
+
+**Detail profiles** on Graphics Quality contains Balanced/Vista/Performance and Current Baseline. Restore an overlapping detail profile before applying native everyday levels, or restore everyday graphics before applying overlapping detail changes. Their original captures are kept separate. Visual modes stay independent.
 
 ## Open and use LumenShift
 
-**Retest this fix:** login should leave graphics unchanged. From the reported Cinematic 42 state, click Night Vision (75), then Original (captured 45). Reopen setup through native Settings → AddOns → LumenShift → Setup wizard, click Finish & Reload UI, and check that it reloads and stays completed. Drag setup/Studio/report by the title bar and check the wheel's longer Game Defaults label. Recovery records no longer block reload or a new mode click when a completed record still matches. A pending/failed write or actual external change retains its original and needs explicit recovery. These are requested native checks, not already verified results.
+**Retest this fix:** login should leave graphics unchanged. From the reported Cinematic 42 state, click Night Vision (75), then Original (captured 45). Reopen setup through native Settings → AddOns → LumenShift → Setup wizard, choose Next: Graphics, keep both banks unchanged, click Finish & Reload UI, and check that it reloads and stays completed. Drag setup/Studio/report by the title bar and check the wheel's longer Game Defaults label. Recovery records no longer block reload or a new mode click when a completed record still matches. A pending/failed write or actual external change retains its original and needs explicit recovery. These are requested native checks, not already verified results.
 
 - **Left-click** the launcher/minimap icon for the six-mode wheel. **Right-click** for Studio.
 - Select **Night Vision**, then **Original** or **Game Defaults** to apply your chosen return look. Other modes have editable Brightness, optional Contrast, tint and effects.
@@ -30,7 +45,7 @@ The six smaller mode icons remain placeholders pending the owner’s new artwork
 
 ## Check the new return mode
 
-1. Choose **Original** in setup. Check the displayed Brightness/Contrast against your intended current look, then **Finish & Reload UI**. After reload, setup should stay closed and graphics should be unchanged.
+1. Choose **Original** in setup. Check the displayed Brightness/Contrast against your intended current look, then **Next: Graphics**, leave Keep current selected, and **Finish & Reload UI**. After reload, setup should stay closed and graphics should be unchanged.
 2. Select Night Vision, then Original. Check that your captured look returns; no assumption is made that your Brightness was 45.
 3. To try the alternate choice, reopen Setup wizard through native Settings, select **Game Defaults**, inspect the reported values and **Save & Close**. Saving should not change the scene. Apply Game Defaults from the wheel or Studio when you want to see it.
 4. If the defaults differ from your prior settings, **Diagnostic Center → Restore My Brightness — preview only → Confirm displayed recovery card → Verify pending recovery** restores pre-change Brightness. **Advanced Graphics → Preview recovery of experimental visual settings → Confirm displayed operation** restores pre-change Contrast. This is separate from applying the selected Game Defaults look.
@@ -73,7 +88,7 @@ For **Shadows, lighting & water**: choose a supported native level, then **Try s
 Outside combat, use a stationary scene:
 
 1. Night Vision → your chosen Original/Game Defaults; Lantern → that same return mode. Check the effects and optional sounds you chose.
-2. Apply Vista, switch Night Vision/your return mode, then Current Baseline. Quality and modes should stay independent.
+2. In Graphics Quality → Detail profiles, apply Vista, switch Night Vision/your return mode, then Current Baseline. Quality and modes should stay independent.
 3. Toggle friendly names twice. Enter Camera Mode, then exit using its keybind or Alt+Z plus Exit. Check that original player/pet name visibility returns.
 4. Optionally try a supported shadow/light/water tier and let restoration finish. If it reports recovery, stop that trial and export; do not repeatedly retry it.
 5. Open **Diagnostic Center → Export Complete Diagnostic Report → Select All → Ctrl+C**. Paste the report with a short description of what looked right or wrong. It collects the technical details; no chat transcript or extra commands are needed.
@@ -88,6 +103,6 @@ Restore before updating, disabling, downgrading or removing the addon. SavedVari
 
 ## What is verified
 
-Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.10 baseline behavior has simulated coverage only. The textured UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Persistent shadow/light/water profiles remain incomplete because complete native dependencies/restoration are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
+Native dev.6 Night Vision/readback/restoration is recorded in [28](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md). The dev.10 baseline behavior has simulated coverage only. The textured UI was reviewed through an off-client layout model and automated Lua tests; native font metrics, input, scrolling and addon coexistence still need an in-game check. New dev.7 camera, profile and tier behavior has automated mock coverage and still needs in-game evaluation. Dev.12 adds explicit persistent native normal/raid recipes, including supported shadow/light/water settings, with captured known-value restoration. Complete native dependencies/restoration and owner acceptance are not established. See the [feature/evidence matrix](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md). This is an expanded interactive development build, not accepted feature-complete beta or a CurseForge release.
 
 Original code/technical documentation: MIT, copyright 2026 Northern Lights Labs. Original creative assets: All Rights Reserved with permission to install/use as part of LumenShift. Both notices and THIRD-PARTY-NOTICES.md ship in the addon; dev.9 supplied-art licenses remain unchanged.

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-dev.12 — Native graphics selection (2026-11-07)
+
+- Add normal/raid graphics choices using native 1–10 recipes and recommended per-key defaults, independent of visual modes and detail profiles. Keep Current is the initial choice; no hardware benchmark or universal best-quality claim.
+- Add captured known parent/leaf originals, fresh expected-state checks, one bounded compensation pass, explicit per-bank restoration and failure/conflict records through the existing planner/recovery and sole native setter.
+- Split Setup into Appearance/Graphics, preserving saved choices. Preview and Save & Close never write. Apply & Reload waits for selected banks to verify; a failure saves preferences but does not reload.
+- Add Studio previews, direct Apply/Restore, a separate Detail profiles view, native recipe/API diagnostics and captured/uncaptured setting export. Schema 7 preserves earlier completion/preferences/journals.
+- Preserve dev.11 reload, mode continuation, movable-window and wheel fixes. No startup/reload graphics activation or new build lock.
+- **268 Lua 5.1 mocks pass, 0 fail** (30 new native-graphics cases); **9 packaging tests pass**. Syntax/structural checks cover 35 runtime modules, 10 Lua test files and 4 bindings; one native setter. UI review is off-client. Native preset dependencies, appearance/performance and owner acceptance remain unverified; no installed-game changes or publication.
+
 ## 0.2.0-dev.11 — Reload, recovery and window fixes (2026-11-07)
 
 - Fix normal mode/Apply clicks after reload when completed saved ownership still matches fresh readback. Keep exact originals, planner checks and zero startup writes; interrupted or conflicting records remain recoverable.

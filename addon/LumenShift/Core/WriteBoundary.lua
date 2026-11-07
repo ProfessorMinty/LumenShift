@@ -63,6 +63,7 @@ function B.New(reader, db, emit)
         if reader.tierOccupied and reader.tierOccupied() then return nil, "QUALITY_TRIAL_RECOVERY_REQUIRED" end
         if reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if reader.experimentBusy and reader.experimentBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
         return catalog, context
     end
@@ -360,6 +361,7 @@ function B.New(reader, db, emit)
         return true
     end
     function engine.Notify() dirty = true end -- synchronous notifications never recurse into writes
+    reader.brightnessBusy = function() return busy end
     function engine.Status()
         if not busy and sessionOwned and state == "ACTIVE" and not (proposal and proposal.recoveryAction) then
             local current = read()
@@ -403,6 +405,7 @@ function B.NewExperiments(runtime, cameraMode)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate()
+        if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if (cameraMode and runtime.lab and runtime.lab.busy) or (not cameraMode and runtime.names and runtime.names.busy) then return nil, "OTHER_OPERATION_ACTIVE" end
         if not data or not policy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
         if reader.tierOccupied and reader.tierOccupied() then return nil, "QUALITY_TRIAL_RECOVERY_REQUIRED" end
@@ -673,6 +676,9 @@ function B.NewExperiments(runtime, cameraMode)
     end
     local function canApply(layer, targets)
         if lab.busy then return nil, "BUSY" end
+        if layer == "quality" and db and db.graphics.records.normal then
+            for key in pairs(targets) do if ns.NativeGraphics.Known(key) then return nil, "RESTORE_GRAPHICS_BANK_FIRST" end end
+        end
         if lab.state == "RECOVERY" or lab.state == "CONFLICT" then
             if not data or next(data.sideEffects) then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
             -- Read-only preflight; ownership is established only by the new Apply.
@@ -791,6 +797,8 @@ function B.NewTierTrials(runtime)
     end
     local function gate()
         if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
+        if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if db and db.graphics.records.normal then return nil, "RESTORE_GRAPHICS_BANK_FIRST" end
         if ns.Compatibility.Inspect(reader).signature ~= signature then return nil, "SESSION_BUILD_CHANGED" end
         if not ns.Compatibility.Experimental(signature) then return nil, "IDENTITY_UNAVAILABLE" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
@@ -953,4 +961,273 @@ function B.NewTierTrials(runtime)
     end
     reader.tierOccupied = function() return trial.busy or executing or T.HasRecord(data) ~= nil end
     return trial
+end
+
+-- Native normal/raid recipes. Compact bank snapshots preserve parent selectors
+-- and captured custom leaves; nativeSet above is still the only setter call.
+function B.NewNativeGraphics(runtime)
+    local G, reader, db = ns.NativeGraphics, runtime.reader, runtime.db
+    local data = db and db.graphics
+    local engine = { busy = false, state = data and next(data.records) and "RECOVERY" or "IDLE" }
+    local executing, sequence = false, 0
+    local function refresh()
+        if runtime.ui and runtime.ui.Refresh then runtime.ui.Refresh() end
+    end
+    local function log(result, level, key)
+        ns.Log.Record(reader, "native-graphics", "operation", level or "INFO", result, { key = key, state = engine.state })
+    end
+    local function combat()
+        local result = ns.ReadOnly.Call(reader, reader.env.InCombatLockdown)
+        return not result or result.n ~= 1 or result[1] ~= false
+    end
+    local function gate(bank)
+        if reader.brightnessBusy and reader.brightnessBusy()
+            or reader.experimentBusy and reader.experimentBusy()
+            or reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if not data or not G.Validate(data) then return nil, "GRAPHICS_DATA_QUARANTINED" end
+        if combat() then return nil, "COMBAT_OR_RESTRICTION" end
+        if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
+        if type(reader.env.C_Timer) ~= "table" or type(reader.env.C_Timer.After) ~= "function" then return nil, "FOLLOWUP_TIMER_UNAVAILABLE" end
+        if runtime.engine and runtime.engine.Status().state == "AWAITING_VERIFICATION"
+            or runtime.lab and runtime.lab.busy or runtime.names and runtime.names.busy
+            or runtime.product and runtime.product.busy then return nil, "OTHER_OPERATION_ACTIVE" end
+        if reader.tierOccupied and reader.tierOccupied() then return nil, "QUALITY_TRIAL_RECOVERY_REQUIRED" end
+        if bank == "normal" and db.experiments then
+            for key, entry in pairs(db.experiments.journal.entries) do
+                if entry.layer == "quality" and G.Known(key) then return nil, "RESTORE_DETAIL_PROFILE_FIRST" end
+            end
+        end
+        local signature = ns.Compatibility.Inspect(reader).signature
+        if not signature then return nil, "IDENTITY_UNAVAILABLE" end
+        if bank == "raid" and not ns.Planner.SafeObservation(ns.ReadOnly.Read(reader, "RAIDsettingsEnabled")) then
+            return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:RAIDsettingsEnabled"
+        end
+        return signature
+    end
+    local function snapshot(record)
+        local current = {}
+        for key in pairs(record.original) do
+            local item = ns.ReadOnly.Read(reader, key)
+            if not ns.Planner.SafeObservation(item) then return nil, "GRAPHICS_READ_FAILED:" .. key end
+            current[key] = item.raw
+        end
+        return current
+    end
+    local function foreignSnapshot(bank)
+        local values = G.Snapshot(reader, bank == "normal" and "raid" or "normal")
+        for _, key in ipairs({ "Brightness", "Contrast", "Gamma", "RenderScale" }) do
+            local item = ns.ReadOnly.Read(reader, key)
+            if ns.Planner.SafeObservation(item) then values[key] = item.raw end
+        end
+        return values
+    end
+    local function watchForeign(values)
+        local matches = true
+        for key, before in pairs(values) do
+            local item = ns.ReadOnly.Read(reader, key)
+            if not ns.Planner.SafeObservation(item) or item.raw ~= before then
+                matches = false
+                if V.Number(item.raw) then data.sideEffects[key] = { before = before, after = item.raw } end
+            end
+        end
+        return matches
+    end
+    local function finish(ok, code, callback)
+        engine.busy, engine.error = false, code
+        engine.state = next(data.records) and (ok and "ACTIVE" or "RECOVERY") or "IDLE"
+        log(code or "VERIFIED", ok and "INFO" or "WARN"); refresh()
+        if callback then callback(ok, code) end
+        return ok, code
+    end
+    local function mark(record, code)
+        record.state, record.error = code and code:find("CONFLICT", 1, true) and "conflict" or "failed", code
+        engine.error = code
+    end
+    local function step(bank, record, key, raw, restoring, signature)
+        local ready, why = gate(bank)
+        if not ready or ready ~= signature then return nil, why or "SESSION_BUILD_CHANGED" end
+        local matches, changed = G.Matches(reader, record.expected)
+        if not matches then return nil, "GRAPHICS_EXTERNAL_CONFLICT:" .. changed end
+        if not restoring then
+            local ok, reason = G.Support(reader, key, V.Number(raw))
+            if not ok then return nil, reason .. ":" .. key end
+        end
+        local plan, journal, _, reason = G.Step(reader, key, raw, restoring, signature)
+        if not plan then return nil, reason or "GRAPHICS_PLAN_FAILED" end
+        if #plan.operations == 0 then return true end
+        local tx = R.Begin(journal, plan, sequence, "ACTIVE")
+        if not tx then return nil, "GRAPHICS_PLAN_FAILED" end
+        local op = plan.operations[1]
+        if op.write then tx = R.Before(tx, sequence, 1, ns.ReadOnly.Read(reader, key), combat())
+        else tx = R.ReleaseObserved(tx, sequence, 1, ns.ReadOnly.Read(reader, key), combat()) end
+        if not tx or tx.state == "DEFERRED" or tx.state == "ROLLING_BACK" then return nil, "GRAPHICS_EXTERNAL_CONFLICT:" .. key end
+        if op.write then
+            if combat() then return nil, "COMBAT_OR_RESTRICTION" end
+            local result, code = nativeSet(reader, key, op.targetRaw)
+            local after = ns.ReadOnly.Read(reader, key)
+            tx = R.Observe(tx, sequence, 1, result and result.n == 1 and result[1] == true and ns.Planner.SafeObservation(after), after.raw)
+            local observed, readError = snapshot(record)
+            if observed then record.expected = observed end
+            if not observed then return nil, readError end
+            if not tx or tx.state ~= "AWAITING_VERIFICATION" then return nil, code or "GRAPHICS_SETTER_OR_READBACK_FAILED:" .. key end
+        end
+        return true
+    end
+    local function run(bank, targets, restoring, callback)
+        local signature, why = gate(bank)
+        if not signature then return nil, why end
+        local previous = data.records[bank] and V.Copy(data.records[bank])
+        if not restoring and previous then
+            if previous.state ~= "owned" or previous.error or previous.signature ~= signature then return nil, "GRAPHICS_RECOVERY_REQUIRED" end
+            local matches, key = G.Matches(reader, previous.expected)
+            if not matches then return nil, "GRAPHICS_EXTERNAL_CONFLICT:" .. key end
+        end
+        local before, omitted = G.Snapshot(reader, bank)
+        if not next(targets) then return true, "NO_CHANGE" end
+        for key in pairs(targets) do if before[key] == nil then return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:" .. key end end
+        local record = previous or { signature = signature, state = "pending", original = V.Copy(before), expected = V.Copy(before) }
+        if not V.Copy(record) then return nil, "GRAPHICS_SNAPSHOT_LIMIT" end
+        for key in pairs(targets) do if not record.original[key] then return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:" .. key end end
+        if restoring then
+            local seen, errorCode = snapshot(record)
+            if not seen then return nil, errorCode end
+            record.expected = seen -- explicit Restore replaces the currently displayed bank
+        end
+        local beforeOperation = V.Copy(record.expected)
+        local foreign = foreignSnapshot(bank)
+        sequence = sequence + 1
+        local id = sequence
+        engine.busy, engine.state, engine.error = true, "APPLYING", nil
+        record.state, record.error = "pending", nil
+        data.records[bank] = record -- every original precedes the first possible setter
+        log(restoring and "USER_RESTORE_CAPTURED_BANK" or "USER_APPLY_NATIVE_RECIPE")
+        local failure
+        for _, key in ipairs(G.Order(bank, targets, restoring)) do
+            local ok, code = step(bank, record, key, tostring(targets[key]), restoring, signature)
+            if not ok then failure = code; break end
+            if not watchForeign(foreign) then failure = "OTHER_BANK_OR_VISUAL_CHANGED"; break end
+            if bank == "raid" and targets.RAIDsettingsEnabled == nil
+                and record.expected.RAIDsettingsEnabled ~= beforeOperation.RAIDsettingsEnabled then
+                failure = "UNREQUESTED_RAID_SWITCH_CHANGED"; break
+            end
+        end
+        if not watchForeign(foreign) then failure = "OTHER_BANK_OR_VISUAL_CHANGED" end
+        local compensated = false
+        -- Bounded compensation is attempted only for this new Apply, while every
+        -- captured current value still matches. Never replay after reload/conflict.
+        if failure and not restoring and not failure:find("CONFLICT", 1, true)
+            and failure ~= "OTHER_BANK_OR_VISUAL_CHANGED" and G.Matches(reader, record.expected) then
+            compensated = true
+            for _, key in ipairs(G.Order(bank, beforeOperation, true)) do
+                local ok = step(bank, record, key, beforeOperation[key], true, signature)
+                if not ok or not watchForeign(foreign) then compensated = false; break end
+            end
+        end
+        if failure and not compensated then mark(record, failure); return finish(false, failure, callback) end
+        engine.state = "VERIFYING"
+        local followup = function()
+            if sequence ~= id then return end
+            local ready, gateError = gate(bank)
+            if not ready or ready ~= signature then mark(record, gateError or "SESSION_BUILD_CHANGED"); finish(false, record.error, callback); return end
+            local stable, key = G.Matches(reader, record.expected)
+            if not stable or not watchForeign(foreign) then
+                mark(record, "GRAPHICS_LATE_CONFLICT:" .. (key or "other-bank")); finish(false, record.error, callback); return
+            end
+            local verifyTargets = compensated and beforeOperation or targets
+            for targetKey, raw in pairs(verifyTargets) do
+                local current = ns.ReadOnly.Read(reader, targetKey)
+                local equal = (restoring or compensated) and current.raw == raw or (not restoring and not compensated and V.Number(current.raw) == V.Number(tostring(raw)))
+                if not ns.Planner.SafeObservation(current) or not equal then
+                    mark(record, "GRAPHICS_FINAL_MISMATCH:" .. targetKey); finish(false, record.error, callback); return
+                end
+            end
+            if compensated then data.records[bank] = previous
+            elseif restoring then data.records[bank] = nil
+            else record.state, record.error = "owned", nil end
+            finish(not failure, failure, callback)
+        end
+        local guarded = runtime.log.Guard("native-graphics", "followup", followup, function()
+            mark(record, "GRAPHICS_HANDLER_ERROR"); finish(false, record.error, callback)
+        end)
+        local scheduled = pcall(reader.env.C_Timer.After, 0.15, function()
+            local prior = executing
+            executing = true
+            guarded()
+            executing = prior
+        end)
+        if not scheduled then mark(record, "FOLLOWUP_TIMER_FAILED"); return finish(false, record.error, callback) end
+        refresh()
+        return true
+    end
+    function engine.Apply(choices, callback)
+        if engine.busy then return nil, "BUSY" end
+        if not data or not G.Validate(data) then return nil, "GRAPHICS_DATA_QUARANTINED" end
+        if not G.Choices(choices) then return nil, "INVALID_GRAPHICS_CHOICE" end
+        -- Preflight BOTH banks before any write; a bad raid recipe cannot first
+        -- change everyday settings. They commit sequentially, not atomically.
+        local recipes = {}
+        for _, bank in ipairs(G.Banks) do
+            local targets, why = G.Recipe(reader, bank, choices[bank])
+            if not targets then return nil, why end
+            if bank == "raid" and choices.raidEnabled ~= "keep" then targets.RAIDsettingsEnabled = choices.raidEnabled == "on" and 1 or 0 end
+            if next(targets) then
+                local signature, errorCode = gate(bank); if not signature then return nil, errorCode end
+                local record = data.records[bank]
+                if record and (record.state ~= "owned" or record.error or record.signature ~= signature or not G.Matches(reader, record.expected)) then return nil, "GRAPHICS_RECOVERY_REQUIRED" end
+                for key in pairs(targets) do if not ns.Planner.SafeObservation(ns.ReadOnly.Read(reader, key)) then return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:" .. key end end
+            end
+            recipes[bank] = targets
+        end
+        data.choices = V.Copy(choices)
+        local index = 0
+        local function nextBank(ok, code)
+            if ok == false then if callback then callback(false, code) end; return end
+            index = index + 1
+            local bank = G.Banks[index]
+            if not bank then if callback then callback(true) end; return true end
+            if not next(recipes[bank]) then return nextBank(true) end
+            local completed = false
+            local started, why = run(bank, recipes[bank], false, function(ok, code)
+                completed = true; nextBank(ok, code)
+            end)
+            if not started and not completed then nextBank(false, why) end
+            return started, why
+        end
+        return nextBank(true)
+    end
+    function engine.Restore(bank, callback)
+        if engine.busy then return nil, "BUSY" end
+        if not data or not G.Validate(data) then return nil, "GRAPHICS_DATA_QUARANTINED" end
+        local record = data.records[bank]
+        if not record then return true, "NO_CHANGE" end
+        return run(bank, V.Copy(record.original), true, callback)
+    end
+    function engine.Observe()
+        if engine.busy or executing or not data then return end
+        for _, record in pairs(data.records) do
+            if record.state == "owned" and not G.Matches(reader, record.expected) then
+                mark(record, "GRAPHICS_EXTERNAL_CONFLICT"); engine.state = "RECOVERY"
+            end
+        end
+    end
+    function engine.Status() return { busy = engine.busy, state = engine.state, error = engine.error } end
+    -- Block native callback reentry during preflight, writes and verification.
+    for _, name in ipairs({ "Apply", "Restore" }) do
+        local fn = engine[name]
+        engine[name] = function(...)
+            if executing then return nil, "BUSY" end
+            executing = true
+            local ok, result, why = pcall(fn, ...)
+            executing = false
+            if not ok then
+                for _, record in pairs(data and data.records or {}) do if record.state == "pending" then mark(record, "GRAPHICS_HANDLER_ERROR") end end
+                engine.busy, engine.state, engine.error = false, "RECOVERY", "GRAPHICS_HANDLER_ERROR"
+                log(engine.error, "ERROR"); return nil, engine.error
+            end
+            if not result and why then engine.error = why; log(why, "WARN") end
+            return result, why
+        end
+    end
+    reader.graphicsBusy = function() return engine.busy or executing end
+    return engine
 end

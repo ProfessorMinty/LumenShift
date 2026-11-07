@@ -30,13 +30,13 @@ function D.Environment(runtime)
     local known = { d3d11 = true, d3d12 = true, metal = true, vulkan = true, opengl = true, d3d11legacy = true }
     result.renderer = renderer.code == "OK" and known[token] and token or "unavailable:" .. (renderer.raw and "UNRECOGNIZED_RENDERER_REDACTED" or renderer.code)
     result.apis = ns.ReadOnly.Capabilities(reader)
-    for _, name in ipairs({ "GetBuildInfo", "GetTime", "GetServerTime", "GetPhysicalScreenSize", "InCombatLockdown", "PlaySoundFile", "StopSound", "CreateFrame", "ReloadUI", "SetUIVisibility" }) do
+    for _, name in ipairs({ "GetBuildInfo", "GetTime", "GetServerTime", "GetPhysicalScreenSize", "InCombatLockdown", "PlaySoundFile", "StopSound", "CreateFrame", "ReloadUI", "SetUIVisibility", "GetGraphicsCVarValueForQualityLevel" }) do
         result.apis[name] = type(env[name]) == "function"
     end
     result.apis.C_Timer_After = type(env.C_Timer) == "table" and type(env.C_Timer.After) == "function"
     result.apis.Settings_canvas = type(env.Settings) == "table" and type(env.Settings.RegisterCanvasLayoutCategory) == "function"
     result.apis.IsGraphicsSettingValueSupported = type(env.IsGraphicsSettingValueSupported) == "function"
-    for _, name in ipairs({ "IsSecondaryLightingSupported", "IsPBRWaterSupported" }) do
+    for _, name in ipairs({ "IsSecondaryLightingSupported", "IsPBRWaterSupported", "IsOutlineModeSupported", "IsSpellVisualDensitySystemSupported" }) do
         local video = env.C_VideoOptions
         result.apis[name] = type(video) == "table" and type(video[name]) == "function"
     end
@@ -52,7 +52,7 @@ function D.Run(runtime, reason)
     add("saved-data", runtime.db and "PASS" or "BLOCKED", runtime.storeStatus)
     add("configuration", runtime.db and ns.Profiles.Validate(runtime.db.config) and "PASS" or "FAIL", "strict-data-validation-no-import-execution")
     add("recovery-data", runtime.db and ns.Store.ValidateJournal(runtime.db.journal)
-        and ns.ExperimentPolicy.Validate(runtime.db.experiments) and ns.NamePolicy.Validate(runtime.db.camera) and "PASS" or "BLOCKED", "schema-and-structure-only-not-disk-durability")
+        and ns.ExperimentPolicy.Validate(runtime.db.experiments) and ns.NamePolicy.Validate(runtime.db.camera) and ns.NativeGraphics.Validate(runtime.db.graphics) and "PASS" or "BLOCKED", "schema-and-structure-only-not-disk-durability")
     add("native-setter", runtime.engine and runtime.engine.Status().setterAvailable and "PASS" or "BLOCKED", "availability-only-no-call")
     for _, name in ipairs({ "ReadOnly", "Catalog", "Planner", "Recovery", "WriteBoundary", "StudioConfig", "ExperimentPolicy", "Product", "Diagnostics", "Report", "DiagnosticWindow", "Setup", "EntryPoints" }) do
         add("module-" .. name, type(ns[name]) == "table" and "PASS" or "FAIL", type(ns[name]) == "table" and "loaded" or "MISSING_MODULE")
@@ -185,7 +185,7 @@ function D.Build(runtime)
         end
     else lines[#lines + 1] = "BLOCKED: quarantined saved data preserved, not exported" end
     lines[#lines + 1] = "5. TRANSACTIONS AND RECOVERY"
-    for label, engine in pairs({ Brightness = runtime.engine, Experiments = runtime.lab, QualityTrial = runtime.tierTrial, Names = runtime.names }) do
+    for label, engine in pairs({ Brightness = runtime.engine, Experiments = runtime.lab, QualityTrial = runtime.tierTrial, Names = runtime.names, NativeGraphics = runtime.graphics }) do
         local status = engine.Status()
         lines[#lines + 1] = label .. ": state=" .. safe(status.state) .. " operation=" .. safe(status.operation) .. " error=" .. safe(status.error or "none")
             .. " original=" .. D.Number(status.original) .. " preview=" .. safe(status.token or "none")
@@ -200,6 +200,24 @@ function D.Build(runtime)
                     .. " lastVerified=" .. D.Number(item.lastVerifiedRaw) .. " intended=" .. D.Number(item.intendedRaw) .. " state=" .. safe(item.state)
                     .. " source-client=" .. safe(item.signature) .. " failure=" .. safe(item.failure or "none")
             end
+        end
+        for _, bank in ipairs(ns.NativeGraphics.Banks) do
+            local choice, record = db.graphics.choices[bank], db.graphics.records[bank]
+            local captured, missing = ns.NativeGraphics.Snapshot(runtime.reader, bank)
+            lines[#lines + 1] = "native graphics " .. bank .. " selected=" .. choice.source .. " level=" .. choice.level
+                .. " current=" .. ns.NativeGraphics.Current(runtime.reader, bank) .. " available-capture=" .. #V.Keys(captured) .. " unavailable=" .. #missing
+            for _, key in ipairs(missing) do lines[#lines + 1] = "uncaptured " .. key end
+            if record then
+                lines[#lines + 1] = bank .. " record=" .. safe(record.state) .. " source-client=" .. safe(record.signature) .. " error=" .. safe(record.error or "none")
+                for _, key in ipairs(V.Keys(record.original)) do
+                    lines[#lines + 1] = bank .. " captured " .. key .. " original=" .. D.Number(record.original[key])
+                        .. " expected=" .. D.Number(record.expected[key]) .. " current=" .. D.Number(captured[key])
+                end
+            end
+        end
+        for _, key in ipairs(V.Keys(db.graphics.sideEffects)) do
+            local pair = db.graphics.sideEffects[key]
+            lines[#lines + 1] = "native-graphics watched change " .. key .. " before=" .. D.Number(pair.before) .. " after=" .. D.Number(pair.after)
         end
         for _, key in ipairs(V.Keys(db.experiments.sideEffects)) do
             local item = db.experiments.sideEffects[key]
@@ -218,7 +236,7 @@ function D.Build(runtime)
     lines[#lines + 1] = "Six visual modes: click a mode to apply; no acknowledgement or non-75 unlock. Source-range Brightness, no startup writes."
     lines[#lines + 1] = "Contrast and named quality: direct bounded Apply or optional Test & Restore. Previous calibration is not an unlock requirement."
     lines[#lines + 1] = "Quality profiles: bounded built-in recipes or saved custom target sets, rechecked on Apply. No measured FPS promises."
-    lines[#lines + 1] = "Shadow/light/water: native enum and hardware-checked round-trip trials with named-watch restoration checks; not persistent tier profiles."
+    lines[#lines + 1] = "Shadow/light/water: native enum and hardware-checked round-trip trials; also available through experimental native graphics banks."
     for _, key in ipairs(ns.QualityTrial.Order) do
         local supported = {}
         for index in ipairs(ns.QualityTrial.Definition(key).choices) do
@@ -228,7 +246,7 @@ function D.Build(runtime)
         lines[#lines + 1] = key .. " supported trial levels=" .. (#supported > 0 and table.concat(supported, ",") or "none or capability unavailable")
     end
     lines[#lines + 1] = "Camera: native UI hide/show and two friendly-name toggles, separate captured originals; no lens, zoom or motion CVars."
-    lines[#lines + 1] = "Not controlled: HDR, renderer and overall/raid quality. Use the game's settings for restart-dependent options."
+    lines[#lines + 1] = "Native graphics banks: Keep Current, per-key WoW defaults or native 1-10 recipes; explicit Apply and captured Restore. Startup never applies them. Unknown native dependencies remain a live test limitation. HDR and renderer stay in the game settings."
     lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Session test history is observational, not permission."
     lines[#lines + 1] = "Addon-owned handlers only. Pre-bootstrap syntax/load failures and unrelated game/addon errors may prevent or lie outside this report."
     lines[#lines + 1] = "8. RECENT WARNINGS / ERRORS (last 32, may overlap history)"

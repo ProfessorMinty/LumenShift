@@ -20,6 +20,7 @@ local research = { "textureFilteringMode", "ResampleQuality", "MSAAAlphaTest", "
     "assaoRadius", "assaoShadowMult", "assaoDetailShadowStrength", "assaoBlurPassCount", "assaoSharpness" }
 function C.ResearchKeys() return ns.Value.Copy(research) end
 function C.Get(key)
+    if ns.NativeGraphics and ns.NativeGraphics.Known(key) then return { kind = "number", layer = "quality", admitted = false } end
     if ns.NamePolicy and ns.NamePolicy.Known(key) then return { kind = "number", layer = "camera", admitted = false } end
     if candidates[key] then return ns.Value.Copy(candidates[key]) end
     if key == "gxapi" then return { kind = "string", diagnosticOnly = true, admitted = false } end
@@ -48,7 +49,7 @@ function C.TestContext(context)
     return type(context) == "table" and context.testOnly == true
         and ns.Compatibility.Experimental(context.signature)
         and (context.experiment == "BRIGHTNESS_75_ROUNDTRIP" or context.experiment == "BOUNDED_LEAF_CALIBRATION"
-            or context.experiment == "QUALITY_TIER_TRIAL" or context.experiment == "CAMERA_NAMES")
+            or context.experiment == "QUALITY_TIER_TRIAL" or context.experiment == "CAMERA_NAMES" or context.experiment == "NATIVE_GRAPHICS_BANK")
 end
 
 function C.BrightnessExperiment(signature)
@@ -75,6 +76,13 @@ end
 
 -- Pure predicate for a FUTURE reviewed catalog. No runtime admission/update API.
 function C.Admitted(descriptor, context)
+    if C.TestContext(context) and context.experiment == "NATIVE_GRAPHICS_BANK" then
+        local expected = type(descriptor) == "table" and ns.NativeGraphics.Descriptor(descriptor.name, context.signature, descriptor.restoreRaw)
+        if not expected then return false end
+        for key, value in pairs(expected) do if type(value) ~= "table" and descriptor[key] ~= value then return false end end
+        return names(descriptor.dependencies) and #descriptor.dependencies == 0
+            and names(descriptor.conflicts) and #descriptor.conflicts == 0
+    end
     if C.TestContext(context) and context.experiment == "CAMERA_NAMES" then
         local expected = type(descriptor) == "table" and ns.NamePolicy.Descriptor(descriptor.name, nil, context.signature)
         if not expected then return false end

@@ -9,6 +9,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     if event == "CVAR_UPDATE" then
         if runtime.engine then runtime.engine.Notify() end
         if runtime.names then runtime.names.Observe() end
+        if runtime.graphics then runtime.graphics.Observe() end
         if runtime.product then runtime.product.Observe() end
         return
     end
@@ -41,6 +42,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.lab = ns.WriteBoundary.NewExperiments(runtime)
     runtime.tierTrial = ns.WriteBoundary.NewTierTrials(runtime)
     runtime.names = ns.WriteBoundary.NewExperiments(runtime, true)
+    runtime.graphics = ns.WriteBoundary.NewNativeGraphics(runtime)
     runtime.product = ns.Product.New(runtime)
     runtime.camera = ns.Camera.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)

@@ -75,7 +75,7 @@ function S.New(runtime)
         local state = product.busy and "Checking change..." or states[status.state] or status.state
         local activeLabel = product.active == "natural" and db.baseline.chosen and not product.baselineVerified
             and "No mode applied" or ns.StudioConfig.Label(product.active)
-        ui.status:SetText("ACTIVE  " .. activeLabel .. "     /     QUALITY  "
+        ui.status:SetText("ACTIVE  " .. activeLabel .. "     /     DETAIL PROFILE  "
             .. (ns.Quality.Profiles[db.config.selected.quality] or "Current Baseline") .. "     /     BRIGHTNESS  "
             .. (current.raw or "unavailable") .. "     /     " .. state)
         local lab = runtime.lab and runtime.lab.Status()
@@ -95,12 +95,14 @@ function S.New(runtime)
                 .. "\n" .. (runtime.camera.error and ns.Product.Message(runtime.camera.error) or runtime.names.Status().state))
         end
         if ui.page == 9 then ui.primary.label:SetText(runtime.camera.active and "Exit Camera Mode" or "Enter Camera Mode — hide interface") end
+        if ui.graphicsStateText then ui.graphicsStateText:SetText(ns.GraphicsUI.Status(runtime.graphics)) end
         if ui.radial then ui.radial.Refresh() end
     end
     function ui.BuildPage()
         ns.Log.Record(runtime.reader, "studio", "page", "DEBUG", "OPEN", { count = ui.page })
         for _, frame in pairs(ui.pageFrames) do frame:Hide() end
         ui.labStateText, ui.trialStateText, ui.cameraStateText = nil, nil, nil
+        ui.graphicsStateText = nil
         ui.title:SetText(pages[ui.page][1]); ui.subtitle:SetText(pages[ui.page][2])
         for id, button in pairs(ui.nav) do button.SetSelected(id == ui.page) end
         local key = ui.page .. ":" .. ((ui.page == 1 or ui.page == 3) and ui.edited or "shared")
@@ -147,21 +149,53 @@ function S.New(runtime)
             end, "quiet") end
             ui.Primary("Apply " .. ns.StudioConfig.Label(ui.edited), function() product.Select(ui.edited) end)
         elseif ui.page == 2 then
+            if ui.qualityTab ~= "detail" then
+                ui.graphicsDraft = ui.graphicsDraft or ns.NativeGraphics.Draft(runtime)
+                height = ns.GraphicsUI.Build(runtime, env, parent, ui.graphicsDraft, ui.BuildPage, 836)
+                button("Detail profiles", 0, -height, 180, function() ui.qualityTab = "detail"; ui.BuildPage() end, "quiet")
+                height = height + 54
+                ui.graphicsStateText = text(ns.GraphicsUI.Status(runtime.graphics), 0, -height, 820, 13, W.colors.muted)
+                height = height + 54
+                for _, bank in ipairs(ns.NativeGraphics.Banks) do
+                    local record = db.graphics.records[bank]
+                    if record then
+                        local chosen = bank
+                        local label = bank == "normal" and "everyday" or "raid"
+                        text("Captured " .. label .. " originals: " .. #ns.Value.Keys(record.original) .. " settings. " .. record.state,
+                            0, -height, 820, 13)
+                        button("Restore " .. label .. " graphics", 0, -height - 28, 310, function()
+                            local ok, code = runtime.graphics.Restore(chosen, function() ui.BuildPage() end)
+                            if not ok then ns.Diagnostics.Emit(runtime, "LumenShift: " .. ns.GraphicsUI.Message(code)) end
+                            ui.BuildPage()
+                        end, "quiet")
+                        text("Replaces this bank's current values with its captured originals.", 330, -height - 38, 506, 12, W.colors.muted)
+                        height = height + 86
+                    end
+                end
+                ui.Primary("Apply graphics", function()
+                    local ok, code = runtime.graphics.Apply(ui.graphicsDraft, function() ui.BuildPage() end)
+                    if not ok then ns.Diagnostics.Emit(runtime, "LumenShift: " .. ns.GraphicsUI.Message(code)) end
+                    ui.BuildPage()
+                end, "Review changes previews the settings. Apply changes only the selected banks.")
+                height = math.max(474, height)
+            else
+            button("Native graphics levels", 600, 0, 236, function() ui.qualityTab = nil; ui.BuildPage() end, "quiet")
+            text("DETAIL PROFILES", 0, -8, 430, 12, W.colors.muted)
             ui.qualityID = ui.qualityID or db.config.selected.quality
             local descriptions = { currentBaseline = "Restore your captured quality settings.", balanced = "Sharpen the image. Preserve scene detail.",
                 vista = "Favor landscape detail and viewing distance.", performance = "Reduce detail and distance for a lighter view." }
             for i, id in ipairs({ "currentBaseline", "balanced", "vista", "performance" }) do
                 local selected = id
                 W.Card(env, parent, ns.Quality.Profiles[id], descriptions[id], ((i - 1) % 2) * 430,
-                    -math.floor((i - 1) / 2) * 110, 406, 96, ui.qualityID == id, function() ui.qualityID = selected; ui.BuildPage() end)
+                    -44 - math.floor((i - 1) / 2) * 110, 406, 96, ui.qualityID == id, function() ui.qualityID = selected; ui.BuildPage() end)
             end
-            section("PROFILE DETAILS", -242)
+            section("PROFILE DETAILS", -268)
             local targets, omitted, source = ns.Quality.Resolve(runtime, ui.qualityID)
             local labels = {}; for _, candidate in ipairs(ns.Quality.Candidates) do labels[candidate.key] = candidate.label end
             local details = {}
             for _, keyName in ipairs(ns.Value.Keys(targets or {})) do details[#details + 1] = (labels[keyName] or keyName) .. ": " .. targets[keyName] end
             text(ui.qualityID == "currentBaseline" and "Restore only the quality settings owned by LumenShift."
-                or (#details > 0 and table.concat(details, "   /   ") or "No usable targets available on this client."), 0, -286, 836, 13)
+                or (#details > 0 and table.concat(details, "   /   ") or "No usable targets available on this client."), 0, -300, 836, 13)
             text(source == "custom" and "Using your saved custom values." or "Built-in targets are based on your captured originals.", 0, -358, 836, 12, W.colors.muted)
             if type(omitted) == "table" and #omitted > 0 then
                 text("Unavailable settings are omitted (" .. #omitted .. "). Details are in the diagnostic report.", 0, -383, 836, 12, W.colors.muted)
@@ -170,6 +204,7 @@ function S.New(runtime)
             ui.Primary(ui.qualityID == "currentBaseline" and "Restore quality baseline" or "Apply " .. ns.Quality.Profiles[ui.qualityID], function()
                 local ok, code = runtime.lab.SelectProfile(ui.qualityID); if not ok then emit(code) end; ui.Refresh()
             end, "Selecting a card previews it. Apply changes quality only.")
+            end
         elseif ui.page == 3 then
             toggle("Enable screen effects", 0, 0, 406, function() return cfg().effects end,
                 function(value) update(function(copy) copy.studio.effects = value end); product.RefreshPresentation() end)

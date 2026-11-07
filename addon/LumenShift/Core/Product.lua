@@ -16,6 +16,7 @@ local messages = {
     CONFIGURE_PROFILE_FIRST = "This profile is empty. Add settings in Advanced Graphics first.",
     OUTSIDE_BOUNDED_TEST_POLICY = "That value is outside this control's available range.",
     INVALID_TEST_STEP = "Choose a value using the step shown for this control.",
+    RESTORE_GRAPHICS_BANK_FIRST = "Restore everyday graphics on the Graphics Quality page before changing overlapping detail settings.",
     QUALITY_TRIAL_RECOVERY_REQUIRED = "Finish or restore the quality trial in Advanced Graphics first.",
     RESTORE_ACTIVE_SETTINGS_BEFORE_TIER_TRIAL = "Restore pre-change visuals in Diagnostic Center and choose Current Baseline for quality before a native tier trial.",
     INVALID_TIER_CHOICE = "Choose one of the available quality levels first.",

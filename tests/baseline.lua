@@ -63,9 +63,9 @@ return function(fixture, eq, test)
     end)
     test("H06 schema 5 migration keeps completion preferences and recovery with one new setup choice", function()
         local f = make(); f.select("nightVision")
-        local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.baseline = 5, nil
+        local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.baseline = 5, nil; old.graphics = nil
         old.addonVersion = "0.2.0-dev.9"; old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_6")
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_7")
         eq(migrated.onboarding.completed, true); eq(migrated.baseline.chosen, false)
         eq(migrated.config.preferences.sound, true); eq(migrated.journal.entries.Brightness.originalRaw, "52")
         eq(old.schemaVersion, 5); eq(old.baseline, nil)

@@ -15,9 +15,9 @@ return function(fixture, native, eq, test)
     test("P01 schema-1 migration preserves journal, selections and source input without enabling controls", function()
         local f = native(); f.activate()
         local old = f.ns.Value.Copy(f.env.LumenShiftDB)
-        old.schemaVersion = 1; old.baseline = nil; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil
+        old.schemaVersion = 1; old.baseline = nil; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_1_TO_6"); eq(copy.schemaVersion, 6); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
+        eq(code, "MIGRATED_1_TO_7"); eq(copy.schemaVersion, 7); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "52"); eq(copy.journal.entries.Brightness.state, "owned")
         eq(copy.config.studio.enabled, false)
         local reload = studio(old, "75"); eq(#reload.calls, 0); eq(reload.engine.Status().state, "RECOVERY")
@@ -284,7 +284,7 @@ return function(fixture, native, eq, test)
         local f = studio(); f.enable(); f.select("nightVision"); f.ui.Open(2)
         local applied
         f.ns.runtime.lab.SelectProfile = function(id) applied = id; return true end
-        f.uiMock.Click("Vista"); eq(applied, nil); eq(f.ui.qualityID, "vista")
+        f.uiMock.Click("Detail profiles"); f.uiMock.Click("Vista"); eq(applied, nil); eq(f.ui.qualityID, "vista")
         eq(f.product.active, "nightVision"); eq(#f.calls, 1)
         f.uiMock.Click("Apply Vista"); eq(applied, "vista"); eq(#f.calls, 1)
         f.ui.Open(1); eq(f.ui.primary.label.text, "Apply Night Vision")

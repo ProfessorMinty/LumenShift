@@ -61,3 +61,7 @@ Acceptance requires:
 - Actual bank switching observed separately in relevant content; FPS comparisons report their conditions rather than promise a universal gain.
 
 Dev.11 fixes the reported reload/UI regressions. This native 1–10/raid setup remains planned work, and persistent tier dependency/restoration remains an open engineering gate.
+
+## Implementation follow-up
+
+Dev.12 implements the proposed controls and bounded known-value bank capture/restore. See [37](37-NATIVE-GRAPHICS-BANKS.md). The historical proposal above is retained; native acceptance and complete dependency closure are still open.

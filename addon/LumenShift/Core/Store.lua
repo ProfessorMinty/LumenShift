@@ -32,7 +32,7 @@ function S.Open(raw)
     if raw == nil then
         return { schemaVersion = ns.schemaVersion, addonVersion = ns.version,
             config = ns.Profiles.Defaults(), journal = S.EmptyJournal(), experiments = ns.ExperimentPolicy.Defaults(),
-            onboarding = { completed = false }, camera = ns.NamePolicy.Defaults(), baseline = ns.Baseline.Defaults() }, "NEW"
+            onboarding = { completed = false }, camera = ns.NamePolicy.Defaults(), baseline = ns.Baseline.Defaults(), graphics = ns.NativeGraphics.Defaults() }, "NEW"
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
@@ -74,13 +74,22 @@ function S.Open(raw)
         data.baseline = ns.Baseline.Defaults()
         data.schemaVersion, migrated = 6, migrated or "MIGRATED_5_TO_6"
     end
+    if data.schemaVersion == 6 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) or not ns.NamePolicy.Validate(data.camera) or not ns.Baseline.Validate(data.baseline)
+            or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
+        data.graphics = ns.NativeGraphics.Defaults()
+        data.schemaVersion, migrated = 7, migrated and migrated:gsub("_TO_6$", "_TO_7") or "MIGRATED_6_TO_7"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1/2/3/4/5 migrations above are permitted.
+        -- Only the explicitly supported schema-1/2/3/4/5/6 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
-    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true })
+    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true })
         or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
         or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) or not ns.NamePolicy.Validate(data.camera) or not ns.Baseline.Validate(data.baseline)
+        or not ns.NativeGraphics.Validate(data.graphics)
         or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
     -- One-time setup refresh for the old completed-wizard generations. Keep every
     -- preference and journal; only the old completion marker is superseded.
