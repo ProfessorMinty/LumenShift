@@ -1,5 +1,11 @@
 # Changelog
 
+## Unpackaged artwork update — approved LumenShift logo (2026-11-07)
+
+- Preserve the owner's supplied metal-ring/aurora PNG as the approved source master and replace the runtime logo used by the launcher, minimap entry, Studio and setup.
+- Add a mechanical TGA/PNG export script and prevent the older geometry generator from overwriting the approved logo. Record source/export hashes and honest owner-supplied provenance.
+- Existing dev.7 ZIPs remain unchanged; the new logo will be included in the next packaged build. No game installation or graphics behavior changes.
+
 
 ## 0.2.0-dev.7 — Camera Mode, usable quality profiles and warning-only compatibility (2026-11-07)
 

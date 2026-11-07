@@ -1,6 +1,7 @@
-"""Original LumenShift geometry and synthesis recipes. No borrowed media or dependencies.
+"""Original LumenShift mode-icon geometry and synthesis recipes.
 
-Source tool: MIT. Creative output: ASSET-LICENSE.md. Re-run to reproduce the assets.
+Source tool: MIT. Creative output: ASSET-LICENSE.md. The owner-approved logo is
+preserved separately and exported by tools/export_logo.ps1, never regenerated here.
 """
 import hashlib
 import json
@@ -112,6 +113,8 @@ def main():
     MEDIA.mkdir(parents=True, exist_ok=True); MASTERS.mkdir(exist_ok=True)
     images = {}
     for name in COLORS:
+        if name == 'logo':
+            continue  # never replace the approved owner-supplied logo with the old geometry
         size = 256 if name == 'logo' else 128
         data = pixels(name, size); tga(MEDIA / (name + '.tga'), data, size)
         images[name] = (data, size)
@@ -131,14 +134,12 @@ def main():
                 preview[dest:dest + 4] = bytes((round(r * a / 255 + 9 * (1 - a / 255)),
                     round(g * a / 255 + 16 * (1 - a / 255)), round(b * a / 255 + 24 * (1 - a / 255)), 255))
     png(MASTERS / 'icon-review.png', bytes(preview), 640, 320)
-    png(MASTERS / 'logo-400.png', pixels('logo', 400), 400, 400)
-    manifest = {'creator': 'Northern Lights Labs; original project geometry and sound synthesis authored with Codex',
-                'created': '2026-11-06', 'license': 'ASSET-LICENSE.md (All Rights Reserved)',
-                'source_recipe': 'tools/create_assets.py', 'borrowed_media': False, 'files': {}}
+    manifest = json.loads((MASTERS / 'manifest.json').read_text(encoding='utf-8'))
+    manifest['files'] = {}  # retain owner-logo provenance and both source recipes
     for path in sorted(MEDIA.iterdir()):
         manifest['files'][path.relative_to(MEDIA.parent).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
     (MASTERS / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n', encoding='utf-8')
-    print(f'Created {len(manifest["files"])} original runtime assets and review sheet.')
+    print(f'Updated mode icons/audio and review sheet; preserved approved logo. Manifest: {len(manifest["files"])} runtime assets.')
 
 
 if __name__ == '__main__':

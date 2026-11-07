@@ -1,14 +1,14 @@
 {
-  "creator": "Northern Lights Labs; original project geometry and sound synthesis authored with Codex",
+  "creator": "Northern Lights Labs; owner-supplied logo plus original project geometry and audio synthesis",
   "created": "2026-11-06",
   "license": "ASSET-LICENSE.md (All Rights Reserved)",
-  "source_recipe": "tools/create_assets.py",
-  "borrowed_media": false,
+  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1",
+  "borrowed_media": null,
   "files": {
     "Media/cinematic.tga": "b42b211e210821e0d6c9d4d28b22f2385cddfd88b14dfbf26b878b7ce34a33ea",
     "Media/clarity.tga": "0228251426fc11bbbf22ebf2e0405a82df370fb9ede967a70f27c9ef0b59044f",
     "Media/lantern.tga": "7534ecd3f06ef1c9aa4ebd11dc1dc03836f9bf04dd73f9e1d0a65f228cc15ec6",
-    "Media/logo.tga": "9446d924b60bec19b82b28a5b2fd70cf04825a27f7d5c0dc9d487df6fbef7621",
+    "Media/logo.tga": "f2d8cfee2a7c12380b9048dfacc94306e5cd8b2bbf303b63c332e723ab26ca9e",
     "Media/moonlight.tga": "c3c4a743ef542320919e4a8185c5886f66e1a54e9a966566dd7c4bdb26adbe5e",
     "Media/natural.tga": "11c0b753e19ee6d311e3476f70b0ff81408ea901f08afcefcf407a8571ad232b",
     "Media/night-off-normal.wav": "b6a529929e52601861a99ddd09f8ac3334ba467ff4fcc486c98073ed38e4c02d",
@@ -17,5 +17,11 @@
     "Media/night-on-soft.wav": "0a6b93aef24b5cd5356974969dff0beea02cf8e74f2b5b1ce8ddb8bd1508b713",
     "Media/nightVision.tga": "b377526296decbff7171bc455beba205d7969e71ebc453bbdc3870d4710f820a",
     "Media/vignette.tga": "955ded18d3adcbf6dec826d9f6ad5a2f629fe5cef62f3e03610e44f4ca33b0aa"
+  },
+  "logo_source": {
+    "approved": "2026-11-07",
+    "provenance": "Owner supplied and designated as the new logo; creation tool/artist not supplied",
+    "sha256": "918d46801f4b9679d517ec130a40e083e046912a9ce4d2c24856792e7120e8b2",
+    "file": "assets/branding/LumenShift-master.png"
   }
 }
