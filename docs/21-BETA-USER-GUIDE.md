@@ -1,22 +1,34 @@
-# LumenShift 0.2.0-dev.3 — install, explore, report
+# LumenShift 0.2.0-dev.4 — install, explore, report
 
-Northern Lights Labs · World of Warcraft: Forever 1.60.1.70790 / interface 16001.
+Northern Lights Labs · World of Warcraft: Forever 1.60.1.70840 / interface 16001 (70790 also retained for experimental testing).
 
-This is the new self-diagnosing interactive development build. Arctic has not installed/tested the previous 0.2.0-beta.1 integration; the successful earlier Brightness round trip belongs to an older development addon. This build has offline tests, **not native acceptance**. No launcher-version reconfirmation is needed.
+This update fixes the build rejection found in Arctic's dev.3 report and reworks the wizard. The report already confirms client 70840, Brightness 45 and Contrast 60; no launcher-version reconfirmation is needed. Dev.3 loaded/exported successfully but Finish stopped before reload. **Dev.4 has offline tests, not native acceptance.** The earlier verified Brightness round trip belongs to 70790 and an older addon.
+
+Included: six editable modes, wheel, Studio, optional effects/sounds, presets and diagnostics. Contrast/selected quality controls are experimental. Balanced/Vista/Performance start empty, and advanced shadow/light/water controls remain read-only. This is not yet the finished product; see [scope and evidence](https://github.com/ProfessorMinty/LumenShift/blob/feat/beta-integration/docs/25-BUILD-70840-AND-SETUP-REVIEW.md).
 
 ## Install the whole folder
 
 1. If the currently installed older addon still owns a brightness change, finish its restore/verification first. Keep any recovery card. Do not discard unresolved originals to update.
 2. Exit WoW. Back up the old LumenShift addon folder and its SavedVariables if present. Leave other addons and the rest of WTF/Interface alone.
-3. Extract `LumenShift-0.2.0-dev.3-<commit>.zip` outside the game. Replace only the old addon folder with the **entire extracted LumenShift folder** in your existing Forever AddOns directory.
+3. Extract `LumenShift-0.2.0-dev.4-<commit>.zip` outside the game. Replace only the old addon folder with the **entire extracted LumenShift folder** in your existing Forever AddOns directory.
 4. The resulting layout must be `World of Warcraft/_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with `Core`, `UI`, `Media` and `Bindings.xml` beside the TOC. **Do not put the ZIP itself in AddOns or install just the TOC.** Avoid an extra nested `LumenShift/LumenShift` folder.
 5. Start WoW, enable LumenShift in the AddOns list and log in. Startup runs read-only checks and never changes graphics or plays sounds. Schemas 1/2/3 migrate to 4 while preserving originals; corrupt/newer data is quarantined. Do not downgrade over schema 4 or delete recovery data to silence an error.
 
 ## Complete the setup wizard
 
-The wizard appears after your first login, outside combat. Choose effects, sounds, animation, reduced motion, high contrast and launcher visibility. On the final page, choose whether to enable user-controlled visual switching, review the current brightness/recovery note and click **Finish & Reload UI**. The addon saves your choices and requests a UI reload from that button. It does not restart the whole game, apply a graphics mode or play a sound during setup/reload.
+The wizard appears after your first login, outside combat.
 
-Closing the wizard with Later/Close leaves your preferences unchanged; it can reopen from the launcher or Settings. Completed setup stays completed on later logins. Existing unresolved graphics ownership opens Recovery first instead of reloading over it. If reload is unavailable or fails, the wizard explains what happened; it does not loop or repeatedly reload.
+1. **Welcome:** check the displayed compatibility and development scope, then click **Choose preferences**.
+2. **Preferences:** use the labeled ON/OFF cards for screen effects, sounds, animations, reduced motion, high contrast and launcher visibility. Click **Review choices**.
+3. **Review:** check the summary, choose whether to enable visual switching, read/check the restore reminder, then click **Finish & Reload UI**.
+
+ The addon saves your choices and requests a UI reload from that button. It does not restart the whole game, apply a graphics mode or play a sound during setup/reload.
+
+Closing the wizard with Set up later/Close leaves your preferences unchanged; it can reopen from the launcher or Settings. Completed setup stays completed on later logins; reopen it with **Settings → AddOns → LumenShift → Setup wizard** if needed. Do not delete SavedVariables to force it. An unreviewed build shows the reason on Welcome and starts with switching off; read-only preferences can still be saved. Existing unresolved graphics ownership opens Recovery first instead of reloading over it. If reload is unavailable or fails, the wizard explains what happened; it does not loop or repeatedly reload.
+
+## Check this update without changing graphics
+
+Complete setup and allow its user-clicked reload. Confirm that your scene and Brightness/Contrast stay unchanged, the wizard stays completed, and the launcher opens the wheel/Studio. Open **Diagnostic Center → Export Complete Diagnostic Report → Select All → Ctrl+C**. Export automatically refreshes read-only checks. Early CVARS_NOT_LOADED events may remain in history; the current-check section should reflect current availability. No mode selection or calibration is needed for this check.
 
 ## Explore with buttons
 
@@ -47,7 +59,7 @@ Do not deliberately induce crashes or adverse conflicts during initial explorati
 
 In Studio, click **Diagnostic Center → Run Diagnostics**. This performs safe reads only: no settings changes, audio playback, synthetic UI input or reload. PASS, FAIL, BLOCKED and NOT TESTED are distinct. Visual effects/audio/persistence cannot be certified by reads.
 
-Click **Export Complete Diagnostic Report** (also available from Settings or Studio’s persistent Export report button). In its dedicated scrollable window, click **Select All**, press **Ctrl+C**, then paste directly into Codex/ChatGPT. The report has build/commit, client/UI/API observations, current/default/security values, requests/readbacks/originals, recovery, watched changes, recent warnings/errors and bounded event history. You do not need to paste unrelated chat or manually collect separate values/screenshots. Add one sentence describing what looked or sounded wrong; the addon cannot measure your visual judgment.
+Click **Export Complete Diagnostic Report** to refresh checks and export them together (also available from Settings or Studio’s persistent Export report button). In its dedicated scrollable window, click **Select All**, press **Ctrl+C**, then paste directly into Codex/ChatGPT. The report has build/commit, client/UI/API observations, current/default/security values, requests/readbacks/originals, recovery, watched changes, recent warnings/errors and bounded event history. You do not need to paste unrelated chat or manually collect separate values/screenshots. Add one sentence describing what looked or sounded wrong; the addon cannot measure your visual judgment.
 
 The default export excludes character/preset names, chat, account identifiers, installation paths, credentials and raw native error text. Nothing uploads automatically. A guarded addon error produces one notice pointing to the report. A separate minimap/Settings entry can still open the report if Studio initialization fails. A failure before the addon can create any UI lies outside its own reporting ability; report that loading error without unrelated chat/account data.
 

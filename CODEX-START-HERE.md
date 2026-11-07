@@ -2,6 +2,9 @@
 
 ## Identity and source of truth
 
+Current owner evidence and correction: read [docs/25](docs/25-BUILD-70840-AND-SETUP-REVIEW.md). Dev.3 loaded and exported on 1.60.1:70840:16001; its outdated build gate blocked Finish before reload. Dev.4 adds that exact experimental identity, improves the whole wizard and refreshes current diagnostics. Do not ask for version reconfirmation or call the integration feature-complete. Dev.4 native acceptance remains pending.
+
+
 Current interaction requirement: automatic first-run setup wizard → chosen preferences → **Finish & Reload UI**. Afterward, use launcher/minimap/Settings buttons; commands are optional. See [guided setup](docs/24-GUIDED-SETUP.md). No automatic graphics activation on startup or reload.
 - **Project:** LumenShift
 - **Owner / creative direction:** Northern Lights Labs (Arctic)

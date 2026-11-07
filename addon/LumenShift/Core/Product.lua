@@ -5,12 +5,12 @@ ns.Product = P
 function P.New(runtime)
     local product = { active = "natural", busy = false, generation = 0, lastError = nil }
     local env, db, engine = runtime.reader.env, runtime.db, runtime.engine
-    local function report(code)
+    local function report(code, message)
         product.lastError = code
         ns.Log.Record(runtime.reader, "product", "operation", "WARN", code or "UNKNOWN")
-        ns.Diagnostics.Emit(runtime, "LumenShift: " .. code)
+        ns.Diagnostics.Emit(runtime, "LumenShift: " .. (message or code))
         if product.Refresh then product.Refresh() end
-        return nil, code
+        return nil, code, message
     end
     local function combat()
         local result = ns.ReadOnly.Call(runtime.reader, env.InCombatLockdown)
@@ -36,16 +36,22 @@ function P.New(runtime)
         if runtime.audio then runtime.audio.Transition(previous, id, db.config) end
         if product.Refresh then product.Refresh() end
     end
-    function product.Enable(acknowledged)
-        if not db or not ns.Profiles.Validate(db.config) then return report("SAVED_DATA_QUARANTINED") end
-        if acknowledged ~= true then return report("Read and acknowledge the recovery notice first.") end
-        if combat() then return report("Outside combat only. Retry after combat.") end
-        if engine.Status().state ~= "BASELINE" then return report("Resolve existing recovery before setup.") end
-        if not engine.Status().setterAvailable then return report("SETTER_UNAVAILABLE") end
-        if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return report("FOLLOWUP_TIMER_UNAVAILABLE") end
+    function product.CanEnable()
+        if not db or not ns.Profiles.Validate(db.config) then return nil, "Saved preferences need recovery. Open Diagnostic Center.", "SAVED_DATA_QUARANTINED" end
+        local identity = ns.Compatibility.Inspect(runtime.reader)
+        if not ns.Compatibility.Experimental(identity.signature) then return nil, ns.Compatibility.Explain(identity), identity.signature and "UNSUPPORTED_BUILD" or "IDENTITY_UNAVAILABLE" end
+        if combat() then return nil, "Finish setup after combat.", "COMBAT_OR_RESTRICTION" end
+        if engine.Status().state ~= "BASELINE" then return nil, "Restore owned settings in Diagnostic Center before setup.", "RECOVERY_REQUIRED" end
+        if not engine.Status().setterAvailable then return nil, "The game's graphics control API is unavailable. Leave visual switching off.", "SETTER_UNAVAILABLE" end
+        if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return nil, "Follow-up checks are unavailable. Leave visual switching off.", "FOLLOWUP_TIMER_UNAVAILABLE" end
         local item = ns.ReadOnly.Read(runtime.reader, "Brightness")
-        if not ns.Planner.SafeObservation(item) then return report("BRIGHTNESS_UNAVAILABLE_OR_RESTRICTED") end
-        if ns.Compatibility.Inspect(runtime.reader).signature ~= "1.60.1:70790:16001" then return report("UNSUPPORTED_BUILD") end
+        if not ns.Planner.SafeObservation(item) then return nil, "Brightness is unavailable or restricted. Leave visual switching off, or reopen setup after the game finishes loading.", "BRIGHTNESS_UNAVAILABLE_OR_RESTRICTED" end
+        return true, item
+    end
+    function product.Enable(acknowledged)
+        if acknowledged ~= true then return report("Read and acknowledge the recovery notice first.") end
+        local ready, item, code = product.CanEnable()
+        if not ready then return report(code, item) end
         if not ns.Diagnostics.Emit(runtime, "LumenShift recovery note: current Brightness=" .. item.raw
             .. ". Save this outside the game. Each new ownership captures the actual then-current value; SavedVariables can lag or be lost.") then
             return report("RECOVERY_CARD_NOT_DISPLAYED")

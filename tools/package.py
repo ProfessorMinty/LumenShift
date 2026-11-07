@@ -54,7 +54,10 @@ def build(payload, version, commit):
     payload = dict(payload)
     assert "Core/Build.lua" in payload, "Runtime build identity module required"
     payload["Core/Build.lua"] = ('local _, ns = ...\nns.build = "' + commit + '"\n').encode("ascii")
-    manifest = {"version": version, "source_commit": commit, "target": "1.60.1:70790:16001",
+    signatures = sorted(re.findall(r'\["(\d+\.\d+\.\d+:\d+:\d+)"\] = true', payload["Core/Compatibility.lua"].decode("utf-8")))
+    assert signatures and len(signatures) == len(set(signatures)), "Exact experimental identities required"
+    manifest = {"version": version, "source_commit": commit, "experimental_targets": signatures,
+                "production_admission": False,
                 "generated": {"Core/Build.lua": "source commit identifier; deterministic build substitution"},
                 "status": "development candidate; integrated native acceptance pending; not published",
                 "code_license": "MIT", "creative_asset_license": "All Rights Reserved; ASSET-LICENSE.md",

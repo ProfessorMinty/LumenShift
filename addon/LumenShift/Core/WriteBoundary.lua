@@ -18,6 +18,7 @@ end
 function B.Request() return nil, "TEST_NOT_ENABLED" end
 
 function B.New(reader, db, emit)
+    local sessionSignature = ns.Compatibility.Inspect(reader).signature
     local state = db and not next(db.journal.entries) and "BASELINE" or "RECOVERY"
     local busy, proposal, transaction, sessionOwned = false, nil, nil, false
     local serial, operation, lastError, dirty = 0, "none", nil, false
@@ -57,6 +58,7 @@ function B.New(reader, db, emit)
         local identity = ns.Compatibility.Inspect(reader)
         local catalog, context = ns.Catalog.BrightnessExperiment(identity.signature)
         if not catalog then return nil, "UNSUPPORTED_TEST_BUILD" end
+        if identity.signature ~= sessionSignature then return nil, "SESSION_BUILD_CHANGED" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
         if reader.experimentBusy and reader.experimentBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
@@ -358,6 +360,7 @@ end
 -- keys from the preserved Brightness engine; the native setter above is shared, never exposed.
 function B.NewExperiments(runtime)
     local reader, db = runtime.reader, runtime.db
+    local sessionSignature = ns.Compatibility.Inspect(reader).signature
     local data = db and db.experiments
     local lab = { state = data and not next(data.journal.entries) and "BASELINE" or "RECOVERY",
         busy = false, certificates = {}, preview = nil, serial = 0, lastError = nil, activeProfile = "currentBaseline" }
@@ -377,7 +380,9 @@ function B.NewExperiments(runtime)
     end
     local function gate()
         if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
-        if ns.Compatibility.Inspect(reader).signature ~= "1.60.1:70790:16001" then return nil, "UNSUPPORTED_BUILD" end
+        local signature = ns.Compatibility.Inspect(reader).signature
+        if not ns.Compatibility.Experimental(signature) then return nil, "UNSUPPORTED_BUILD" end
+        if signature ~= sessionSignature then return nil, "SESSION_BUILD_CHANGED" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
         if type(reader.env.C_Timer) ~= "table" or type(reader.env.C_Timer.After) ~= "function" then return nil, "FOLLOWUP_TIMER_UNAVAILABLE" end
@@ -418,12 +423,12 @@ function B.NewExperiments(runtime)
         for key in pairs(data.journal.entries) do keys[key] = true end
         for key in pairs(keys) do
             local item = data.journal.entries[key]
-            if item and (item.signature ~= "1.60.1:70790:16001" or item.descriptorVersion ~= 2
+            if item and (item.signature ~= sessionSignature or item.descriptorVersion ~= 2
                 or key == "Brightness" or not ns.ExperimentPolicy.Known(key)) then return nil, "RECOVERY_SIGNATURE_MISMATCH" end
             local bounds, why = ns.ExperimentPolicy.Bounds(key, item and item.originalRaw or seen[key] and seen[key].raw)
             if overrides and overrides[key] then bounds = overrides[key] end
             if not bounds then return nil, why end
-            descriptors[key] = ns.ExperimentPolicy.Descriptor(key, bounds)
+            descriptors[key] = ns.ExperimentPolicy.Descriptor(key, bounds, sessionSignature)
         end
         return descriptors
     end
@@ -440,7 +445,7 @@ function B.NewExperiments(runtime)
                 elseif not owned[key] then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
             end
         end
-        local plan, errorCode = ns.Planner.Build(descriptors, ns.ExperimentPolicy.Context("1.60.1:70790:16001"), seen, journal, layer, targets)
+        local plan, errorCode = ns.Planner.Build(descriptors, ns.ExperimentPolicy.Context(sessionSignature), seen, journal, layer, targets)
         if not plan then return nil, errorCode end
         return { plan = plan, journal = journal, source = V.Copy(data.journal), seen = seen, descriptors = descriptors,
             layer = layer, targets = V.Copy(targets), reconciliation = reconciliation, overrides = overrides }
@@ -450,7 +455,7 @@ function B.NewExperiments(runtime)
         local current = ns.ReadOnly.Read(reader, key)
         local number = V.Number(target)
         if not ns.Planner.SafeObservation(current) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
-        if not ns.Catalog.Admitted(descriptor, ns.ExperimentPolicy.Context("1.60.1:70790:16001"))
+        if not ns.Catalog.Admitted(descriptor, ns.ExperimentPolicy.Context(sessionSignature))
             or not number or number < descriptor.min or number > descriptor.max then return false, current, "INVALID_EXPERIMENT_TARGET" end
         if combat() then return false, current, "COMBAT_OR_RESTRICTION" end
         record("write", "INFO", "ATTEMPT", { key = key, before = expected, requested = target,

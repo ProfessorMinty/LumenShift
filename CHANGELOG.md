@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-dev.4 — build 70840 and revised setup, unreleased
+
+- Accept the exact 1.60.1:70840:16001 identity for experimental controls, using the owner's read-only report and the pinned UI-source comparison. Preserve 70790, all restrictions, and empty production admission.
+- Bind previews, writes and follow-up checks to the session build; refuse cross-build recovery without changing originals.
+- Rework setup into compatibility/scope, labeled preference cards, then review and explicit reload. Show unsupported builds early and allow read-only setup. Size text independently of small inherited UI scale.
+- Refresh read-only checks at world entry and export; preserve transient startup history without presenting it as the current result.
+- The owner loaded dev.3 on 70840 and exported its report; Finish was blocked before reload and no graphics writes were recorded. Dev.4 native acceptance remains pending.
+
 ## 0.2.0-dev.3 — guided setup and button-first access, unreleased
 
 - Open a three-step setup wizard on first login: appearance, sound, accessibility and controls, followed by an explicit Finish & Reload UI button. Draft choices stay local until Finish; setup/reload never apply graphics.

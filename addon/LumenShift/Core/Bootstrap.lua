@@ -17,6 +17,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     end
     if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
         if runtime.product then runtime.product.Observe() end
+        if event == "PLAYER_ENTERING_WORLD" and runtime.loaded then ns.Report.Run(runtime, "world-entry-read-only") end
         if runtime.setup then runtime.setup.MaybeOpen() end
         return -- no queued reapply, even when combat ends
     end

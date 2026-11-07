@@ -2,15 +2,17 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-dev.3** connects six visual modes, an icon wheel, eight-page Studio, optional effects/audio, personal presets, experimental Contrast/quality calibration and a Diagnostic Center with one copyable report.
+**0.2.0-dev.4** connects six visual modes, an icon wheel, eight-page Studio, optional effects/audio, personal presets, experimental Contrast/quality calibration and a Diagnostic Center with one copyable report.
 
-Arctic has **not installed or tested 0.2.0-beta.1 or this integration**. The older development version's Brightness 45 → 75 → 45 round trip is evidence only for that test. New native behavior remains unverified. This is not a published release or an accepted feature-complete beta.
+This is **more than a brightness toggle, but not the finished product**. Contrast and selected quality controls remain experimental; Balanced/Vista/Performance start empty and need tested user-configured targets. Advanced shadow/light/water and other unmapped controls are read-only. See the [honest feature matrix](docs/25-BUILD-70840-AND-SETUP-REVIEW.md#does-this-include-the-whole-requested-product).
+
+Arctic loaded dev.3 on **Forever 1.60.1.70840 / interface 16001** and exported its report. Finish was rejected by the outdated 70790-only check before reload; no graphics writes were recorded. Dev.4 corrects that check, redesigns setup and refreshes stale diagnostics. **Dev.4 native acceptance is pending.** The older 70790 Brightness 45 → 75 → 45 round trip does not validate the integration. This is not a published release or an accepted feature-complete beta.
 
 ## Install, explore, report
 
 Install the **whole extracted LumenShift folder**, not the ZIP or TOC alone, under the existing Forever `Interface/AddOns` folder. Follow the [consolidated user guide](docs/21-BETA-USER-GUIDE.md).
 
-1. Log in: the setup wizard opens automatically. Choose appearance, sound, accessibility and control preferences, then click **Finish & Reload UI**.
+1. Log in: the setup wizard opens automatically. Review compatibility, choose preferences, review your choices, then click **Finish & Reload UI**.
 2. After reload, click the labeled launcher or minimap button for modes; right-click for Studio.
 3. **Settings → AddOns → LumenShift** provides Studio, the setup wizard, diagnostics and export.
 4. In Studio, click **Diagnostic Center → Run Diagnostics**, or **Export Complete Diagnostic Report → Select All → Ctrl+C**.
@@ -29,7 +31,7 @@ Calibrated Contrast is optional per visual mode. Balanced/Vista/Performance are 
 
 WriteBoundary contains the single private native graphics call. The preserved Brightness engine and leaf experiments use planner preflight, capture-before-write, exact ownership, readback and conflict protection. Reload, conflict or late failure never triggers an uncertain automatic restore. Composite Brightness+Contrast failures can leave a partial operation with originals retained and reported. SavedVariables are not immediately durable or crash-proof; save recovery reports externally and restore before updating/removing the addon.
 
-Read [setup and button-first access](docs/24-GUIDED-SETUP.md) and [diagnostic architecture, limits and sources](docs/23-INTERACTIVE-DIAGNOSTICS.md). Historical research and [native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md) are preserved. Native UI, media, performance, persistence and EllesmereUI coexistence are untested for this build.
+Read [setup and button-first access](docs/24-GUIDED-SETUP.md) and [diagnostic architecture, limits and sources](docs/23-INTERACTIVE-DIAGNOSTICS.md). Historical research and [native results](docs/18-BRIGHTNESS-CLIENT-RESULTS.md) are preserved. Dev.3 load/setup-display/export observations are recorded in [the 70840 report review](docs/25-BUILD-70840-AND-SETUP-REVIEW.md). Dev.4 native UI, media, reload/persistence, graphics and EllesmereUI coexistence acceptance remain pending.
 
 ## Development
 

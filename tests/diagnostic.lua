@@ -258,10 +258,10 @@ return function(fixture, eq, test)
         local f = setup(); local policy = f.ns.ExperimentPolicy; local context = policy.Context("1.60.1:70790:16001")
         for _, key in ipairs(policy.Keys) do
             local bounds = assert(policy.Bounds(key, f.values[key]))
-            local descriptor = policy.Descriptor(key, bounds)
+            local descriptor = policy.Descriptor(key, bounds, context.signature)
             assert(f.ns.Catalog.Admitted(descriptor, context))
             descriptor.max = 10001; eq(f.ns.Catalog.Admitted(descriptor, context), false)
-            descriptor = policy.Descriptor(key, bounds); descriptor.min = 0; descriptor.max = 9999
+            descriptor = policy.Descriptor(key, bounds, context.signature); descriptor.min = 0; descriptor.max = 9999
             eq(f.ns.Catalog.Admitted(descriptor, context), false)
         end
         eq(#f.calls, 0)

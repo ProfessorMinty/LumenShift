@@ -33,6 +33,17 @@ class PackageTests(unittest.TestCase):
             for name, sha in info["files"].items():
                 self.assertEqual(sha, package.digest(archive.read("LumenShift/" + name)))
 
+    def test_manifest_experimental_identities_follow_runtime_registry(self):
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            info = json.loads(archive.read("LumenShift/BUILD.json"))
+            self.assertEqual(info["experimental_targets"], ["1.60.1:70790:16001", "1.60.1:70840:16001"])
+            self.assertFalse(info["production_admission"])
+        changed = dict(self.payload)
+        changed["Core/Compatibility.lua"] = changed["Core/Compatibility.lua"].replace(b'    ["1.60.1:70840:16001"] = true,\n', b'')
+        data = package.build(changed, self.version, "0" * 40)
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            self.assertEqual(json.loads(archive.read("LumenShift/BUILD.json"))["experimental_targets"], ["1.60.1:70790:16001"])
+
     def test_runtime_report_build_matches_manifest_without_mutating_source(self):
         original = dict(self.payload)
         commit = "abcdef0123" * 4

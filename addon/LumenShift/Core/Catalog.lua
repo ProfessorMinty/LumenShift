@@ -35,7 +35,7 @@ end
 -- An explicit experiment policy, NOT a promotion to the production write catalog.
 function C.TestContext(context)
     return type(context) == "table" and context.testOnly == true
-        and context.signature == "1.60.1:70790:16001"
+        and ns.Compatibility.Experimental(context.signature)
         and (context.experiment == "BRIGHTNESS_75_ROUNDTRIP" or context.experiment == "BOUNDED_LEAF_CALIBRATION")
 end
 

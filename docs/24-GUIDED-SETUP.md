@@ -1,6 +1,6 @@
 # Guided setup and button-first access
 
-**0.2.0-dev.3 · schema 4 · Forever 1.60.1:70790:16001**
+**Historical dev.3 implementation record · schema 4.** Dev.4 supersedes its wizard design and single-build policy; see [70840 evidence, revised flow and scope](25-BUILD-70840-AND-SETUP-REVIEW.md).
 
 The owner corrected the interaction model: a complete addon must introduce itself with a setup wizard and use buttons for normal operation. The earlier command-first handoff was inadequate. Existing diagnostics, calibration and graphics safety remain; this change does not expand graphics-writing scope.
 
@@ -18,12 +18,12 @@ Recovery is entirely clickable: Diagnostic Center → Restore My Brightness prev
 
 The pinned Blizzard UI mirror for 70790 uses ReloadUI in an accepted popup callback: [AddOnPerformance.lua, lines 5–8](https://github.com/Gethe/wow-ui-source/blob/eac30af597e5aaa43a60f6675ef5fdcea100375f/Interface/AddOns/Blizzard_AddOnPerformance/AddOnPerformance.lua#L5). Its [Minimap.lua](https://github.com/Gethe/wow-ui-source/blob/eac30af597e5aaa43a60f6675ef5fdcea100375f/Interface/AddOns/Blizzard_Minimap/Mainline/Minimap.lua) references the Minimap frame. These are source observations, not native verification of LumenShift's callback, positioning, copying or persistence. Availability is checked and missing APIs have explicit fallback/reasons. No existing minimap scripts, global keys or game settings are replaced.
 
-Native wizard/reload/Settings/minimap acceptance is **NOT TESTED**. The older successful Brightness round trip does not validate this build; no game installation or live action was performed by the development agent.
+At dev.3 implementation time, native wizard/reload/Settings/minimap acceptance was **NOT TESTED**. Subsequent owner evidence confirms loading, wizard display/navigation and report export on 70840, but Finish was blocked before native reload. Full acceptance remains incomplete; see docs/25. The older successful Brightness round trip does not validate this build; no game installation or live action was performed by the development agent.
 
 ## Offline checks
 
 The prior 125 cases remain; 13 wizard/access tests cover automatic first display, no startup writes/audio/reload, selected settings saved before explicit reload, no later reapply, cancel/back/draft behavior, combat deferral, missing/failed reload, recovery before setup, a complete button-only setup/mode-on/mode-off/diagnostic/export journey, minimap/fallback access with hidden launcher or missing Settings, Studio initialization failure, schema-3 migration/quarantine, unsupported-build read-only setup, Settings reopening, preserved disabled preference and immutable exact preview values.
 
-Recorded result: **138 passed, 0 failed under actual Lua 5.1**, with **six Python packaging tests passed**. Runtime is 29 Lua modules; syntax checks also passed for all five test files and three binding snippets. Structural checks and git diff whitespace checks passed. The final local ZIP is generated from committed source and verified against its source/hash manifest. There is no automatic merge, installed-game modification or CurseForge publication.
+Historical dev.3 recorded result: **138 passed, 0 failed under actual Lua 5.1**, with **six Python packaging tests passed**. Runtime is 29 Lua modules; syntax checks also passed for all five test files and three binding snippets. Structural checks and git diff whitespace checks passed. The final local ZIP is generated from committed source and verified against its source/hash manifest. There is no automatic merge, installed-game modification or CurseForge publication.
 
 Use the [button-first user guide](21-BETA-USER-GUIDE.md). The normal owner handoff is: install the extracted folder, log in, complete the wizard, click Finish & Reload UI, then explore the launcher/Studio and send its report if anything breaks.

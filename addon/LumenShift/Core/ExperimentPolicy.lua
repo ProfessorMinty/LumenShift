@@ -65,9 +65,10 @@ end
 function E.Context(signature)
     return { signature = signature, testOnly = true, experiment = "BOUNDED_LEAF_CALIBRATION" }
 end
-function E.Descriptor(key, bounds)
+function E.Descriptor(key, bounds, signature)
+    if not ns.Compatibility.Experimental(signature) or not E.Known(key) then return nil end
     return { name = key, layer = key == "Contrast" and "visual" or "quality", kind = "number", version = 2,
         evidence = "EXPLICIT_EXPERIMENT_NOT_NATIVE_ADMISSION", testOnly = true, admitted = false,
-        signature = "1.60.1:70790:16001", scope = "bounded_leaf_test", min = bounds.min, max = bounds.max,
+        signature = signature, scope = "bounded_leaf_test", min = bounds.min, max = bounds.max,
         settle = "scheduled_readback_test", numericEquivalent = true, dependencies = {}, conflicts = {} }
 end

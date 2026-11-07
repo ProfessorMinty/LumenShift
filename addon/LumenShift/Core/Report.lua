@@ -43,7 +43,7 @@ function D.Run(runtime, reason)
     local results = {}
     local function add(id, status, detail) results[#results + 1] = { id = id, status = status, detail = detail } end
     local environment = D.Environment(runtime)
-    add("client-identity", environment.identity.signature == "1.60.1:70790:16001" and "PASS" or "BLOCKED", environment.identity.status)
+    add("client-identity", ns.Compatibility.Experimental(environment.identity.signature) and "PASS" or "BLOCKED", environment.identity.status)
     add("saved-data", runtime.db and "PASS" or "BLOCKED", runtime.storeStatus)
     add("configuration", runtime.db and ns.Profiles.Validate(runtime.db.config) and "PASS" or "FAIL", "strict-data-validation-no-import-execution")
     add("recovery-data", runtime.db and ns.Store.ValidateJournal(runtime.db.journal)
@@ -64,7 +64,7 @@ function D.Run(runtime, reason)
             local bounds, code = ns.ExperimentPolicy.Bounds(key, item.raw)
             local ready = ns.Planner.SafeObservation(item) and bounds ~= nil
             add("calibration-preflight-" .. key, ready and "PASS" or "BLOCKED",
-                ready and "observation-and-test-policy-only-no-write" or code or "RESTRICTED_OR_UNVERIFIED_FLAGS")
+                ready and "observation-and-test-policy-only-no-write" or item.code ~= "OK" and item.code or code or "RESTRICTED_OR_UNVERIFIED_FLAGS")
         end
     end
     add("native-writes", "NOT TESTED", "Run Diagnostics never invokes a setter; use explicit Calibration")
@@ -172,7 +172,7 @@ function D.Build(runtime)
         end
     end
     if runtime.lab and runtime.lab.preview then for _, line in ipairs(runtime.lab.preview.lines) do lines[#lines + 1] = "PREVIEW: " .. line end end
-    lines[#lines + 1] = "6. LAST COMPLETED READ-ONLY CHECKS / NOT PERFORMED (Run Diagnostics to refresh)"
+    lines[#lines + 1] = "6. CURRENT READ-ONLY CHECKS / NOT PERFORMED (refreshed on export)"
     if not runtime.checks then lines[#lines + 1] = "NOT TESTED: Run Diagnostics has not completed" end
     local counts = { PASS = 0, FAIL = 0, BLOCKED = 0, ["NOT TESTED"] = 0 }
     for _, check in ipairs(runtime.checks or {}) do
@@ -199,7 +199,10 @@ function D.Build(runtime)
 end
 function D.Export(runtime)
     ns.Log.Record(runtime.reader, "diagnostics", "export", "INFO", "USER_REQUEST")
-    local ok, text = pcall(D.Build, runtime)
+    local ok, text = pcall(function()
+        D.Run(runtime, "export-read-only")
+        return D.Build(runtime)
+    end)
     if not ok then
         ns.Log.Record(runtime.reader, "diagnostics", "export", "ERROR", "REPORT_GENERATION_FAILED")
         text = "LUMENSHIFT REPORT GENERATION FAILED\nAddon " .. ns.version .. " build " .. safe(ns.build)
