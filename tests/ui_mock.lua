@@ -18,6 +18,7 @@ return function(env)
         if type(relative) ~= "table" then x, y, relativePoint, relative = relative or 0, relativePoint or 0, anchor, self.parent end
         self.points = self.points or {}; self.points[#self.points + 1] = { anchor, relative, relativePoint or anchor, x or 0, y or 0 }
     end
+    function methods:GetPoint(index) return unpack(self.points and self.points[index or 1] or {}) end
     function methods:ClearAllPoints() self.points, self.allPoints = {}, nil end
     function methods:SetAllPoints(other) self.allPoints = other or self.parent end
     function methods:SetParent(parent) self.parent = parent end
@@ -44,7 +45,7 @@ return function(env)
     function methods:SetVertexColor(r, g, b, a) self.vertexColor = { r, g, b, a or 1 } end
     function methods:SetTextColor(r, g, b, a) self.textColor = { r, g, b, a or 1 } end
     function methods:SetTexture(path) self.texture = path end
-    function methods:SetText(value) self.text = tostring(value or "") end
+    function methods:SetText(value) self.text = tostring(value or ""); if self.scripts.OnTextChanged then self.scripts.OnTextChanged(self) end end
     function methods:GetText() return self.text or "" end
     function methods:SetFont(font, size, flags) self.font, self.fontSize, self.fontFlags = font, size, flags end
     function methods:GetFont() return self.font or "GameFont", self.fontSize or 13, "" end
@@ -69,8 +70,8 @@ return function(env)
     function methods:SetVerticalScroll(value) self.scroll = value end
     function methods:GetVerticalScroll() return self.scroll or 0 end
     function methods:SetThumbTexture(texture) self.thumb = texture end
-    function methods:ClearFocus() self.focus = false; if self.scripts.OnEditFocusLost then self.scripts.OnEditFocusLost(self) end end
-    function methods:SetFocus() self.focus = true; if self.scripts.OnEditFocusGained then self.scripts.OnEditFocusGained(self) end end
+    function methods:ClearFocus() self.focus = false; if mock.focus == self then mock.focus = nil end; if self.scripts.OnEditFocusLost then self.scripts.OnEditFocusLost(self) end end
+    function methods:SetFocus() if mock.focus and mock.focus ~= self then mock.focus:ClearFocus() end; mock.focus = self; self.focus = true; if self.scripts.OnEditFocusGained then self.scripts.OnEditFocusGained(self) end end
     function methods:HighlightText(first, last) self.highlight = { first, last } end
     function methods:CreateAnimationGroup()
         local group = { animations = {} }
@@ -101,6 +102,8 @@ return function(env)
     end
     env.CreateFrame = create
     env.UIParent = create("Frame", "UIParent"); env.UIParent:SetSize(1280, 800)
+    env.GetCurrentKeyBoardFocus = function() return mock.focus end
+    env.IsShiftKeyDown = function() return false end
     env.UISpecialFrames = {}; env.GetCursorPosition = function() return 1250, 790 end
     env.GameTooltip = create("Frame", "GameTooltip"); env.GameTooltip:Hide()
     env.Settings = { RegisterCanvasLayoutCategory = function(frame, name) return { frame = frame, name = name } end,

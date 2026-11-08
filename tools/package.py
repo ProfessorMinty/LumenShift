@@ -3,6 +3,7 @@ import argparse
 import hashlib
 import io
 import json
+import posixpath
 import re
 import subprocess
 import zipfile
@@ -53,6 +54,18 @@ def build(payload, version, commit):
     for name in payload:
         assert not name.startswith("/") and ".." not in name and "\\" not in name and ":" not in name
     payload = dict(payload)
+    # The bundled guide lives at the ZIP root, not in repository docs/. Pin its
+    # relative documentation links to this exact source instead of shipping
+    # broken links or silently following later changes on a mutable branch.
+    def guide_link(match):
+        target = match.group(1)
+        if ":" in target or target.startswith("#"):
+            return match.group(0)
+        target = posixpath.normpath(posixpath.join("docs", target))
+        assert not target.startswith(("/", "../")), "Guide link outside repository"
+        return "](https://github.com/ProfessorMinty/LumenShift/blob/" + commit + "/" + target + ")"
+    payload["README.md"] = re.sub(r"\]\(([^)]+)\)", guide_link,
+                                  payload["README.md"].decode("utf-8")).encode("utf-8")
     assert "Core/Build.lua" in payload, "Runtime build identity module required"
     payload["Core/Build.lua"] = ('local _, ns = ...\nns.build = "' + commit + '"\n').encode("ascii")
     compatibility = payload["Core/Compatibility.lua"].decode("utf-8")
@@ -69,7 +82,8 @@ def build(payload, version, commit):
                                                "reference_minimum_build": int(minimum), "mismatch_action": mismatch,
                                                "capability_checks": "per-operation"},
                 "production_admission": False,
-                "generated": {"Core/Build.lua": "source commit identifier; deterministic build substitution"},
+                "generated": {"Core/Build.lua": "source commit identifier; deterministic build substitution",
+                              "README.md": "relative documentation links pinned to source commit"},
                 "status": "development candidate; integrated native acceptance pending; not published",
                 "code_license": "MIT", "creative_asset_license": "Original assets: All Rights Reserved; third-party assets: CC BY 4.0 / Craftwork Commercial License; see bundled notices",
                 "files": {name: digest(data) for name, data in sorted(payload.items())}}

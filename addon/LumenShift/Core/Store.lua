@@ -113,6 +113,10 @@ function S.Open(raw)
     if data.schemaVersion == 10 then
         data.schemaVersion, migrated = 11, migrated and migrated:gsub("_TO_10$", "_TO_11") or "MIGRATED_10_TO_11"
     end
+    if data.schemaVersion == 11 then
+        -- No Camera-session intent can be inferred from older manual name records.
+        data.schemaVersion, migrated = 12, migrated and migrated:gsub("_TO_11$", "_TO_12") or "MIGRATED_11_TO_12"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
         -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"

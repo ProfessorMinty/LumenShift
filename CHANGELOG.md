@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-beta.2 — Delivery 5 candidate (2026-11-08)
+
+- Audit Camera: preserve independent names choices on exit and cancel pending screenshots across Camera sessions. Schema 12 keeps session return intent separate from exact originals.
+- Add saved-preset Edit, Update from mode editor, Reset editor, rename feedback and Undo deletion; retain draft text and data-only import/export. Editing never applies graphics.
+- Scroll expanded setup graphics, keep final actions fixed, and prevent edits/reopening during Apply verification. Preserve completion and preferences across upgrades.
+- Add Studio/setup Tab and Shift+Tab navigation, visible focus, keyboard activation, focus scrolling/cleanup, and live window resize fitting. Native text fields retain editing behavior.
+- Stop in-progress menu fades for reduced motion; clarify Night Vision audio and human-readable operation/FPS status. Keep diagnostics available through visible controls.
+- Validation: 383 Lua 5.1 mocks and 10 packaging tests passed; 44 runtime modules, 59 syntax files and four bindings. Bundled guide links resolve to the exact packaged source commit. Native acceptance limitations: docs/46-BETA2-POLISH-AND-AUDIT.md. No game installation, merge or publication.
+
 ## 0.2.0-dev.16 — Camera composition and graphics observations
 
 - Camera thirds/aspect composition guides, guide-free native screenshot capture and a HUD-independent exit/capture bar.

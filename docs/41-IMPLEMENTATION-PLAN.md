@@ -4,7 +4,7 @@
 
 Repository: **ProfessorMinty/LumenShift**. Continue `feat/beta-integration` and PR #5. Starting source is `d4e5f33`; the current playable archive remains **0.2.0-dev.12 / adf7763f**. This document plans implementation; it does not change the runtime or declare new live test results.
 
-**Delivery 1 implementation:** [dev.13 reliability and presentation](42-DEV13-RELIABILITY.md), 2026-11-08. Runtime changes and simulated acceptance are recorded there; this plan retains its original starting snapshot. **Delivery 2 implementation:** [dev.14 shared optics](43-DEV14-SHARED-OPTICS.md), 2026-11-08. Delivery 1 was reverified and Delivery 2 is implemented with simulated acceptance. **Delivery 3 implementation:** [dev.15 distinct looks](44-DEV15-DISTINCT-MODES.md), 2026-11-08. Delivery 2 was audited; starting variations, intensity, explicit return optics and an isolated contact-depth trial are implemented. **Delivery 4 implementation:** [dev.16 Camera and graphics comparison](45-DEV16-CAMERA-AND-PERFORMANCE.md), 2026-11-08. Native observations remain separate; Delivery 5 remains planned.
+**Delivery 1 implementation:** [dev.13 reliability and presentation](42-DEV13-RELIABILITY.md), 2026-11-08. Runtime changes and simulated acceptance are recorded there; this plan retains its original starting snapshot. **Delivery 2 implementation:** [dev.14 shared optics](43-DEV14-SHARED-OPTICS.md), 2026-11-08. Delivery 1 was reverified and Delivery 2 is implemented with simulated acceptance. **Delivery 3 implementation:** [dev.15 distinct looks](44-DEV15-DISTINCT-MODES.md), 2026-11-08. Delivery 2 was audited; starting variations, intensity, explicit return optics and an isolated contact-depth trial are implemented. **Delivery 4 implementation:** [dev.16 Camera and graphics comparison](45-DEV16-CAMERA-AND-PERFORMANCE.md), 2026-11-08. Native observations remain separate. **Delivery 5 implementation and Delivery 4 audit:** [beta.2](46-BETA2-POLISH-AND-AUDIT.md), 2026-11-08. Planned implementation is complete; integrated native acceptance remains pending.
 
 ## Working agreement
 
@@ -140,7 +140,7 @@ Build archives from a clean committed tree with `tools/package.py`; retain exact
 
 Execution order is **1 → 2 → 3 → 4 → 5**, with independent UI/assets/documentation work progressing alongside the current delivery. Optional AO research and owner visual feedback do not form mandatory stop points between deliveries. Do not accumulate a hidden rewrite before providing the first usable fix build.
 
-As of dev.16, **Deliveries 1–4 are implemented** with their recorded simulated checks and native acceptance still separate. **Delivery 5** is the next planned implementation scope; it was not started as part of this increment. The original planning snapshot above remains historical. Native acceptance is recorded separately from implementation completion.
+As of beta.2, **Deliveries 1–5 are implemented**, including the Delivery 4 audit, preset/setup/accessibility polish and local beta candidate. See [46](46-BETA2-POLISH-AND-AUDIT.md) for current validation and outstanding native acceptance. The original planning snapshot above remains historical. Native acceptance is recorded separately from implementation completion.
 
 True scene-wide outlines, thermal imaging, world light creation and external shader injection are not promises of this Lua-addon beta. Their researched alternatives remain in [39](39-GRAPHICS-CONTROL-LANDSCAPE.md); useful native controls and composition tools proceed independently.
 

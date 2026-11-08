@@ -1052,6 +1052,7 @@ local nativeGraphicsFixture = assert(loadfile("tests/native_graphics.lua"))()(fi
 assert(loadfile("tests/reliability.lua"))()(fixture, eq, test)
 assert(loadfile("tests/optics.lua"))()(fixture, eq, test)
 assert(loadfile("tests/modes.lua"))()(fixture, eq, test)
-assert(loadfile("tests/composition.lua"))()(nativeGraphicsFixture, eq, test)
+local cameraFixture = assert(loadfile("tests/composition.lua"))()(nativeGraphicsFixture, eq, test)
+assert(loadfile("tests/polish.lua"))()(cameraFixture, eq, test)
 print(string.format("SIMULATED: %d passed, %d failed (%s); no native game tests", passed, failed, _VERSION))
 assert(failed == 0, "Mock test failures")

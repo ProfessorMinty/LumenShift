@@ -2,6 +2,15 @@ local _, ns = ...
 local P = {}
 ns.Product = P
 local messages = {
+    INVALID_PRESET = "Choose a visual mode and a name of 1–40 characters (no formatting codes).",
+    INVALID_PRESET_NAME = "Use a name of 1–40 characters, without formatting codes.",
+    INVALID_PRESET_DATA = "That preset text is incomplete or invalid. Copy the entire LSMODE code and try again.",
+    UNKNOWN_PRESET = "That preset is no longer available. Choose one from Personal Presets.",
+    PRESET_LIMIT = "You can save up to 24 presets. Delete one before adding another.",
+    EXIT_CAMERA_BEFORE_NAMES = "Exit Camera Mode before changing the separate names toggle.",
+    RESTORE_CAMERA_NAMES_FIRST = "Use Restore Camera changes to finish the previous names adjustment first.",
+    INVALID_CONFIGURATION = "The edit could not be saved. Check the value and try again.",
+    AUDIO_UNAVAILABLE_OR_MUTED = "The cue could not play. Check LumenShift sounds and the game's SFX volume.",
     COMBAT_OR_RESTRICTION = "Try again after combat.",
     SETTER_UNAVAILABLE = "The game's graphics control API is unavailable. Open Diagnostics for details.",
     FOLLOWUP_TIMER_UNAVAILABLE = "The game's follow-up timer is unavailable. Open Diagnostics for details.",
@@ -47,7 +56,8 @@ local messages = {
 }
 function P.Message(code)
     if not code then return nil end
-    return messages[code] or messages[code:match("^([^:]+):")] or code
+    return messages[code] or messages[code:match("^([^:]+):")]
+        or (code:match("^[A-Z][A-Z0-9_]+[: ]?") and "This change could not finish. Open Diagnostic Center for details and recovery.") or code
 end
 
 function P.New(runtime)
@@ -361,6 +371,7 @@ function P.New(runtime)
         local ok = pcall(mutator, copy)
         if not ok or not ns.Profiles.Validate(copy) then return report("INVALID_CONFIGURATION") end
         db.config = copy
+        product.lastError, product.lastMessage = nil, nil
         ns.Log.Record(runtime.reader, "configuration", "edit", "DEBUG", "VALIDATED_NO_WRITE")
         if product.Refresh then product.Refresh() end
         return true
@@ -370,6 +381,7 @@ function P.New(runtime)
         local copy, code = ns.StudioConfig.SavePreset(config(), name, id)
         if not copy then return report(code) end
         db.config.studio = copy
+        product.lastError, product.lastMessage = nil, "Preset saved. Apply it when you want to change the scene."
         ns.Log.Record(runtime.reader, "presets", "save", "INFO", "PASS", { mode = id })
         if product.Refresh then product.Refresh() end
         return code
@@ -382,6 +394,24 @@ function P.New(runtime)
         product.lastError, product.lastMessage = nil, "Preset imported. Click Apply on its card to use it."
         if product.Refresh then product.Refresh() end
         return id
+    end
+    function product.EditPreset(id)
+        if not db then return report("SAVED_DATA_QUARANTINED") end
+        local copy, mode = ns.StudioConfig.LoadPreset(config(), id)
+        if not copy then return report(mode) end
+        db.config.studio = copy
+        product.lastError, product.lastMessage = nil, "Preset copied to the mode editor. The scene has not changed."
+        if product.Refresh then product.Refresh() end
+        return mode
+    end
+    function product.UpdatePreset(id, name)
+        if not db then return report("SAVED_DATA_QUARANTINED") end
+        local copy, mode = ns.StudioConfig.UpdatePreset(config(), id, name)
+        if not copy then return report(mode) end
+        db.config.studio = copy
+        product.lastError, product.lastMessage = nil, "Saved preset updated from the mode editor. The scene has not changed."
+        if product.Refresh then product.Refresh() end
+        return true
     end
     function product.LoadPreset(id)
         if not db then return report("SAVED_DATA_QUARANTINED") end

@@ -32,13 +32,15 @@ function N.Defaults()
     N.Upgrade(data); return data
 end
 function N.Validate(data)
-    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true })
+    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true })
         or not ns.Store.ValidateJournal(data.journal) or type(data.sideEffects) ~= "table"
         or type(data.hideWithUI) ~= "boolean" or type(data.keepEffects) ~= "boolean" then return false end
     if type(data.thirds) ~= "boolean" or not ({ none = true, wide = true, cinema = true, square = true })[data.aspect]
         or type(data.photoEnabled) ~= "boolean" or not V.Finite(data.photoLevel) or data.photoLevel % 1 ~= 0
         or data.photoLevel < 1 or data.photoLevel > 10 or not ns.Framing.Validate(data.framing)
         or not ns.NativeGraphics.Validate(data.photo) then return false end
+    if data.nameReturn ~= nil and (not V.Fields(data.nameReturn, { targets = true })
+        or not N.ValidateTargets(data.nameReturn.targets, "camera")) then return false end
     for key, record in pairs(data.journal.entries) do
         if not N.Known(key) or record.layer ~= "camera" or record.descriptorVersion ~= N.Version then return false end
     end

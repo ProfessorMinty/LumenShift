@@ -1,4 +1,4 @@
-# LumenShift 0.2.0-dev.16 — install and explore
+# LumenShift 0.2.0-beta.2 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
@@ -6,15 +6,27 @@ Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report con
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. Do not delete saved data to work around it. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.16-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-beta.2-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
 Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Opening setup and startup never apply graphics or hide the HUD. The new Graphics page applies only through its explicitly labelled Apply & Reload UI action. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
 
+## Presets and keyboard access
+
+In **Personal Presets**, Save variation stores a copy of the selected mode's editor settings. **Edit** copies a saved preset to Visual Modes without applying. Change its light/detail there, then return to Personal Presets and choose **Update from mode editor**. **Reset editor** discards those edits in favor of the saved snapshot; the current scene stays unchanged. **Apply** is the separate scene-changing action.
+
+Rename a card with Enter. Export copies a complete data-only LSMODE code into the transfer field for Ctrl+C; import saves it without applying. Delete has **Undo last deletion** for this session. Names/transfer drafts survive page rebuilding. Presets keep visual settings only; graphics quality remains independent. Up to 24 looks are supported. Original/Game Defaults remains the setup reference rather than a personal variation.
+
+Studio and Setup support **Tab / Shift+Tab** focus, **Enter / Space** buttons and native text entry; Enter commits a numeric/name edit. Focused controls scroll into view. Existing chat/text focus wins. **Escape** clears a keyboard selection or closes the window through the game's window handling. Mode wheel: 1–6 or arrows/Tab to select; Enter to apply; Escape to cancel. Use title bars to move windows. Accessibility includes Studio scale, high contrast, reduced motion, effects and launcher visibility. No commands are required.
+
+Setup's expanded Graphics page scrolls while Save & Close and Finish/Apply & Reload remain fixed. Only an in-progress Apply temporarily prevents setup edits. Successful preference saving survives an apply failure; recovery originals stay available. Completed setup is not reopened merely because the addon version changed.
+
+See the [beta.2 audit, current support matrix and test steps](46-BETA2-POLISH-AND-AUDIT.md). This candidate includes all five implementation deliveries. In-game acceptance of the combined build is pending; the older confirmed Brightness tests do not establish every effect or graphics recipe.
+
 ## Delivery 4 Camera and graphics comparison
 
-Studio → **Camera** now offers thirds and aspect guides, manual **Field of view**, and optional **Temporary photo quality**. **Enter Camera Mode** hides the HUD and leaves a small capture/exit bar available. **Capture screenshot** hides LumenShift's guides/bar for the native capture; ordinary Print Screen is unchanged. **Exit Camera Mode** shows the HUD and restores matching captured names, framing and photo-quality values. **Restore Camera changes** also works after reload. External edits remain preserved, with originals retained for recovery. Photo quality starts off and never replaces saved everyday/raid choices. See [the dev.16 test steps and limits](45-DEV16-CAMERA-AND-PERFORMANCE.md#install-and-try-it).
+Studio → **Camera** now offers thirds and aspect guides, manual **Field of view**, and optional **Temporary photo quality**. **Enter Camera Mode** hides the HUD and leaves a small capture/exit bar available. **Capture screenshot** hides LumenShift's guides/bar for the native capture; ordinary Print Screen is unchanged. **Exit Camera Mode** shows the HUD and restores matching Camera names intent, framing and photo-quality values. It preserves names hidden/shown separately before Camera entry. **Restore original name settings** deliberately restores all captured names. **Restore Camera changes** also works after reload. External edits remain preserved, with originals retained for recovery. Photo quality starts off and never replaces saved everyday/raid choices. See [the dev.16 test steps and limits](45-DEV16-CAMERA-AND-PERFORMANCE.md#install-and-try-it).
 
 Studio → **Graphics Quality** → **Find your balance** offers Smooth gameplay, Richer scenery and Quieter operation guidance. Choose the scene, then **Observe FPS for 10 seconds**. After the observation, apply a graphics choice yourself and observe again from the same viewpoint/load. Sampling is read-only, finite, and allowed during combat; graphics changes remain outside combat. The last two observations are session-only and included in diagnostic export. Mean/min/max FPS readings are not frame-time percentiles, hardware recommendations or predictions of future raid performance. Settings changes, world transitions, invalid readings or Cancel stop the sample. No background autotuning runs.
 

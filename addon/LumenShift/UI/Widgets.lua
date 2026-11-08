@@ -2,6 +2,17 @@ local _, ns = ...
 local W = {}
 ns.Widgets = W
 function W.Script(frame, script, handler)
+    if handler and (script == "OnClick" or script == "OnValueChanged" or script == "OnEnterPressed") then
+        local action = handler
+        handler = function(self, ...)
+            local owner = frame
+            while owner do
+                if owner.lumenInputBlocked then return end
+                owner = owner:GetParent()
+            end
+            return action(self, ...)
+        end
+    end
     local log = ns.runtime and ns.runtime.log
     frame:SetScript(script, handler and log and log.Guard("ui", script, handler) or handler)
 end
@@ -57,8 +68,10 @@ function W.CreatePool(env, root)
         pool.indexes = {}
         for _, owner in ipairs(pool.owners) do
             if owner ~= root then
+                if owner.lumenNavigation and owner.lumenNavigation.current == owner then owner.lumenNavigation.Clear() end
+                if owner.lumenEdit then owner:ClearFocus() end
                 owner:Hide(); owner:ClearAllPoints()
-                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnValueChanged", "OnEnterPressed", "OnEscapePressed", "OnEditFocusGained", "OnEditFocusLost" }) do
+                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnValueChanged", "OnEnterPressed", "OnEscapePressed", "OnEditFocusGained", "OnEditFocusLost", "OnTabPressed", "OnTextChanged" }) do
                     -- Native frames reject unsupported script names, so clear only installed scripts.
                     local ok, fn = pcall(owner.GetScript, owner, script)
                     if ok and fn then W.Script(owner, script, nil) end
@@ -163,7 +176,7 @@ function W.Checkbox(env, parent, title, description, x, y, width, get, set)
         mark:ClearAllPoints(); mark:SetPoint("TOPLEFT", box, "TOPLEFT", get() and 20 or 4, -4)
     end
     W.Script(button, "OnClick", function() set(not get()); refresh() end)
-    refresh(); return button
+    refresh(); if ns.Keyboard then ns.Keyboard.Control(env, button) end; return button
 end
 function W.Tip(env, frame, text)
     if not env.GameTooltip then return end
@@ -201,7 +214,7 @@ function W.Button(env, parent, label, x, y, width, callback, tip, style)
         button.Paint(false)
         if env.GameTooltip then env.GameTooltip:Hide() end
     end)
-    button.Paint(false); return button
+    button.Paint(false); if ns.Keyboard then ns.Keyboard.Control(env, button) end; return button
 end
 function W.Toggle(env, parent, label, x, y, width, get, set, tip)
     local button = W.Button(env, parent, label, x, y, width, function() end, tip, "quiet")
@@ -246,10 +259,11 @@ function W.Edit(env, parent, value, x, y, width, callback, maxLetters)
     local function focus(active)
         for _, edge in ipairs(edges) do edge:SetColorTexture(unpack(active and W.colors.accent or W.colors.border)) end
     end
-    W.Script(edit, "OnEditFocusGained", function() focus(true) end)
+    W.Script(edit, "OnEditFocusGained", function() focus(true); if edit.lumenNavigation then if edit.lumenNavigation.current ~= edit then edit.lumenNavigation.Clear() end; edit.lumenNavigation.current = edit end end)
     W.Script(edit, "OnEditFocusLost", function() focus(false) end)
     W.Script(edit, "OnEscapePressed", function(self) self:ClearFocus() end)
     W.Script(edit, "OnEnterPressed", function(self) callback(self:GetText()); self:ClearFocus() end)
+    if ns.Keyboard then ns.Keyboard.Control(env, edit, true) end
     return edit
 end
 function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip, width)
@@ -282,6 +296,7 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
     return slider
 end
 function W.Fade(frame, preferences)
+    if frame.lumenFade then frame.lumenFade:Stop() end
     frame:SetAlpha(1)
     if not preferences.animation or preferences.reducedMotion or type(frame.CreateAnimationGroup) ~= "function" then return end
     if not frame.lumenFade then

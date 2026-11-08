@@ -26,6 +26,15 @@ function C.New(runtime)
         end
     end
     function self.Hide() if self.root then self.root:Hide() end end
+    function self.CancelCapture()
+        -- A scheduled capture belongs to this Camera entry only. An already
+        -- issued native request drains until its event/timeout; it cannot be undone.
+        if self.capturing and not self.requested then
+            self.generation = self.generation + 1
+            self.capturing, self.status = false, "CAPTURE_CANCELLED"
+        end
+        self.Hide()
+    end
     local function build()
         if self.root then return end
         local root = env.CreateFrame("Frame", nil, env.UIParent); self.root, self.lines = root, {}
@@ -61,7 +70,8 @@ function C.New(runtime)
         self.capturing, self.status = true, "CAPTURING"; self.Hide()
         -- Let the hidden guides render before requesting the native screenshot.
         local scheduled = pcall(env.C_Timer.After, 0.1, function()
-            if id ~= self.generation or not runtime.camera.active or runtime.product.IsCombat() then
+            if id ~= self.generation then return end
+            if not runtime.camera.active or runtime.product.IsCombat() then
                 self.capturing, self.status = false, "CAPTURE_CANCELLED"; sync(); return
             end
             self.requested = true

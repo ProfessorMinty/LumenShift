@@ -76,7 +76,18 @@ function P.New(runtime)
         refresh(); return self.active or nil, self.active and nil or self.status
     end
     function self.Text()
-        local lines = { self.status == "READY" and "Ready for a 10-second observation after a 2-second settling period." or self.status }
+        local labels = {
+            READY = "Ready for a 10-second observation after a 2-second settling period.",
+            SETTLING = "Settling for 2 seconds. Keep the same viewpoint.", COMPLETE = "Observation complete.",
+            CANCELLED = "Observation cancelled. No settings changed.", LEAVING_WORLD = "Observation stopped while leaving the world.",
+            SAMPLE_SETTINGS_CHANGED = "Settings changed during the observation. Try again after your changes finish.",
+            FPS_API_UNAVAILABLE = "The game's FPS or timer API is unavailable.",
+            FPS_OBSERVATION_INVALID = "The game returned an unusable reading. Try another observation.",
+            SAMPLE_TIMER_FAILED = "The observation timer stopped. Try again when the game is ready.",
+        }
+        local count = self.status:match("^SAMPLING_(%d+)_OF_10$")
+        local lines = { count and ("Reading " .. count .. " of 10. Keep the same viewpoint.")
+            or labels[self.status] or "Observation stopped. Diagnostic Center has the details." }
         for i, result in ipairs(self.results) do
             lines[#lines + 1] = string.format("%s · %s · %.1f seconds · FPS mean %.1f / min %.1f / max %.1f", i == 1 and "A" or "B",
                 P.Scenes[result.scene], result.elapsed, result.mean, result.low, result.high)

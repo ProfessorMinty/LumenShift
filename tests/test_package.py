@@ -2,6 +2,7 @@
 import importlib.util
 import io
 import json
+import re
 import struct
 import unittest
 import wave
@@ -32,6 +33,18 @@ class PackageTests(unittest.TestCase):
             self.assertEqual(info["source_commit"], "0" * 40)
             for name, sha in info["files"].items():
                 self.assertEqual(sha, package.digest(archive.read("LumenShift/" + name)))
+
+    def test_bundled_guide_links_resolve_to_recorded_source(self):
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            guide = archive.read("LumenShift/README.md").decode("utf-8")
+            links = re.findall(r"\]\(([^)]+)\)", guide)
+            self.assertTrue(links)
+            self.assertTrue(all(":" in link or link.startswith("#") for link in links))
+            self.assertIn("/blob/" + "0" * 40 + "/docs/46-BETA2-POLISH-AND-AUDIT.md", guide)
+            for link in links:
+                marker = "/blob/" + "0" * 40 + "/"
+                if marker in link:
+                    self.assertTrue((ROOT / link.split(marker, 1)[1].split("#", 1)[0]).is_file())
 
     def test_manifest_policy_and_observed_identities_follow_runtime(self):
         with zipfile.ZipFile(io.BytesIO(self.data)) as archive:

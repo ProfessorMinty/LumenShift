@@ -111,6 +111,15 @@ function C.LoadPreset(data, id)
     return copy, preset.mode
 end
 
+function C.UpdatePreset(data, id, name)
+    local copy = V.Copy(data)
+    if not copy or not C.Validate(copy) or not copy.presets[id] then return nil, "UNKNOWN_PRESET" end
+    if not C.Name(name) then return nil, "INVALID_PRESET_NAME" end
+    local preset = copy.presets[id]
+    preset.name, preset.settings = name, V.Copy(copy.modes[preset.mode])
+    return copy, preset.mode
+end
+
 -- Fixed data-only format; no executable text, arbitrary keys or quality state.
 function C.ExportPreset(data, id)
     if not C.Validate(data) or not data.presets[id] then return nil, "UNKNOWN_PRESET" end

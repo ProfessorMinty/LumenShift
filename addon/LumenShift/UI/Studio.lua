@@ -27,6 +27,7 @@ function S.New(runtime)
     window:SetSize(1120, 740); window:SetPoint("CENTER")
     W.Script(window, "OnHide", function(self) if self.lumenFade then self.lumenFade:Stop() end end)
     W.Window(env, window, 96, 134)
+    ui.keyboard = ns.Keyboard.Attach(env, window)
     ui.background = W.Fill(window, W.colors.bg)
     ui.panelArt = W.Art(window, "panel-steel", 1, -1, 1118, 738, 0.48, "BACKGROUND")
     ui.headerArt = W.Art(window, "light-sweep", 588, -8, 500, 102, 0.48, "BACKGROUND")
@@ -73,13 +74,15 @@ function S.New(runtime)
         local status, current = runtime.engine.Status(), ns.ReadOnly.Read(runtime.reader, "Brightness")
         local states = { BASELINE = "Ready", ACTIVE = "Applied", RECOVERY = "Recovery available",
             CONFLICT = "External change preserved", AWAITING_VERIFICATION = "Checking change..." }
-        local state = product.busy and "Checking change..." or states[status.state] or status.state
+        local state = product.busy and "Checking change..."
+            or ({ PARTIAL = "Change incomplete — open Diagnostics", RECOVERY = "Recovery available", CONFLICT = "External change preserved" })[product.state]
+            or states[status.state] or "Check Diagnostics"
         local activeLabel = product.ActiveLabel()
         ui.status:SetText("ACTIVE  " .. activeLabel .. "     /     DETAIL PROFILE  "
             .. (ns.Quality.Profiles[db.config.selected.quality] or "Current Baseline") .. "     /     BRIGHTNESS  "
             .. (current.raw or "unavailable") .. "     /     " .. state)
         local lab = runtime.lab and runtime.lab.Status()
-        ui.footer:SetText(ui.capabilityHint or product.lastMessage or ns.Product.Message(lab and lab.error) or ns.Product.Message(status.error) or ui.hint or "")
+        ui.footer:SetText(ui.capabilityHint or product.lastMessage or (ui.page == 8 and ns.Product.Message(lab and lab.error)) or ns.Product.Message(status.error) or ui.hint or "")
         if ui.page == 9 then ui.footer:SetText(ns.Product.Message(runtime.camera.error) or (runtime.camera.busy and "Restoring / checking Camera changes...") or ui.hint or "") end
         if ui.labStateText and lab then
             local states = { BASELINE = "Original settings restored.", ACTIVE = "Settings applied.", APPLYING = "Applying...",
@@ -101,6 +104,7 @@ function S.New(runtime)
         if ui.radial then ui.radial.Refresh() end
     end
     function ui.BuildPage()
+        ui.keyboard.Clear()
         ns.Log.Record(runtime.reader, "studio", "page", "DEBUG", "OPEN", { count = ui.page })
         for _, frame in pairs(ui.pageFrames) do frame:Hide() end
         ui.labStateText, ui.trialStateText, ui.cameraStateText, ui.performanceText = nil, nil, nil, nil
@@ -241,9 +245,9 @@ function S.New(runtime)
             ui.Primary("Apply effects to active mode", product.RefreshPresentation, "Screen overlays; letterbox hides automatically in combat.")
         elseif ui.page == 4 then
             section("PLAYBACK", 0)
-            toggle("Activation / deactivation sounds", 0, -43, 406, function() return db.config.preferences.sound end,
+            toggle("Night Vision on / off sounds", 0, -43, 406, function() return db.config.preferences.sound end,
                 function(value) update(function(copy) copy.preferences.sound = value end); if not value then runtime.audio.Stop() end end)
-            text("Plays after a successful mode switch, through the game's SFX channel.", 0, -91, 790, 14, W.colors.muted)
+            text("Plays when entering or leaving Night Vision, through the game's SFX channel.", 0, -91, 790, 14, W.colors.muted)
             section("CUE LEVEL", -155)
             for i, id in ipairs({ "soft", "normal" }) do
                 local level = id
@@ -257,41 +261,13 @@ function S.New(runtime)
             ui.Primary("Preview activation cue", function() local _, code = runtime.audio.Play("on", db.config); emit(code) end,
                 "Enable sounds to hear a preview. Global volume is unchanged.")
         elseif ui.page == 5 then
-            section("SAVE A VARIATION", 0)
-            text("Based on " .. ns.StudioConfig.Label(ui.edited), 0, -44, 800, 14, W.colors.muted)
-            local name = W.Edit(env, parent, "My " .. ns.StudioConfig.Label(ui.edited), 0, -77, 406, function() end)
-            button("Edit source mode", 430, -77, 180, function() ui.Open(1) end, "quiet")
-            ui.Primary("Save variation", function() product.SavePreset(name:GetText(), ui.edited); ui.BuildPage() end,
-                "Presets save mode settings. Quality profiles stay separate.")
-            local transfer = W.Edit(env, parent, ui.presetTransfer or "", 0, -147, 836, function(value) ui.presetTransfer = value end, 2048)
-            if ui.focusTransfer then transfer:SetFocus(); transfer:HighlightText(); ui.focusTransfer = nil end
-            button("Import preset", 0, -192, 180, function() product.ImportPreset(name:GetText(), transfer:GetText()); ui.BuildPage() end)
-            text("Paste a LumenShift preset above. Import saves it without changing your scene.", 204, -200, 628, 12, W.colors.muted)
-            section("YOUR PRESETS", -251)
-            local ids = ns.Value.Keys(cfg().presets)
-            if #ids == 0 then text("Your saved looks will appear here.", 0, -298, 800, 16, W.colors.muted) end
-            for i, id in ipairs(ids) do
-                local presetID, preset = id, cfg().presets[id]
-                local x, y = ((i - 1) % 2) * 430, -295 - math.floor((i - 1) / 2) * 118
-                text(ns.StudioConfig.Label(preset.mode), x, y, 406, 12, W.colors.muted)
-                W.Edit(env, parent, preset.name, x, y - 24, 406, function(value)
-                    if ns.StudioConfig.Name(value) then update(function(copy) copy.studio.presets[presetID].name = value end) end
-                end)
-                button("Apply", x, y - 64, 100, function() product.LoadPreset(presetID); ui.Invalidate(1); ui.Invalidate(3) end)
-                button("Delete", x + 118, y - 64, 100, function() update(function(copy) copy.studio.presets[presetID] = nil end); ui.BuildPage() end, "quiet")
-                button("Export", x + 236, y - 64, 150, function()
-                    ui.presetTransfer = ns.StudioConfig.ExportPreset(cfg(), presetID)
-                    ui.focusTransfer = true
-                    ui.BuildPage()
-                end, "quiet")
-            end
-            height = math.max(474, 308 + math.ceil(#ids / 2) * 118)
+            height = ns.PresetsUI.Build(runtime, ui, parent, env)
         elseif ui.page == 6 then
             section("COMFORT & READABILITY", 0)
             toggle("Reduced motion", 0, -44, 398, function() return db.config.preferences.reducedMotion end,
-                function(value) update(function(copy) copy.preferences.reducedMotion = value end) end)
+                function(value) update(function(copy) copy.preferences.reducedMotion = value end); W.Fade(window, db.config.preferences) end)
             toggle("Menu fade animation", 438, -44, 398, function() return db.config.preferences.animation end,
-                function(value) update(function(copy) copy.preferences.animation = value end) end)
+                function(value) update(function(copy) copy.preferences.animation = value end); W.Fade(window, db.config.preferences) end)
             toggle("High-contrast panel", 0, -90, 398, function() return cfg().highContrast end,
                 function(value) update(function(copy) copy.studio.highContrast = value end); ui.Size() end)
             toggle("Show draggable launcher", 438, -90, 398, function() return cfg().launcher.visible end,
@@ -300,9 +276,9 @@ function S.New(runtime)
                 function(value) local ok = update(function(copy) copy.studio.scale = value end); ui.Size(); return ok end, nil, 398)
             button("Reset launcher position", 438, -157, 260, function() update(function(copy) copy.studio.launcher.x = 80; copy.studio.launcher.y = -160 end) end)
             section("SHORTCUTS & SETUP", -237)
-            text("Assign shortcuts in Key Bindings > LumenShift.\nMode wheel: 1–6, arrows or Tab to choose; Enter to apply; Escape to close.", 0, -278, 820, 14, W.colors.muted)
-            button("Setup wizard", 0, -350, 184, function() if runtime.setup then runtime.setup.Open() end end)
-            button("Disable controls (restore originals first)", 206, -350, 360, function() product.Disable() end, "quiet")
+            text("Assign shortcuts in Key Bindings > LumenShift.\nMode wheel: 1–6, arrows or Tab; Enter to apply; Escape to close.\nStudio/setup: Tab or Shift+Tab to focus; Enter/Space to activate. Text fields use Enter to save.", 0, -278, 820, 14, W.colors.muted)
+            button("Setup wizard", 0, -370, 184, function() if runtime.setup then runtime.setup.Open() end end)
+            button("Disable controls (restore originals first)", 206, -370, 360, function() product.Disable() end, "quiet")
             section("ART & CREDITS", -414)
             text("Core UI icons by Streamline · CC BY 4.0 · streamlinehq.com\nMesh Gradients by Craftwork Studio · Lumen Loops by Jon Lehman\nCraftwork Commercial License · craftwork.design/license\nLumenShift logo and original mode artwork · Northern Lights Labs", 0, -455, 820, 12, W.colors.muted)
             height = 550
@@ -352,6 +328,7 @@ function S.New(runtime)
         elseif ui.page == 9 then
             height = ns.CameraUI.Build(runtime, ui, parent, env)
         end
+        ui.keyboard.viewport = { body = parent, scroll = scroll, bar = scrollBar, maximum = function() return ui.scrollMaximum or 0 end }
         parent:SetHeight(height)
         ui.scrollMaximum = math.max(0, height - 474)
         scrollBar:SetMinMaxValues(0, ui.scrollMaximum); scrollBar:SetValue(0); scroll:SetVerticalScroll(0)
@@ -381,6 +358,8 @@ function S.New(runtime)
         ui.Size(); ui.BuildPage(); window:Show(); W.Fade(window, db.config.preferences)
         ns.Log.Record(runtime.reader, "studio", "open", "INFO", "PASS", { count = ui.page })
     end
+    window:RegisterEvent("UI_SCALE_CHANGED"); window:RegisterEvent("DISPLAY_SIZE_CHANGED")
+    W.Script(window, "OnEvent", function() if window:IsShown() then ui.Size() end end)
     local y = -118
     for _, group in ipairs({ { "WORKSPACE", 1, 2, 9 }, { "PERSONALIZE", 3, 4, 5 }, { "TOOLS", 8, 6, 7 } }) do
         W.Text(sidebar, group[1], 24, y, 184, 10, W.colors.muted); y = y - 26

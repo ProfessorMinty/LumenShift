@@ -157,8 +157,10 @@ function D.Build(runtime)
             lines[#lines + 1] = key .. " current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] original=" .. D.Number(original and original.originalRaw)
                 .. " secure=" .. bool(item.flags and item.flags.secure) .. " readOnly=" .. bool(item.flags and item.flags.readOnly)
                 .. " locked=" .. bool(item.flags and item.flags.locked)
+                .. " cameraReturn=" .. D.Number(db.camera.nameReturn and db.camera.nameReturn.targets[key])
         end
         lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
+            .. " namesReturnPending=" .. bool(db.camera.nameReturn ~= nil)
             .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
         local fov = ns.ReadOnly.Read(runtime.reader, "cameraFov")
         local framing = db.camera.framing.journal.entries.cameraFov
@@ -304,7 +306,7 @@ function D.Build(runtime)
         end
         lines[#lines + 1] = key .. " supported trial levels=" .. (#supported > 0 and table.concat(supported, ",") or "none or capability unavailable")
     end
-    lines[#lines + 1] = "Camera: native UI hide/show and two friendly-name toggles, separate captured originals; no lens, zoom or motion CVars."
+    lines[#lines + 1] = "Camera: native HUD visibility, friendly names, bounded native FOV, composition guides and optional photo quality; no zoom or motion changes."
     lines[#lines + 1] = "Native graphics banks: Keep Current, per-key WoW defaults or native 1-10 recipes; explicit Apply and captured Restore. Startup never applies them. Unknown native dependencies remain a live test limitation. HDR and renderer stay in the game settings."
     lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Session test history is observational, not permission."
     lines[#lines + 1] = "Addon-owned handlers only. Pre-bootstrap syntax/load failures and unrelated game/addon errors may prevent or lie outside this report."

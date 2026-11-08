@@ -1,6 +1,28 @@
 # Beta acceptance and eventual distribution
 
-> Current dev.16 Camera/graphics comparison scope, simulated results and button-based checks are in [45](45-DEV16-CAMERA-AND-PERFORMANCE.md), with earlier deliveries retained in [44](44-DEV15-DISTINCT-MODES.md), [43](43-DEV14-SHARED-OPTICS.md) and [42](42-DEV13-RELIABILITY.md); use the updated [installation guide](21-BETA-USER-GUIDE.md). Native acceptance of the new integration remains separate from the owner's successful dev.6 Brightness observations. The older tables below preserve beta.1 history. No repeated approval/unlock ceremony is required for ordinary use, and no CurseForge publication is authorized. Earlier evidence is retained in [28](28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md), [29](29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [30](30-CAMERA-MODE.md).
+> Current beta.2 completes Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
+
+## Current beta.2 acceptance record
+
+Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.2**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
+
+| Area | Acceptance check |
+|---|---|
+| Startup / upgrade | Whole-folder install; preferences, presets, exact originals and completion survive; no startup write or repeated wizard |
+| Setup | Original/Game Defaults reads; optional optics; both normal/raid selectors scroll; Save & Close does not apply; deliberate Apply & Reload verifies and reloads; failed apply retains saved choices |
+| Every mode | Original/Game Defaults, Night Vision, Cinematic, Lantern, Clarity, Moonlight; starting looks, intensity, optional Contrast, sharpening/bloom, effects off; exact pre-change recovery differs correctly from Game Defaults |
+| Mode/quality independence | Mode overrides quality optics; releasing mode reveals quality request; native normal/raid choices remain independent; captured normal/raid/photo values restore |
+| Personal presets | Save/Edit/Update/Reset/Rename/Delete/Undo; transfer LSMODE3 and legacy LSMODE2; changes persist after reload; no write until Apply |
+| UI/accessibility | Keyboard focus and text edits, scrolling, chat focus, Escape, wheel, draggable title bars, native Settings/launcher; 1080p/1440p/ultrawide as available; readable labels/contrast at user's scale |
+| Comfort / combat | Effects, letterbox, optional Night Vision audio, mute, reduced motion; HUD accessible on Camera combat; no queued graphics changes |
+| Camera | Independent manual names preserved on exit; mixed names restored; pending capture cancelled on exit/reentry; native screenshot has no guides/bar; FOV/photo exact return and external camera-addon conflict behavior |
+| Performance | Deliberate finite same-scene observations, elapsed time and combat counts; no settings writes/background loop; actual CPU/memory observations recorded separately |
+| Recovery / reload | Explicit owner-operated interrupted/conflict testing; no startup replay, exact originals retained, no repeated overwrite; export gives actionable state |
+| Distribution | Single install root, deterministic commit/manifest/hash, split licenses and asset attribution; installation/update/uninstall and moderation requirements reviewed before publication |
+
+A missing optional API should affect its own control, not freeze the addon. If a test fails, export the diagnostic report and record the visual result. Do not induce a crash merely to test persistence. SavedVariables is not immediately durable. A simulated UI render is not native input/font/taint evidence.
+
+## Historical beta.1 record
 
 **Historical beta.1 publication plan, not the current development priority.** The owner never installed/tested beta.1. Current work is the interactive diagnostic build in [23](23-INTERACTIVE-DIAGNOSTICS.md), with [one exploration/report workflow](21-BETA-USER-GUIDE.md). That document supersedes the old Brightness-only scope, schema/module counts and packaging detail below. Publication remains unapproved; no release-polish work is required before owner exploration.
 
@@ -8,7 +30,7 @@ The code and local archive are development deliverables. **Recommendation: owner
 
 ## Owner test record
 
-Use [21-BETA-USER-GUIDE.md](21-BETA-USER-GUIDE.md) for exact installation and the initial read-only / Brightness-only acceptance sequence. Record the ZIP filename, SHA-256 and `BUILD.json` source commit. The following remain **NOT RUN IN-CLIENT** for 0.2.0-beta.1:
+Use [21-BETA-USER-GUIDE.md](21-BETA-USER-GUIDE.md) for current installation; the following sequence records the superseded beta.1 proposal. Record the ZIP filename, SHA-256 and `BUILD.json` source commit. The following remain **NOT RUN IN-CLIENT** for 0.2.0-beta.1:
 
 | Gate | Acceptance criterion |
 |---|---|
