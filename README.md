@@ -20,6 +20,8 @@ The broader [graphics control research](docs/39-GRAPHICS-CONTROL-LANDSCAPE.md) c
 
 The [community visual research](docs/40-COMMUNITY-VISUAL-RESEARCH.md) compares firsthand Forever experiments and creator approaches to sharpening, atmosphere, camera composition and sustainable performance. It checks popular recipes against native metadata and proposes concrete improvements and comparisons for each mode. Community preferences and proposed effects remain separate from verified client behavior.
 
+The [implementation plan](docs/41-IMPLEMENTATION-PLAN.md) turns that research into five usable deliveries: reliability fixes, shared optics and sharper modes, distinct mode treatments, Camera/graphics selection, and beta polish. Routine development proceeds under existing authorization; unavailable optional features affect their own controls, without adding global locks or repeated setup approvals.
+
 Setup separates Appearance from Graphics. Save & Close saves choices without applying them; Apply & Reload explicitly applies selected graphics banks before reload. Ordinary mode use remains enabled; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
 ## Install and use
