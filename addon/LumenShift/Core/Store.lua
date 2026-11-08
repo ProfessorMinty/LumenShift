@@ -32,10 +32,20 @@ function S.Open(raw)
     if raw == nil then
         return { schemaVersion = ns.schemaVersion, addonVersion = ns.version,
             config = ns.Profiles.Defaults(), journal = S.EmptyJournal(), experiments = ns.ExperimentPolicy.Defaults(),
-            onboarding = { completed = false }, camera = ns.NamePolicy.Defaults(), baseline = ns.Baseline.Defaults(), graphics = ns.NativeGraphics.Defaults() }, "NEW"
+            onboarding = { completed = false }, camera = ns.NamePolicy.Defaults(), baseline = ns.Baseline.Defaults(),
+            graphics = ns.NativeGraphics.Defaults(), optics = ns.Optics.Defaults() }, "NEW"
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 1 and data.schemaVersion <= 8 then
+        local studio = type(data.config) == "table" and data.config.studio
+        if type(studio) == "table" then
+            for _, m in pairs(type(studio.modes) == "table" and studio.modes or {}) do ns.StudioConfig.UpgradeMode(m) end
+            for _, p in pairs(type(studio.presets) == "table" and studio.presets or {}) do
+                if type(p) == "table" then ns.StudioConfig.UpgradeMode(p.settings) end
+            end
+        end
+    end
     if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 7
         and type(data.camera) == "table" and data.camera.keepEffects == nil then data.camera.keepEffects = true end
     local migrated = false
@@ -87,14 +97,19 @@ function S.Open(raw)
     if data.schemaVersion == 7 then
         data.schemaVersion, migrated = 8, migrated and migrated:gsub("_TO_7$", "_TO_8") or "MIGRATED_7_TO_8"
     end
+    if data.schemaVersion == 8 then
+        if not ns.ExperimentPolicy.Validate(data.experiments) then return nil, "QUARANTINED_SCHEMA" end
+        data.optics = data.optics or ns.Optics.Migrate(data.experiments.journal)
+        data.schemaVersion, migrated = 9, migrated and migrated:gsub("_TO_8$", "_TO_9") or "MIGRATED_8_TO_9"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1/2/3/4/5/6/7 migrations above are permitted.
+        -- Only the explicitly supported schema-1/2/3/4/5/6/7/8 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
-    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true })
+    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true, optics = true })
         or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
         or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) or not ns.NamePolicy.Validate(data.camera) or not ns.Baseline.Validate(data.baseline)
-        or not ns.NativeGraphics.Validate(data.graphics)
+        or not ns.NativeGraphics.Validate(data.graphics) or not ns.Optics.Validate(data.optics)
         or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
     -- One-time setup refresh for the old completed-wizard generations. Keep every
     -- preference and journal; only the old completion marker is superseded.

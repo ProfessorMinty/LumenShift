@@ -15,9 +15,9 @@ return function(fixture, native, eq, test)
     test("P01 schema-1 migration preserves journal, selections and source input without enabling controls", function()
         local f = native(); f.activate()
         local old = f.ns.Value.Copy(f.env.LumenShiftDB)
-        old.schemaVersion = 1; old.baseline = nil; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil
+        old.schemaVersion = 1; old.baseline = nil; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil; old.optics = nil
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_1_TO_8"); eq(copy.schemaVersion, 8); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
+        eq(code, "MIGRATED_1_TO_9"); eq(copy.schemaVersion, 9); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "52"); eq(copy.journal.entries.Brightness.state, "owned")
         eq(copy.config.studio.enabled, false)
         local reload = studio(old, "75"); eq(#reload.calls, 0); eq(reload.engine.Status().state, "RECOVERY")
@@ -33,6 +33,7 @@ return function(fixture, native, eq, test)
     end)
     test("P03 all six modes retain the first raw original and preserve quality/Contrast", function()
         local f = studio(nil, "052.00"); f.enable(true)
+        f.ns.runtime.db.config.studio.modes.clarity.brightnessMode = "custom"
         for _, id in ipairs({ "nightVision", "cinematic", "lantern", "clarity", "moonlight" }) do
             assert(f.product.Select(id)); eq(f.product.busy, true)
             f.uiMock.Flush(); eq(f.product.active, id); eq(f.engine.Status().original, "052.00")

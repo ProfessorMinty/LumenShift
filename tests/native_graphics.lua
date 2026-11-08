@@ -36,7 +36,8 @@ return function(fixture, eq, test)
         f.env.C_CVar.SetCVar = function(key, target)
             local def = G.Definition(key)
             local record = def and f.env.LumenShiftDB.graphics.records[def.bank]
-            assert(record and record.original[key] ~= nil, "native graphics capture must precede every write")
+            local visual = f.env.LumenShiftDB.journal.entries[key] or f.env.LumenShiftDB.experiments.journal.entries[key]
+            assert(record and record.original[key] ~= nil or visual and visual.originalRaw, "capture must precede every write")
             f.calls[#f.calls + 1] = { key, target }
             if f.setter then return f.setter(key, target, #f.calls) end
             return f.native(key, target)
@@ -215,9 +216,9 @@ return function(fixture, eq, test)
         assert(f.ns.Store.Open(f.r.db)); assert(f.ns.Report.Export(f.r):find("native-graphics watched change Brightness", 1, true))
     end)
     test("N17 saved graphics data is strict, schema-6 migration preserves prior preferences", function()
-        local f = make(); local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.graphics = 6, nil
+        local f = make(); local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.graphics, old.optics = 6, nil, nil
         old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, why = f.ns.Store.Open(old); eq(why, "MIGRATED_6_TO_8"); eq(migrated.schemaVersion, 8)
+        local migrated, why = f.ns.Store.Open(old); eq(why, "MIGRATED_6_TO_9"); eq(migrated.schemaVersion, 9)
         eq(migrated.onboarding.completed, true); eq(migrated.config.preferences.sound, true); eq(old.graphics, nil)
         f.apply("normal", 6); f.apply("raid", 4); assert(f.ns.Store.Open(f.r.db))
         for _, mutate in ipairs({
@@ -292,7 +293,10 @@ return function(fixture, eq, test)
             if action == "brightness" then f.r.engine.Prepare("on")
             elseif action == "names" then f.r.names.Apply("camera", { UnitNameFriendlyPlayerName = 0, UnitNameFriendlyPetName = 0 })
             else f.r.lab.SelectProfile("vista") end
-            assert(invoked); assert(result == nil, action .. " allowed nested graphics"); eq(#f.calls, 0)
+            assert(invoked); assert(result == nil, action .. " allowed nested graphics")
+            eq(f.r.db.graphics.records.normal, nil)
+            for _, call in ipairs(f.calls) do assert(f.ns.ExperimentPolicy.Known(call[1]), "nested native recipe wrote a parent") end
+            if action ~= "lab" then eq(#f.calls, 0) end
         end
     end)
     test("N26 native custom status compares unmodified recipe and sliders bypass dropdown support API", function()
@@ -346,6 +350,28 @@ return function(fixture, eq, test)
         assert(f.g.Apply(f.choice("raid", 5))); f.mock.Flush()
         eq(f.g.Status().error, "UNREQUESTED_RAID_SWITCH_CHANGED"); eq(f.values.RAIDsettingsEnabled, "0")
         eq(f.r.db.graphics.records.raid, nil)
+    end)
+    test("N31 native normal and raid banks coexist with shared optical mode and quality requests", function()
+        local f = make(nil, { ResampleSharpness = "1.000", ResampleAlwaysSharpen = "0" })
+        assert(f.r.lab.Apply("quality", { ResampleSharpness = 0.4 })); f.mock.Flush()
+        local m = f.r.db.config.studio.modes.nightVision; m.sharpening, m.detail = "custom", 90
+        assert(f.r.product.Select("nightVision")); f.mock.Flush(); eq(f.values.ResampleSharpness, "0.2")
+        f.apply("normal", 6); f.apply("raid", 4); eq(f.values.ResampleSharpness, "0.2")
+        eq(f.r.db.graphics.records.normal.original.ResampleSharpness, nil)
+        eq(f.r.db.graphics.records.raid.original.ResampleSharpness, nil)
+        assert(f.r.lab.Apply("quality", { ResampleSharpness = 0.7 })); f.mock.Flush()
+        assert(f.r.product.Select("natural")); f.mock.Flush(); eq(f.values.ResampleSharpness, "0.7")
+        assert(f.r.lab.Apply("quality", {})); f.mock.Flush(); eq(f.values.ResampleSharpness, "1.000")
+    end)
+    test("N32 unexpected native bank optical side effects stop without overwriting the changed optical key", function()
+        local f = make(nil, { ResampleSharpness = "1.000", ResampleAlwaysSharpen = "0" })
+        local m = f.r.db.config.studio.modes.nightVision; m.sharpening, m.detail = "custom", 90
+        assert(f.r.product.Select("nightVision")); f.mock.Flush()
+        f.setter = function(key, raw) f.native(key, raw); f.values.ResampleSharpness = "0.8"; return true end
+        local count = #f.calls; eq(f.g.Apply(f.choice("normal", 6)), false)
+        eq(#f.calls, count + 1); eq(f.values.ResampleSharpness, "0.8")
+        eq(f.r.db.experiments.journal.entries.ResampleSharpness.originalRaw, "1.000")
+        assert(f.ns.NativeGraphics.Validate(f.r.db.graphics))
     end)
     if os.getenv("LUMENSHIFT_UI_MODEL_PATH") then
         local path = os.getenv("LUMENSHIFT_UI_MODEL_PATH")

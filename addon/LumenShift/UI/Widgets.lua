@@ -238,11 +238,11 @@ function W.Card(env, parent, label, description, x, y, width, height, selected, 
     end
     button.SetSelected(selected); return button
 end
-function W.Edit(env, parent, value, x, y, width, callback)
+function W.Edit(env, parent, value, x, y, width, callback, maxLetters)
     local edit = env.CreateFrame("EditBox", nil, parent)
     edit:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); edit:SetSize(width, 28)
     edit:SetAutoFocus(false); edit:SetFontObject("GameFontHighlight"); edit:SetTextInsets(6, 6, 0, 0)
-    edit:SetMaxLetters(64); W.Fill(edit, W.colors.sidebar); local edges = W.Border(edit); edit:SetText(tostring(value))
+    edit:SetMaxLetters(maxLetters or 64); W.Fill(edit, W.colors.sidebar); local edges = W.Border(edit); edit:SetText(tostring(value))
     local function focus(active)
         for _, edge in ipairs(edges) do edge:SetColorTexture(unpack(active and W.colors.accent or W.colors.border)) end
     end

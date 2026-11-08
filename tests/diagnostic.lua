@@ -255,8 +255,8 @@ return function(fixture, eq, test)
         f.calibrate("Contrast", 65); eq(#f.calls, 2); eq(f.values.Brightness, "52")
     end)
     test("D23 schema-2 migration preserves existing state and malformed experimental data is quarantined", function()
-        local f = setup(); local old = f.ns.Value.Copy(f.env.LumenShiftDB); old.schemaVersion = 2; old.baseline = nil; old.camera = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_2_TO_8"); eq(migrated.schemaVersion, 8)
+        local f = setup(); local old = f.ns.Value.Copy(f.env.LumenShiftDB); old.schemaVersion = 2; old.baseline = nil; old.camera = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil; old.optics = nil
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_2_TO_9"); eq(migrated.schemaVersion, 9)
         eq(old.schemaVersion, 2); eq(old.experiments, nil); eq(next(migrated.experiments.journal.entries), nil)
         migrated.experiments.profiles.vista.Unknown = 100
         local reloaded = setup(migrated); eq(reloaded.runtime.db, nil); eq(reloaded.env.LumenShiftDB, migrated); eq(#reloaded.calls, 0)

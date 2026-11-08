@@ -30,6 +30,10 @@ local messages = {
     EXTERNAL_CONFLICT_NO_AUTOMATIC_RESTORE = "A setting changed during the trial. Automatic restoration stopped; review the report before restoring the trial.",
     BLOOM_CAPABILITY_UNAVAILABLE = "Bloom support could not be checked. Other controls remain available.",
     BLOOM_LINEAR_RENDERER_UNAVAILABLE = "Bloom needs the game's linear renderer. Other controls remain available.",
+    FINISH_COMPARISON = "Finish the Before / After comparison before applying another change.",
+    COMPARISON_CHANGED_EXTERNALLY = "The scene changed outside LumenShift. That change was kept; use Recovery if you want the captured originals.",
+    USE_SHARED_OPTICAL_RESTORE = "Use Restore captured visuals in Diagnostic Center to restore shared visual and detail originals.",
+    USE_MODE_DETAIL_CONTROLS = "Use Visual Modes detail controls or finish the current comparison first.",
     MODE_PARTIAL = "The mode did not finish applying. Your original values are retained; open Recovery.",
     BASELINE_VALUE_UNAVAILABLE = "This baseline value was unavailable during setup. Open Setup and capture it again, or choose another mode.",
 }
@@ -61,7 +65,7 @@ function P.New(runtime)
         product.active, product.lastError, product.lastMessage = id, nil, nil
         product.state, product.combatSuspended = "ACTIVE", false
         product.baselineVerified = id == "natural"
-        product.appliedBrightness = settings.brightness
+        product.appliedBrightness = ns.Value.Number(ns.ReadOnly.Read(runtime.reader, "Brightness").raw)
         product.appliedSettings = ns.Value.Copy(settings)
         db.config.selected.visual = id
         ns.Log.Record(runtime.reader, "product", "mode-commit", "INFO", "PASS", { mode = id,
@@ -121,6 +125,7 @@ function P.New(runtime)
             if not enabled then return nil, code, message end
         end
         if product.busy then return report("An operation is still being verified.") end
+        if db.optics.comparison then return report("FINISH_COMPARISON") end
         if not ns.StudioConfig.Labels[id] or not ns.StudioConfig.Validate(config()) then return report("INVALID_MODE_CONFIG") end
         if not ns.Baseline.Validate(db.baseline) then return report("INVALID_BASELINE_CONFIG") end
         ns.Baseline.CompleteMissing(runtime) -- explicit click only; no startup capture/write
@@ -128,8 +133,8 @@ function P.New(runtime)
         if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return report("FOLLOWUP_TIMER_UNAVAILABLE") end
         local settings = ns.Value.Copy(config().modes[id])
         local contrast = id ~= "natural" and settings.useContrast and { Contrast = settings.contrast } or {}
-        local brightnessTarget = id ~= "natural" and settings.brightness or nil
-        if id == "natural" and db.baseline.chosen then
+        local brightnessTarget = id ~= "natural" and settings.brightnessMode == "custom" and settings.brightness or nil
+        if (id == "natural" or settings.brightnessMode == "inherit") and db.baseline.chosen then
             local why; brightnessTarget, why = ns.Baseline.Target(runtime, "Brightness")
             if why then return report(why) end
         end
@@ -142,10 +147,13 @@ function P.New(runtime)
             local planned, reason = runtime.lab.CanApply("visual", contrast)
             if not planned then return report(reason) end -- before ANY Brightness write
         end
+        local optical = id == "natural" and {} or ns.Optics.ModeTargets(settings)
+        local shared = needsContrast or next(optical) ~= nil or next(db.optics.visual) ~= nil
         ns.Log.Record(runtime.reader, "product", "mode-select", "INFO", "USER_REQUEST", { mode = id })
-        if needsContrast then
+        if shared then
             local previous, previousState, previousSettings = product.active, product.state, product.appliedSettings
             local targets = ns.Value.Copy(contrast); targets.Brightness = brightnessTarget
+            for key, value in pairs(optical) do targets[key] = value end
             product.busy, product.state = true, "APPLYING"
             local completed = false
             local ok, why = runtime.visual.Apply(targets, function(verified, reason, restored)
@@ -208,6 +216,8 @@ function P.New(runtime)
         return ok, code
     end
     function product.ActiveLabel()
+        local comparison = db and db.optics.comparison
+        if comparison then return "Comparison / " .. comparison.state end
         if product.state == "PARTIAL" then return "Partial / Recovery" end
         if product.state == "RECOVERY" then return "Recovery needed" end
         if product.state == "APPLYING" or product.busy then return "Applying mode..." end
@@ -219,6 +229,16 @@ function P.New(runtime)
     end
     function product.Observe(resumeCosmetics)
         if product.busy then return end
+        if runtime.visual.ObserveComparison() == "recovery" then clear(); product.state = "RECOVERY" end
+        if db and next(db.optics.visual) and not db.optics.comparison then
+            for key, target in pairs(db.optics.visual) do
+                local item = ns.ReadOnly.Read(runtime.reader, key)
+                if not ns.Planner.SafeObservation(item) or ns.Value.Number(item.raw) ~= target then
+                    clear(); product.state, product.baselineVerified = "RECOVERY", false
+                    report("EXTERNAL_CONFLICT"); break
+                end
+            end
+        end
         if runtime.lab then
             runtime.lab.Observe()
             if db and db.experiments.journal.entries.Contrast and (runtime.lab.state == "RECOVERY" or runtime.lab.state == "CONFLICT") then
@@ -261,13 +281,38 @@ function P.New(runtime)
     end
     function product.RefreshPresentation(resume)
         if runtime.presentation and db then
-            if product.state ~= "ACTIVE" or product.IsCombat() then runtime.presentation.Clear(); return true end
+            if product.state ~= "ACTIVE" or product.IsCombat()
+                or db.optics.comparison and db.optics.comparison.state ~= "after" then runtime.presentation.Clear(); return true end
             product.combatSuspended = false
             local mode = resume and product.appliedSettings or config().modes[product.active]
             if not mode then runtime.presentation.Clear(); return true end
             product.appliedSettings = ns.Value.Copy(mode)
             return runtime.presentation.Apply(product.active, mode, db.config, db.camera.keepEffects)
         end
+    end
+    function product.Compare(side, onComplete)
+        if product.busy then return report("BUSY") end
+        if side ~= "done" and not db.optics.comparison and product.state ~= "ACTIVE" then return report("Apply a mode before comparing.") end
+        product.busy = true
+        local completed, previousState = false, product.state
+        local function done(ok, why, compensated)
+            completed, product.busy = true, false
+            if ok then
+                if product.appliedSettings then product.state = "ACTIVE" end
+                product.lastError, product.lastMessage = nil, side == "done" and "Comparison finished. Your applied look is back." or "Showing " .. side .. "."
+                product.RefreshPresentation(true)
+            elseif compensated then
+                product.state = previousState; product.RefreshPresentation(true)
+                report(why, "Comparison could not change the scene; the prior view was restored.")
+            else clear(); product.state = "RECOVERY"; report(why) end
+            if product.Refresh then product.Refresh() end
+            if onComplete then onComplete() end
+        end
+        local ok, why
+        if side == "done" then ok, why = runtime.visual.EndComparison(done)
+        else ok, why = runtime.visual.Compare(side, done) end
+        if not ok and not completed then product.busy = false; return report(why) end
+        return ok, why
     end
     function product.RestoreVisuals(onComplete)
         if product.busy then return report("BUSY") end
@@ -277,7 +322,7 @@ function P.New(runtime)
             clear()
             if restored then
                 product.active, product.state, product.lastError = "natural", "IDLE", nil
-                product.lastMessage = "Captured pre-change Brightness and Contrast restored. Your saved look choices are unchanged."
+                product.lastMessage = "Captured visual and optical originals restored. Saved mode/profile edits are unchanged."
             else product.state = "PARTIAL"; report("MODE_PARTIAL: " .. (reason or "RESTORE_FAILED")) end
             if product.Refresh then product.Refresh() end
             if onComplete then onComplete() end
@@ -303,6 +348,15 @@ function P.New(runtime)
         ns.Log.Record(runtime.reader, "presets", "save", "INFO", "PASS", { mode = id })
         if product.Refresh then product.Refresh() end
         return code
+    end
+    function product.ImportPreset(name, text)
+        if not db then return report("SAVED_DATA_QUARANTINED") end
+        local copy, id = ns.StudioConfig.ImportPreset(config(), name, text)
+        if not copy then return report(id) end
+        db.config.studio = copy
+        product.lastError, product.lastMessage = nil, "Preset imported. Click Apply on its card to use it."
+        if product.Refresh then product.Refresh() end
+        return id
     end
     function product.LoadPreset(id)
         if not db then return report("SAVED_DATA_QUARANTINED") end

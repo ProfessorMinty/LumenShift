@@ -87,7 +87,7 @@ function G.Validate(data)
         or type(data.sideEffects) ~= "table"
         or not V.Fields(data.records, { normal = true, raid = true }) then return false end
     for key, pair in pairs(data.sideEffects) do
-        if not (byKey[key] or key == "Brightness" or key == "Contrast" or key == "Gamma" or key == "RenderScale")
+        if not (byKey[key] or key == "Brightness" or key == "Contrast" or key == "Gamma" or key == "RenderScale" or ns.Optics.Known(key))
             or not V.Fields(pair, { before = true, after = true }) or not V.Number(pair.before) or not V.Number(pair.after) then return false end
     end
     for bank, record in pairs(data.records) do

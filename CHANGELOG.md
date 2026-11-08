@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-dev.14 — Shared optics and mode detail (2026-11-08)
+
+- Reverify Delivery 1 and retain its transaction, Camera, combat-presentation and local bloom fixes.
+- Resolve independent mode/quality optical requests against one canonical original per shared key. Changing quality beneath a mode override preserves the new underlying preference; mode release reveals it and full recovery restores exact raw originals.
+- Add Inherit / Off (extra) / Custom sharpening, weak-to-strong detail, Clear/Goggles styling and optional capability-checked bloom. New/reset Clarity inherits return-look brightness and uses Clear styling; existing customizations remain intact.
+- Add real sequential Before/After through the same native writer, conflict-aware Finish, pending/reload recovery, and retained Studio scroll position. No startup replay, animated graphics writes or resolution/AA changes.
+- Add bounded data-only preset import/export through the existing mode planner, with complete copyable payloads and import-without-apply.
+- Migrate to schema 9 without overwriting completion, saved edits or exact originals. Diagnostic recovery explicitly includes shared sharpening/bloom originals; other quality settings stay independent.
+- **314 Lua 5.1 mocks pass, 0 fail; 9 packaging tests pass.** Syntax covers 49 Lua files and four bindings; structural checks cover 37 runtime modules and one native CVar call site. UI review is off-client; new native acceptance is pending. [Delivery details and testing](docs/43-DEV14-SHARED-OPTICS.md).
+
 ## 0.2.0-dev.13 — Reliable mode transactions and presentation (2026-11-08)
 
 - Apply Brightness/Contrast as one planned transaction, preserve both originals, compensate verified attempts in reverse and report partial recovery accurately.

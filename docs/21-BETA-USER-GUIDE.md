@@ -1,4 +1,4 @@
-# LumenShift 0.2.0-dev.13 — install and explore
+# LumenShift 0.2.0-dev.14 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
@@ -6,11 +6,21 @@ Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report con
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. Do not delete saved data to work around it. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.13-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.14-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
 Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Opening setup and startup never apply graphics or hide the HUD. The new Graphics page applies only through its explicitly labelled Apply & Reload UI action. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
+
+## Delivery 2 detail and comparison
+
+Follow the [dev.14 button-based steps](43-DEV14-SHARED-OPTICS.md#install-and-try-it-with-buttons). In Visual Modes, scroll to Detail: choose Inherit quality, Off (extra), or Custom weak-to-strong detail. Apply changes the scene. Clear removes styling while retaining native changes; Goggles uses optional Night Vision styling. Before/After compares the actual scene, and Finish comparison returns to After without overwriting intervening external changes. No commands or unlock are needed.
+
+New/reset Clarity inherits return-look brightness and uses Clear styling. Upgrades preserve old Clarity customizations; enable Use return-look brightness and select Clear to adopt the neutral look deliberately. Custom bloom/glare is optional and checked only when requested. New detail settings default to inheritance, so updating does not silently strengthen a saved mode.
+
+Personal Presets → Export highlights a copyable data-only string. Paste it into the transfer field, supply a name, and Import preset. Import saves without applying; a preset's Apply uses the same mode/quality resolver.
+
+Diagnostic Center → Restore captured visuals restores captured Brightness, Contrast and optical originals, including optical quality overrides. Other quality settings and saved edits remain. Normal Original/Game Defaults mode instead reveals the latest underlying quality preference. This distinction also applies to the older recovery instructions below.
 
 ## Delivery 1 reliability test
 
@@ -29,7 +39,7 @@ Follow the short [dev.13 button-based checks](42-DEV13-RELIABILITY.md#install-an
 
 Only available known parent/leaf originals are captured. Missing leaves are disclosed in the report; complete renderer dependencies and exact whole-game restoration are unverified. If an Apply or Restore reports failure, keep its originals and export the report. There is no automatic retry or uncertain restore on startup. A failed raid operation can follow a successful everyday operation; each bank retains its own recovery data.
 
-**Detail profiles** on Graphics Quality contains Balanced/Vista/Performance and Current Baseline. Restore an overlapping detail profile before applying native everyday levels, or restore everyday graphics before applying overlapping detail changes. Their original captures are kept separate. Visual modes stay independent.
+**Detail profiles** on Graphics Quality contains Balanced/Vista/Performance and Current Baseline. Restore an overlapping detail profile before applying native everyday levels, or restore everyday graphics before applying overlapping detail changes. Non-optical bank captures remain separate. Shared sharpening/bloom keys have one canonical original; mode overrides temporarily take precedence over the detail-profile request. Returning from a mode reveals the latest underlying quality request.
 
 ## Open and use LumenShift
 
@@ -75,7 +85,7 @@ Studio → **Graphics Quality** offers usable experimental profiles:
 - **Balanced:** sharpening while keeping/restoring original scene detail.
 - **Vista:** modest increases in foliage, distance and object detail from your originals.
 - **Performance:** modest reductions in scene detail. No FPS improvement is guaranteed.
-- **Current Baseline:** restore captured quality originals without switching off your visual mode.
+- **Current Baseline:** release quality requests without switching off the visual mode; active mode optical overrides remain until the mode releases them.
 
 Select a profile card to preview it, then click **Apply** at bottom right. Targets and the number of unavailable built-in controls are shown before Apply; the report contains individual capability details. Existing custom profiles keep exactly their saved values; built-in keys are not silently added. Edit named settings in **Advanced Graphics**, save values into a profile, then Apply. Removing all custom keys returns that slot to its built-in recipe. These are experimental recipes within bounded test ranges, not native defaults or measured safe maxima.
 

@@ -161,6 +161,20 @@ function D.Build(runtime)
         lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
             .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
         local config = db.config
+        local effective, sources = ns.Optics.Resolve(db.optics.visual, db.optics.quality)
+        for _, key in ipairs(ns.Optics.Keys) do
+            lines[#lines + 1] = "optical " .. key .. " visual=" .. D.Number(db.optics.visual[key])
+                .. " quality=" .. D.Number(db.optics.quality[key]) .. " effective-request=" .. D.Number(effective and effective[key])
+                .. " source=" .. safe(sources and sources[key] or "inherited-current") .. " original-record=experiments.journal"
+        end
+        local comparison = db.optics.comparison
+        lines[#lines + 1] = "comparison=" .. safe(comparison and comparison.state or "inactive")
+        if comparison then
+            for _, key in ipairs(V.Keys(comparison.before)) do
+                lines[#lines + 1] = "compare " .. key .. " before=" .. D.Number(comparison.before[key]) .. " after=" .. D.Number(comparison.after[key])
+                    .. " last-observed=" .. D.Number(comparison.expected[key])
+            end
+        end
         lines[#lines + 1] = "visual-operation=" .. safe(runtime.product and runtime.product.state)
             .. " effects=" .. safe(runtime.presentation and runtime.presentation.Status())
         lines[#lines + 1] = "active visual presentation=" .. safe(runtime.product and runtime.product.active)
@@ -178,6 +192,8 @@ function D.Build(runtime)
             else lines[#lines + 1] = id .. ": brightness=" .. D.Number(mode.brightness) .. " contrast=" .. D.Number(mode.contrast)
                 .. " contrastEnabled=" .. bool(mode.useContrast) .. " tint=" .. bool(mode.tintEnabled) .. " opacity=" .. D.Number(mode.opacity)
                 .. " vignette=" .. D.Number(mode.vignette) .. " letterbox=" .. D.Number(mode.letterbox)
+                .. " brightnessMode=" .. safe(mode.brightnessMode) .. " sharpening=" .. safe(mode.sharpening) .. " detail=" .. D.Number(mode.detail)
+                .. " bloomOverride=" .. bool(mode.useBloom) .. " bloom=" .. D.Number(mode.bloom) .. " styling=" .. safe(mode.styling)
             end
         end
         lines[#lines + 1] = "personal preset count=" .. #V.Keys(config.studio.presets)

@@ -78,7 +78,7 @@ function P.New(env)
     function self.Combat() self.Clear(); self.suspended = true end -- never resize/hide the user's HUD
     function self.Apply(id, mode, config, keepEffects)
         self.Clear()
-        if id == "natural" or not config.studio.effects then return true end
+        if id == "natural" or mode.styling == "clear" or not config.studio.effects then return true end
         local checked, inCombat = pcall(env.InCombatLockdown)
         if not checked or inCombat ~= false then return true end
         local ok = pcall(function()

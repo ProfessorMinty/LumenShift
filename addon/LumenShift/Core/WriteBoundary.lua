@@ -17,14 +17,14 @@ end
 -- No ambient enable switch or public raw setter. A preview token is consumed once.
 function B.Request() return nil, "TEST_NOT_ENABLED" end
 
--- A mode's Brightness and Contrast commit together. Existing journals remain the
--- saved recovery format; quality entries are never imported into this transaction.
+-- Composite visual/optical requests share the canonical experimental optical records.
+-- Non-optical quality entries stay independent; no second copy of an original is stored.
 function B.NewVisual(runtime)
     local reader, db = runtime.reader, runtime.db
     local signature = ns.Compatibility.Inspect(reader).signature
     local self = { busy = false, state = "IDLE", serial = 0 }
-    local executing, cancel = false, nil
-    reader.visualBusy = function() return self.busy or executing end
+    local executing, comparing, cancel = false, false, nil
+    reader.visualBusy = function() return self.busy or executing or comparing end
     local function combat()
         local result = ns.ReadOnly.Call(reader, reader.env.InCombatLockdown)
         return not result or result.n ~= 1 or result[1] ~= false
@@ -47,16 +47,25 @@ function B.NewVisual(runtime)
         for _, key in ipairs(ns.Catalog.WatchKeys()) do seen[key] = ns.ReadOnly.Read(reader, key) end
         return seen
     end
-    local function journal()
+    local function journal(opticalKeys)
         local result = V.Copy(db.journal)
         for key in pairs(result.entries) do if key ~= "Brightness" then return nil end end
         result.entries.Contrast = V.Copy(db.experiments.journal.entries.Contrast)
+        for _, key in ipairs(ns.Optics.Keys) do
+            local entry = V.Copy(db.experiments.journal.entries[key])
+            if entry and (not opticalKeys or opticalKeys[key]) then entry.layer = "visual"; result.entries[key] = entry end
+        end
         result.nextEpoch = math.max(result.nextEpoch, db.experiments.journal.nextEpoch)
         return result
     end
-    local function persist(value)
+    local function persist(value, opticalKeys)
         db.journal.entries.Brightness = V.Copy(value.entries.Brightness)
         db.experiments.journal.entries.Contrast = V.Copy(value.entries.Contrast)
+        for _, key in ipairs(ns.Optics.Keys) do
+            local entry = V.Copy(value.entries[key])
+            if entry then entry.layer = "quality" end
+            if not opticalKeys or opticalKeys[key] then db.experiments.journal.entries[key] = entry end
+        end
         db.journal.nextEpoch = math.max(db.journal.nextEpoch, value.nextEpoch)
         db.experiments.journal.nextEpoch = math.max(db.experiments.journal.nextEpoch, value.nextEpoch)
         runtime.engine.SyncVisual(); runtime.lab.SyncVisual()
@@ -73,12 +82,30 @@ function B.NewVisual(runtime)
         end
         return false
     end
-    local function apply(targets, callback, restoring)
+    local function apply(targets, callback, restoring, options)
+        options = options or {}
         local ready, why = gate(); if not ready then return nil, why end
         if type(targets) ~= "table" then return nil, "INVALID_MODE_TARGETS" end
-        for key in pairs(targets) do if key ~= "Brightness" and key ~= "Contrast" then return nil, "INVALID_MODE_TARGETS" end end
-        local prior, before = journal(), observe()
+        for key in pairs(targets) do
+            if key ~= "Brightness" and key ~= "Contrast" and not ns.Optics.Known(key) then return nil, "INVALID_MODE_TARGETS" end
+        end
+        if not ns.Optics.Validate(db.optics) then return nil, "INVALID_OPTICAL_STATE" end
+        if db.optics.comparison and not options.comparison and not restoring then return nil, "FINISH_COMPARISON" end
+        local visualIntent, opticalKeys = ns.Optics.Extract(targets), {}
+        for _, key in ipairs(ns.Optics.Keys) do
+            if restoring or targets[key] ~= nil or db.optics.visual[key] ~= nil then opticalKeys[key] = true end
+        end
+        if not restoring and not options.comparison then
+            local effective, reason = ns.Optics.Resolve(visualIntent, db.optics.quality)
+            if not effective then return nil, reason end
+            targets = V.Copy(targets)
+            for key, value in pairs(effective) do if opticalKeys[key] then targets[key] = value end end
+        end
+        local prior, before = journal(opticalKeys), observe()
         if not prior then return nil, "OTHER_RECOVERY_RECORDS_PRESENT" end
+        for key, raw in pairs(options.expected or {}) do
+            if not ns.Planner.SafeObservation(before[key]) or before[key].raw ~= raw then return nil, "COMPARISON_CHANGED_EXTERNALLY" end
+        end
         local descriptors = ns.Catalog.BrightnessExperiment(signature)
         local context = { signature = signature, testOnly = true, experiment = "VISUAL_MODE" }
         if restoring then
@@ -95,32 +122,63 @@ function B.NewVisual(runtime)
             if not bounds then return nil, reason end
             descriptors.Contrast = ns.ExperimentPolicy.Descriptor("Contrast", bounds, signature)
         end
+        for _, key in ipairs(ns.Optics.Keys) do
+            if targets[key] ~= nil or prior.entries[key] then
+                keys[key] = true
+                local entry = prior.entries[key]
+                local bounds, reason = ns.ExperimentPolicy.Bounds(key, entry and entry.originalRaw or before[key].raw)
+                if not bounds then return nil, reason end
+                local value = visualIntent[key]
+                if value ~= nil and not options.comparison
+                    and math.abs(value / bounds.step - math.floor(value / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP:" .. key end
+                local capable, code = ns.ExperimentPolicy.Capability(reader, key)
+                if not capable then return nil, code end
+                descriptors[key] = ns.ExperimentPolicy.Descriptor(key, bounds, signature)
+                descriptors[key].layer = "visual" -- temporary planner view; canonical record stays quality
+            end
+        end
         local plan, reason = ns.Planner.Build(descriptors, context, before, prior, "visual", targets)
         if not plan then return nil, reason end
+        if options.rawTargets then
+            if not ns.Optics.RawMap(options.rawTargets) then return nil, "INVALID_COMPARISON" end
+            for _, op in ipairs(plan.operations) do
+                local raw = options.rawTargets[op.key]
+                if raw then
+                    if V.Number(raw) ~= targets[op.key] then return nil, "INVALID_COMPARISON" end
+                    op.targetRaw = raw
+                end
+            end
+        end
         if not ns.Planner.SafeObservation(before.Brightness) then return nil, "BRIGHTNESS_UNAVAILABLE_OR_RESTRICTED" end
         self.serial = self.serial + 1
         local tx, code = R.Begin(prior, plan, self.serial, next(prior.entries) and "ACTIVE" or "BASELINE")
         if not tx then return nil, code end
         self.busy, self.state, self.error = true, "APPLYING", nil
         local held, expected = V.Copy(tx.journal), V.Copy(before)
-        persist(held) -- both originals exist before either setter
+        persist(held, opticalKeys) -- all originals exist before any setter
         local finished = false
         local function finish(ok, errorCode, restored)
             if finished then return end
             finished, cancel = true, nil
             self.busy, self.state, self.error = false, ok and "VERIFIED" or restored and "COMPENSATED" or "PARTIAL", errorCode
             ns.Log.Record(reader, "visual", "transaction", ok and "INFO" or "WARN", errorCode or "PASS", { state = self.state, tx = self.serial })
+            if ok and not options.comparison then
+                db.optics.visual = restoring and {} or V.Copy(visualIntent)
+                if restoring then db.optics.quality, db.optics.comparison = {}, nil end
+            end
             if callback then callback(ok, errorCode, restored) end
         end
         local function fail(errorCode)
             for _, entry in pairs(held.entries) do entry.state, entry.failure = "failed", errorCode end
-            persist(held); finish(false, errorCode)
+            persist(held, opticalKeys); finish(false, errorCode)
         end
         cancel = fail
         local function write(key, raw, current)
             local allowed, errorCode = gate(); if not allowed then return false, nil, errorCode end
             local seen = observe()
             if not matches(current, seen, keys) or foreignChanged(before, seen, keys) then return false, seen[key], "EXTERNAL_CONFLICT" end
+            local capable, capabilityError = ns.ExperimentPolicy.Capability(reader, key)
+            if not capable then return false, seen[key], capabilityError end
             if not ns.Catalog.Admitted(descriptors[key], context) or combat() then return false, seen[key], "COMBAT_OR_RESTRICTION" end
             local result, errorCode = nativeSet(reader, key, raw)
             local after = ns.ReadOnly.Read(reader, key)
@@ -169,7 +227,7 @@ function B.NewVisual(runtime)
         local function verify()
             if finished then return end
             -- Do not overwrite a journal changed by recovery or another operation.
-            local currentJournal = journal()
+            local currentJournal = journal(opticalKeys)
             for key in pairs(keys) do
                 local a, b = held.entries[key], currentJournal and currentJournal.entries[key]
                 if (a == nil) ~= (b == nil) then finish(false, "RECOVERY_DATA_CHANGED"); return end
@@ -183,7 +241,7 @@ function B.NewVisual(runtime)
                 if verified.state ~= "VERIFIED" then fail("LATE_DRIFT_OR_RESTRICTION"); return end
                 finalJournal = verified.journal
             end
-            persist(finalJournal); finish(not failure, failure, failure ~= nil)
+            persist(finalJournal, opticalKeys); finish(not failure, failure, failure ~= nil)
         end
         local scheduled = pcall(reader.env.C_Timer.After, 0.15, function()
             executing = true
@@ -194,10 +252,10 @@ function B.NewVisual(runtime)
         if not scheduled then fail("FOLLOWUP_TIMER_FAILED"); return nil, self.error end
         return true
     end
-    local function request(targets, callback, restoring)
-        if self.busy or executing then return nil, "BUSY" end
+    local function request(targets, callback, restoring, options)
+        if self.busy or executing or comparing and not (options and options.comparison) then return nil, "BUSY" end
         executing = true
-        local ok, result, why = pcall(apply, targets, callback, restoring)
+        local ok, result, why = pcall(apply, targets, callback, restoring, options)
         executing = false
         if not ok then
             self.busy, self.state, self.error = false, "PARTIAL", "VISUAL_HANDLER_ERROR"
@@ -213,6 +271,93 @@ function B.NewVisual(runtime)
         if cancel then cancel("CANCELLED_WITH_RECOVERY") end
         return true
     end
+    local function comparisonMatches(c)
+        for key, raw in pairs(c.expected) do
+            local item = ns.ReadOnly.Read(reader, key)
+            if not ns.Planner.SafeObservation(item) or item.raw ~= raw then return false end
+        end
+        return true
+    end
+    function self.ObserveComparison()
+        local c = db and db.optics.comparison
+        if c and not self.busy and c.state ~= "pending" and not comparisonMatches(c) then c.state = "recovery" end
+        return c and c.state
+    end
+    local function compare(side, done, ending)
+        if self.busy or executing then return nil, "BUSY" end
+        if not db then return nil, "INVALID_OPTICAL_STATE" end
+        local c = db.optics.comparison
+        local created = false
+        if not c then
+            if side ~= "before" or ending then return nil, "NO_COMPARISON" end
+            c = { before = {}, after = {}, expected = {}, state = "after" }
+            local keys = { Brightness = true, Contrast = true }
+            for key in pairs(db.optics.visual) do keys[key] = true end
+            for key in pairs(keys) do
+                local item = ns.ReadOnly.Read(reader, key)
+                if not ns.Planner.SafeObservation(item) then
+                    if key ~= "Contrast" then return nil, "COMPARISON_VALUE_UNAVAILABLE:" .. key end
+                else
+                    local entry = key == "Brightness" and db.journal.entries[key] or db.experiments.journal.entries[key]
+                    local original = entry and entry.originalRaw or item.raw
+                    local home = db.baseline.chosen and db.baseline.values[key]
+                    if ns.Optics.Known(key) and db.optics.quality[key] ~= nil then home = tostring(db.optics.quality[key]) end
+                    c.before[key], c.after[key], c.expected[key] = home or original, item.raw, item.raw
+                end
+            end
+            created = true
+        end
+        if not ns.Optics.RawMap(c.before) or not ns.Optics.RawMap(c.after) then return nil, "INVALID_COMPARISON" end
+        if c.state == "pending" or c.state == "recovery" or not comparisonMatches(c) then
+            c.state = "recovery"
+            if ending then db.optics.comparison = nil else db.optics.comparison = c end
+            if done then done(false, "COMPARISON_CHANGED_EXTERNALLY") end
+            return nil, "COMPARISON_CHANGED_EXTERNALLY"
+        end
+        if ending and c.state == "after" then db.optics.comparison = nil; if done then done(true) end; return true end
+        local targets, priorState = {}, c.state
+        for key, raw in pairs(c[side]) do targets[key] = assert(V.Number(raw)) end
+        local expected = V.Copy(c.expected)
+        c.state, db.optics.comparison = "pending", c -- retained before the first possible write
+        local completed = false
+        local ok, why = request(targets, function(success, code, compensated)
+            completed = true
+            if success then
+                c.state = side
+                for key in pairs(c.expected) do
+                    local item = ns.ReadOnly.Read(reader, key)
+                    if not ns.Planner.SafeObservation(item) or item.raw ~= c[side][key] then
+                        c.state = "recovery"; success, code = false, "COMPARISON_CHANGED_EXTERNALLY"; break
+                    end
+                    c.expected[key] = item.raw
+                end
+                if ending and success then db.optics.comparison = nil end
+            elseif compensated then c.state = priorState; if created then db.optics.comparison = nil end
+            else c.state = "recovery" end
+            if done then done(success, code, compensated) end
+        end, false, { comparison = true, rawTargets = c[side], expected = expected })
+        if not ok and not completed then
+            c.state = priorState
+            if created then db.optics.comparison = nil end
+        end
+        return ok, why
+    end
+    local function compareRequest(side, done, ending)
+        if self.busy or executing or comparing then return nil, "BUSY" end
+        comparing = true
+        local ok, result, why = pcall(compare, side, done, ending)
+        comparing = false
+        if not ok then
+            if db and db.optics.comparison then db.optics.comparison.state = "recovery" end
+            return nil, "COMPARISON_HANDLER_ERROR"
+        end
+        return result, why
+    end
+    function self.Compare(side, done)
+        if side ~= "before" and side ~= "after" then return nil, "INVALID_COMPARISON" end
+        return compareRequest(side, done, false)
+    end
+    function self.EndComparison(done) return compareRequest("after", done, true) end
     return self
 end
 
@@ -249,6 +394,7 @@ function B.New(reader, db, emit)
     end
 
     local function eligible()
+        if db and db.optics and db.optics.comparison then return nil, "FINISH_COMPARISON" end
         if reader.visualBusy and reader.visualBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if not db then return nil, "SAVED_DATA_QUARANTINED" end
         if not ns.Store.ValidateJournal(db.journal) then return nil, "INVALID_JOURNAL" end
@@ -614,6 +760,7 @@ function B.NewExperiments(runtime, cameraMode)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate()
+        if not cameraMode and db and db.optics.comparison then return nil, "FINISH_COMPARISON" end
         if reader.visualBusy and reader.visualBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if (cameraMode and runtime.lab and runtime.lab.busy) or (not cameraMode and runtime.names and runtime.names.busy) then return nil, "OTHER_OPERATION_ACTIVE" end
@@ -805,6 +952,7 @@ function B.NewExperiments(runtime, cameraMode)
                 finalJournal = verified.journal
             end
             data.journal = V.Copy(finalJournal)
+            if not failure and proposal.qualityIntent then db.optics.quality = V.Copy(proposal.qualityIntent) end
             for key in pairs(allowed) do owned[key] = data.journal.entries[key] ~= nil end
             for key, entry in pairs(data.journal.entries) do
                 if entry.layer == proposal.layer and R.CanContinue(entry, seen[key], sessionSignature) then owned[key] = true end
@@ -843,6 +991,7 @@ function B.NewExperiments(runtime, cameraMode)
     function lab.Preview(key, target)
         lab.preview = nil
         if lab.busy then return nil, "BUSY" end
+        if not cameraMode and db and (db.optics.comparison or ns.Optics.Known(key) and next(db.optics.visual)) then return nil, "USE_MODE_DETAIL_CONTROLS" end
         if not data or next(data.journal.entries) then return nil, "RESTORE_EXPERIMENTS_BEFORE_CALIBRATING" end
         if runtime.engine and runtime.engine.Status().state ~= "BASELINE" then return nil, "RESTORE_BRIGHTNESS_BEFORE_CALIBRATING" end
         local item = ns.ReadOnly.Read(reader, key)
@@ -861,9 +1010,11 @@ function B.NewExperiments(runtime, cameraMode)
         lab.preview = nil
         if lab.busy then return nil, "BUSY" end
         if layer ~= "visual" and layer ~= "quality" and not (cameraMode and layer == "camera") then return nil, "INVALID_LAYER" end
+        if not cameraMode and (db.optics.comparison or layer == "quality" and next(db.optics.visual)) then return nil, "USE_SHARED_OPTICAL_RESTORE" end
         local proposal, code = build(layer, {}, true)
         if not proposal then return nil, code end
         if #proposal.plan.operations == 0 then return nil, "NO_CAPTURED_EXPERIMENT_ORIGINAL" end
+        if not cameraMode and layer == "quality" then proposal.qualityIntent = {} end
         return show(proposal, "EXPLICIT RECOVERY: replace the displayed current values with the captured originals. No automatic reapply on failure.")
     end
     function lab.Confirm(token)
@@ -909,13 +1060,24 @@ function B.NewExperiments(runtime, cameraMode)
             end
         end
         if not policy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
+        local qualityIntent
+        if not cameraMode and layer == "quality" then
+            if db.optics.comparison then return nil, "FINISH_COMPARISON" end
+            qualityIntent = ns.Optics.Extract(targets)
+            local effective, why = ns.Optics.Resolve(db.optics.visual, qualityIntent)
+            if not effective then return nil, why end
+            targets = V.Copy(targets)
+            for _, key in ipairs(ns.Optics.Keys) do targets[key] = effective[key] end
+        end
         local overrides = {}
         for key, target in pairs(targets) do
             local bounds, why = targetBounds(key, target)
             if not bounds then return nil, why end
             overrides[key] = bounds
         end
-        return build(layer, targets, false, overrides)
+        local proposal, why = build(layer, targets, false, overrides)
+        if proposal then proposal.qualityIntent = qualityIntent end
+        return proposal, why
     end
     lab.CanApply = canApply
     function lab.Apply(layer, targets, callback)
@@ -976,8 +1138,10 @@ function B.NewExperiments(runtime, cameraMode)
             activeProfile = lab.activeProfile, operation = pending and "VERIFYING" or lab.preview and "PREVIEW" or "idle" }
     end
     function lab.SyncVisual()
-        local entry = data and data.journal.entries.Contrast
-        owned.Contrast = entry and entry.state == "owned" or nil
+        for _, key in ipairs({ "Contrast", "ResampleAlwaysSharpen", "ResampleSharpness", "bloomUserMult" }) do
+            local entry = data and data.journal.entries[key]
+            owned[key] = entry and entry.state == "owned" or nil
+        end
         lab.state, lab.lastError = data and next(data.journal.entries) and "ACTIVE" or "BASELINE", nil
         for _, item in pairs(data and data.journal.entries or {}) do
             if item.state ~= "owned" then lab.state, lab.lastError = "RECOVERY", item.failure; break end
@@ -1210,6 +1374,7 @@ function B.NewNativeGraphics(runtime)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate(bank)
+        if db and db.optics.comparison then return nil, "FINISH_COMPARISON" end
         if reader.brightnessBusy and reader.brightnessBusy()
             or reader.experimentBusy and reader.experimentBusy()
             or reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
@@ -1244,7 +1409,7 @@ function B.NewNativeGraphics(runtime)
     end
     local function foreignSnapshot(bank)
         local values = G.Snapshot(reader, bank == "normal" and "raid" or "normal")
-        for _, key in ipairs({ "Brightness", "Contrast", "Gamma", "RenderScale" }) do
+        for _, key in ipairs({ "Brightness", "Contrast", "Gamma", "RenderScale", "ResampleAlwaysSharpen", "ResampleSharpness", "bloomUserMult" }) do
             local item = ns.ReadOnly.Read(reader, key)
             if ns.Planner.SafeObservation(item) then values[key] = item.raw end
         end
@@ -1332,6 +1497,7 @@ function B.NewNativeGraphics(runtime)
         log(restoring and "USER_RESTORE_CAPTURED_BANK" or "USER_APPLY_NATIVE_RECIPE")
         local failure
         for _, key in ipairs(G.Order(bank, targets, restoring)) do
+            if not watchForeign(foreign) then failure = "OTHER_BANK_OR_VISUAL_CHANGED"; break end
             local ok, code = step(bank, record, key, tostring(targets[key]), restoring, signature)
             if not ok then failure = code; break end
             if not watchForeign(foreign) then failure = "OTHER_BANK_OR_VISUAL_CHANGED"; break end

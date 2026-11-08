@@ -4,7 +4,7 @@
 
 Repository: **ProfessorMinty/LumenShift**. Continue `feat/beta-integration` and PR #5. Starting source is `d4e5f33`; the current playable archive remains **0.2.0-dev.12 / adf7763f**. This document plans implementation; it does not change the runtime or declare new live test results.
 
-**Delivery 1 implementation:** [dev.13 reliability and presentation](42-DEV13-RELIABILITY.md), 2026-11-08. Runtime changes and simulated acceptance are recorded there; this plan retains its original starting snapshot. Deliveries 2–5 remain planned.
+**Delivery 1 implementation:** [dev.13 reliability and presentation](42-DEV13-RELIABILITY.md), 2026-11-08. Runtime changes and simulated acceptance are recorded there; this plan retains its original starting snapshot. **Delivery 2 implementation:** [dev.14 shared optics](43-DEV14-SHARED-OPTICS.md), 2026-11-08. Delivery 1 was reverified and Delivery 2 is implemented with simulated acceptance. Native observations remain separate; Deliveries 3–5 remain planned.
 
 ## Working agreement
 
@@ -140,7 +140,7 @@ Build archives from a clean committed tree with `tools/package.py`; retain exact
 
 Execution order is **1 → 2 → 3 → 4 → 5**, with independent UI/assets/documentation work progressing alongside the current delivery. Optional AO research and owner visual feedback do not form mandatory stop points between deliveries. Do not accumulate a hidden rewrite before providing the first usable fix build.
 
-The next implementation task is **Delivery 1**, beginning with composite-mode failure reporting/compensation and Camera presentation. No further planning approval is needed for that authorized development work. This turn creates the plan only.
+As of dev.14, **Deliveries 1 and 2 are implemented** with their recorded simulated checks. **Delivery 3** is the next planned implementation scope; it was not started as part of this increment. The original planning snapshot above remains historical. Native acceptance is recorded separately from implementation completion.
 
 True scene-wide outlines, thermal imaging, world light creation and external shader injection are not promises of this Lua-addon beta. Their researched alternatives remain in [39](39-GRAPHICS-CONTROL-LANDSCAPE.md); useful native controls and composition tools proceed independently.
 

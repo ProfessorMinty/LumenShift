@@ -130,23 +130,20 @@ function S.New(runtime)
             end
             section("LIGHT & CONTRAST", -210)
             if ui.edited ~= "natural" then
-                W.Slider(env, parent, "Brightness", 0, -252, 0, 100, 1, function() return cfg().modes[ui.edited].brightness end,
+                W.Slider(env, parent, "Custom brightness", 0, -252, 0, 100, 1, function() return cfg().modes[ui.edited].brightness end,
                     function(value) return editMode("brightness", value) end, nil, 398)
                 W.Slider(env, parent, "Contrast", 438, -252, 0, 100, 1, function() return cfg().modes[ui.edited].contrast end,
                     function(value) return editMode("contrast", value) end, nil, 398)
                 toggle("Custom Contrast (off: use return look)", 438, -319, 398, function() return cfg().modes[ui.edited].useContrast end,
                     function(value) return editMode("useContrast", value) end)
-                text("Adjustments apply when you click Apply.", 0, -325, 398, 12, W.colors.muted)
+                toggle("Use return-look brightness", 0, -319, 398, function() return cfg().modes[ui.edited].brightnessMode == "inherit" end,
+                    function(value) return editMode("brightnessMode", value and "inherit" or "custom") end)
             else
                 text(ns.Baseline.Summary(db.baseline), 0, -254, 800, 18)
                 text("Uses your setup choice for light and contrast. Quality stays independent. Pre-change values remain available in Recovery.", 0, -292, 800, 14, W.colors.muted)
                 button("Change baseline in setup", 0, -342, 260, function() runtime.setup.Open() end, "quiet")
             end
-            if ui.edited ~= "natural" then button("Reset this mode's saved settings", 0, -389, 284, function()
-                local selected = ui.edited
-                update(function(copy) copy.studio.modes[selected] = ns.StudioConfig.Defaults().modes[selected] end)
-                ui.Invalidate(1); ui.Invalidate(3); ui.BuildPage()
-            end, "quiet") end
+            height = ns.OpticsUI.Build(runtime, ui, parent, env)
             ui.Primary("Apply " .. ns.StudioConfig.Label(ui.edited), function() product.Select(ui.edited) end)
         elseif ui.page == 2 then
             if ui.qualityTab ~= "detail" then
@@ -257,20 +254,29 @@ function S.New(runtime)
             button("Edit source mode", 430, -77, 180, function() ui.Open(1) end, "quiet")
             ui.Primary("Save variation", function() product.SavePreset(name:GetText(), ui.edited); ui.BuildPage() end,
                 "Presets save mode settings. Quality profiles stay separate.")
-            section("YOUR PRESETS", -143)
+            local transfer = W.Edit(env, parent, ui.presetTransfer or "", 0, -147, 836, function(value) ui.presetTransfer = value end, 2048)
+            if ui.focusTransfer then transfer:SetFocus(); transfer:HighlightText(); ui.focusTransfer = nil end
+            button("Import preset", 0, -192, 180, function() product.ImportPreset(name:GetText(), transfer:GetText()); ui.BuildPage() end)
+            text("Paste a LumenShift preset above. Import saves it without changing your scene.", 204, -200, 628, 12, W.colors.muted)
+            section("YOUR PRESETS", -251)
             local ids = ns.Value.Keys(cfg().presets)
-            if #ids == 0 then text("Your saved looks will appear here.", 0, -190, 800, 16, W.colors.muted) end
+            if #ids == 0 then text("Your saved looks will appear here.", 0, -298, 800, 16, W.colors.muted) end
             for i, id in ipairs(ids) do
                 local presetID, preset = id, cfg().presets[id]
-                local x, y = ((i - 1) % 2) * 430, -187 - math.floor((i - 1) / 2) * 118
+                local x, y = ((i - 1) % 2) * 430, -295 - math.floor((i - 1) / 2) * 118
                 text(ns.StudioConfig.Label(preset.mode), x, y, 406, 12, W.colors.muted)
                 W.Edit(env, parent, preset.name, x, y - 24, 406, function(value)
                     if ns.StudioConfig.Name(value) then update(function(copy) copy.studio.presets[presetID].name = value end) end
                 end)
                 button("Apply", x, y - 64, 100, function() product.LoadPreset(presetID); ui.Invalidate(1); ui.Invalidate(3) end)
                 button("Delete", x + 118, y - 64, 100, function() update(function(copy) copy.studio.presets[presetID] = nil end); ui.BuildPage() end, "quiet")
+                button("Export", x + 236, y - 64, 150, function()
+                    ui.presetTransfer = ns.StudioConfig.ExportPreset(cfg(), presetID)
+                    ui.focusTransfer = true
+                    ui.BuildPage()
+                end, "quiet")
             end
-            height = math.max(474, 200 + math.ceil(#ids / 2) * 118)
+            height = math.max(474, 308 + math.ceil(#ids / 2) * 118)
         elseif ui.page == 6 then
             section("COMFORT & READABILITY", 0)
             toggle("Reduced motion", 0, -44, 398, function() return db.config.preferences.reducedMotion end,
@@ -311,7 +317,8 @@ function S.New(runtime)
             button("Restore captured visuals", 446, -263, 390, function()
                 product.RestoreVisuals(function() ui.BuildPage() end); ui.BuildPage()
             end)
-            local y = -313
+            text("Restore also resets captured sharpening and bloom, including quality overrides. Saved edits and other quality settings stay unchanged.", 0, -309, 830, 12, W.colors.muted)
+            local y = -371
             if status.token then
                 local token = status.token
                 text("Review recovery: original " .. ns.Report.Number(status.preview and status.preview.original)
@@ -354,6 +361,12 @@ function S.New(runtime)
         scrollBar:SetMinMaxValues(0, ui.scrollMaximum); scrollBar:SetValue(0); scroll:SetVerticalScroll(0)
         if ui.scrollMaximum > 0 then scrollBar:Show() else scrollBar:Hide() end
         parent:Show(); ui.Refresh()
+    end
+    function ui.RebuildInPlace()
+        local offset = scroll:GetVerticalScroll()
+        ui.BuildPage()
+        offset = math.min(offset, ui.scrollMaximum)
+        scrollBar:SetValue(offset); scroll:SetVerticalScroll(offset)
     end
     function ui.Invalidate(page)
         if ui.cache then for key, frame in pairs(ui.cache) do if key:match("^" .. page .. ":") then frame.lumenInvalid = true end end end
