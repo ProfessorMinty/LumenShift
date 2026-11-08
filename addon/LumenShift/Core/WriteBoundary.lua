@@ -92,14 +92,22 @@ function B.NewVisual(runtime)
         if not ns.Optics.Validate(db.optics) then return nil, "INVALID_OPTICAL_STATE" end
         if db.optics.comparison and not options.comparison and not restoring then return nil, "FINISH_COMPARISON" end
         local visualIntent, opticalKeys = ns.Optics.Extract(targets), {}
+        local reference = restoring and {} or ns.Modes.Reference(runtime)
         for _, key in ipairs(ns.Optics.Keys) do
-            if restoring or targets[key] ~= nil or db.optics.visual[key] ~= nil then opticalKeys[key] = true end
+            if options.comparison then opticalKeys[key] = targets[key] ~= nil or nil
+            elseif restoring or targets[key] ~= nil or db.optics.visual[key] ~= nil
+                or reference[key] ~= nil or db.optics.reference[key] ~= nil then opticalKeys[key] = true end
         end
         if not restoring and not options.comparison then
-            local effective, reason = ns.Optics.Resolve(visualIntent, db.optics.quality)
+            local effective, reason = ns.Optics.Resolve(visualIntent, db.optics.quality, reference)
             if not effective then return nil, reason end
             targets = V.Copy(targets)
             for key, value in pairs(effective) do if opticalKeys[key] then targets[key] = value end end
+            for key in pairs(opticalKeys) do
+                local entry = db.experiments.journal.entries[key]
+                if visualIntent[key] == nil and db.optics.quality[key] == nil and entry
+                    and V.Number(entry.originalRaw) == reference[key] then targets[key] = nil end
+            end
         end
         local prior, before = journal(opticalKeys), observe()
         if not prior then return nil, "OTHER_RECOVERY_RECORDS_PRESENT" end
@@ -121,6 +129,8 @@ function B.NewVisual(runtime)
             local bounds, reason = ns.ExperimentPolicy.Bounds("Contrast", prior.entries.Contrast and prior.entries.Contrast.originalRaw or before.Contrast.raw)
             if not bounds then return nil, reason end
             descriptors.Contrast = ns.ExperimentPolicy.Descriptor("Contrast", bounds, signature)
+            if targets.Contrast ~= nil and not options.comparison
+                and (not V.Finite(targets.Contrast) or targets.Contrast % bounds.step ~= 0) then return nil, "INVALID_TEST_STEP:Contrast" end
         end
         for _, key in ipairs(ns.Optics.Keys) do
             if targets[key] ~= nil or prior.entries[key] then
@@ -131,14 +141,19 @@ function B.NewVisual(runtime)
                 local value = visualIntent[key]
                 if value ~= nil and not options.comparison
                     and math.abs(value / bounds.step - math.floor(value / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP:" .. key end
-                local capable, code = ns.ExperimentPolicy.Capability(reader, key)
-                if not capable then return nil, code end
                 descriptors[key] = ns.ExperimentPolicy.Descriptor(key, bounds, signature)
                 descriptors[key].layer = "visual" -- temporary planner view; canonical record stays quality
             end
         end
         local plan, reason = ns.Planner.Build(descriptors, context, before, prior, "visual", targets)
         if not plan then return nil, reason end
+        -- A no-setter release needs a safe observation, not renderer write support.
+        for _, op in ipairs(plan.operations) do
+            if op.write then
+                local capable, code = ns.ExperimentPolicy.Capability(reader, op.key)
+                if not capable then return nil, code end
+            end
+        end
         if options.rawTargets then
             if not ns.Optics.RawMap(options.rawTargets) then return nil, "INVALID_COMPARISON" end
             for _, op in ipairs(plan.operations) do
@@ -164,6 +179,7 @@ function B.NewVisual(runtime)
             ns.Log.Record(reader, "visual", "transaction", ok and "INFO" or "WARN", errorCode or "PASS", { state = self.state, tx = self.serial })
             if ok and not options.comparison then
                 db.optics.visual = restoring and {} or V.Copy(visualIntent)
+                db.optics.reference = V.Copy(reference)
                 if restoring then db.optics.quality, db.optics.comparison = {}, nil end
             end
             if callback then callback(ok, errorCode, restored) end
@@ -953,6 +969,7 @@ function B.NewExperiments(runtime, cameraMode)
             end
             data.journal = V.Copy(finalJournal)
             if not failure and proposal.qualityIntent then db.optics.quality = V.Copy(proposal.qualityIntent) end
+            if not failure and proposal.referenceIntent then db.optics.reference = V.Copy(proposal.referenceIntent) end
             for key in pairs(allowed) do owned[key] = data.journal.entries[key] ~= nil end
             for key, entry in pairs(data.journal.entries) do
                 if entry.layer == proposal.layer and R.CanContinue(entry, seen[key], sessionSignature) then owned[key] = true end
@@ -1014,7 +1031,7 @@ function B.NewExperiments(runtime, cameraMode)
         local proposal, code = build(layer, {}, true)
         if not proposal then return nil, code end
         if #proposal.plan.operations == 0 then return nil, "NO_CAPTURED_EXPERIMENT_ORIGINAL" end
-        if not cameraMode and layer == "quality" then proposal.qualityIntent = {} end
+        if not cameraMode and layer == "quality" then proposal.qualityIntent, proposal.referenceIntent = {}, {} end
         return show(proposal, "EXPLICIT RECOVERY: replace the displayed current values with the captured originals. No automatic reapply on failure.")
     end
     function lab.Confirm(token)
@@ -1047,6 +1064,7 @@ function B.NewExperiments(runtime, cameraMode)
     end
     local function canApply(layer, targets)
         if lab.busy then return nil, "BUSY" end
+        if type(targets) == "table" and targets.assaoDetailShadowStrength ~= nil then return nil, "USE_CONTACT_DEPTH_TRIAL" end
         if layer == "quality" and db and db.graphics.records.normal then
             for key in pairs(targets) do if ns.NativeGraphics.Known(key) then return nil, "RESTORE_GRAPHICS_BANK_FIRST" end end
         end
@@ -1060,23 +1078,33 @@ function B.NewExperiments(runtime, cameraMode)
             end
         end
         if not policy.ValidateTargets(targets, layer) then return nil, "INVALID_EXPERIMENT_TARGETS" end
-        local qualityIntent
+        local qualityIntent, referenceIntent, sources
         if not cameraMode and layer == "quality" then
             if db.optics.comparison then return nil, "FINISH_COMPARISON" end
             qualityIntent = ns.Optics.Extract(targets)
-            local effective, why = ns.Optics.Resolve(db.optics.visual, qualityIntent)
+            referenceIntent = ns.Modes.Reference(runtime)
+            local effective, why = ns.Optics.Resolve(db.optics.visual, qualityIntent, referenceIntent)
             if not effective then return nil, why end
+            sources = why
             targets = V.Copy(targets)
             for _, key in ipairs(ns.Optics.Keys) do targets[key] = effective[key] end
+            for key in pairs(referenceIntent) do
+                local entry = data.journal.entries[key]
+                if sources[key] == "reference" and entry and V.Number(entry.originalRaw) == referenceIntent[key] then targets[key] = nil end
+            end
         end
         local overrides = {}
         for key, target in pairs(targets) do
-            local bounds, why = targetBounds(key, target)
+            local bounds, why
+            if sources and sources[key] == "reference" then
+                local entry = data.journal.entries[key]
+                bounds, why = policy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw)
+            else bounds, why = targetBounds(key, target) end
             if not bounds then return nil, why end
             overrides[key] = bounds
         end
         local proposal, why = build(layer, targets, false, overrides)
-        if proposal then proposal.qualityIntent = qualityIntent end
+        if proposal then proposal.qualityIntent, proposal.referenceIntent = qualityIntent, referenceIntent end
         return proposal, why
     end
     lab.CanApply = canApply
@@ -1087,6 +1115,7 @@ function B.NewExperiments(runtime, cameraMode)
     end
     function lab.SaveProfile(id, key, target)
         if cameraMode then return nil, "INVALID_QUALITY_PROFILE" end
+        if key == "assaoDetailShadowStrength" then return nil, "USE_CONTACT_DEPTH_TRIAL" end
         if not data or not data.profiles[id] or key == "Contrast" then return nil, "INVALID_QUALITY_PROFILE" end
         local copy = V.Copy(data.profiles[id]); copy[key] = target
         if not policy.ValidateTargets(copy, "quality") then return nil, "PROFILE_LIMIT" end
@@ -1378,6 +1407,7 @@ function B.NewNativeGraphics(runtime)
         if reader.brightnessBusy and reader.brightnessBusy()
             or reader.experimentBusy and reader.experimentBusy()
             or reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if db and db.experiments.journal.entries.assaoDetailShadowStrength then return nil, "RESTORE_CONTACT_DEPTH_FIRST" end
         if not data or not G.Validate(data) then return nil, "GRAPHICS_DATA_QUARANTINED" end
         if combat() then return nil, "COMBAT_OR_RESTRICTION" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end

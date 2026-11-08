@@ -37,7 +37,8 @@ function S.Open(raw)
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
-    if type(data.schemaVersion) == "number" and data.schemaVersion >= 1 and data.schemaVersion <= 8 then
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 1 and data.schemaVersion <= 9 then
+        if type(data.baseline) == "table" and data.baseline.includeOptics == nil then data.baseline.includeOptics = false end
         local studio = type(data.config) == "table" and data.config.studio
         if type(studio) == "table" then
             for _, m in pairs(type(studio.modes) == "table" and studio.modes or {}) do ns.StudioConfig.UpgradeMode(m) end
@@ -102,8 +103,12 @@ function S.Open(raw)
         data.optics = data.optics or ns.Optics.Migrate(data.experiments.journal)
         data.schemaVersion, migrated = 9, migrated and migrated:gsub("_TO_8$", "_TO_9") or "MIGRATED_8_TO_9"
     end
+    if data.schemaVersion == 9 then
+        if type(data.optics) == "table" and data.optics.reference == nil then data.optics.reference = {} end
+        data.schemaVersion, migrated = 10, migrated and migrated:gsub("_TO_9$", "_TO_10") or "MIGRATED_9_TO_10"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1/2/3/4/5/6/7/8 migrations above are permitted.
+        -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
     if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true, optics = true })

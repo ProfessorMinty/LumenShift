@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-dev.15 — Distinct starting looks and return optics (2026-11-08)
+
+- Audit Delivery 2: reverify 314 existing tests, add no-setter bloom recovery when renderer support becomes unavailable, and prevent unrelated quality recovery from vetoing or relabelling a valid composite visual mode. Original recovery records remain intact.
+- Add two authored starting variations per active mode, light/style intensity anchored to the chosen return look, and independent detail/bloom/framing controls. Variations are deliberate saved-editor changes, not automatic replacements or claims of optimal native settings.
+- Let Setup explicitly include available sharpening/bloom in Original or Game Defaults. Effective priority is mode, quality, opted-in reference, then captured original; keep one canonical optical recovery record and exact restoration.
+- Disclose unavailable unowned optional optics before Apply and after success. Preserve owned unavailable records and fail/compensate actual write failures instead of silently skipping them.
+- Add a separate bounded Contact depth Test & Restore experiment with AO-context/dependency observations and exact captured restoration. It is not applied by modes or saved profiles; visible effect and motion stability remain unverified.
+- Schema 10 preserves completion, customizations and originals; LSMODE3 exports include intensity and old LSMODE2 imports remain accepted. Startup/reload stays free of graphics writes.
+- **340 Lua 5.1 tests pass, 0 fail; 9 packaging tests pass.** Syntax covers 51 Lua files and four bindings; structural checks cover 38 runtime modules and one native CVar call site. Offline layout review covers starting looks, Setup and the contact-depth trial. [Details, evidence and installation](docs/44-DEV15-DISTINCT-MODES.md). No new native acceptance or publication.
+
 ## 0.2.0-dev.14 — Shared optics and mode detail (2026-11-08)
 
 - Reverify Delivery 1 and retain its transaction, Camera, combat-presentation and local bloom fixes.

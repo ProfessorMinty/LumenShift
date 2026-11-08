@@ -3,24 +3,29 @@ local B, V = {}, ns.Value
 ns.Baseline = B
 local keys = { "Brightness", "Contrast" }
 function B.Defaults()
-    return { source = "current", chosen = false, values = {}, signature = "unavailable" }
+    return { source = "current", chosen = false, values = {}, signature = "unavailable", includeOptics = false }
 end
 function B.Validate(data)
-    if not V.Fields(data, { source = true, chosen = true, values = true, signature = true })
+    if not V.Fields(data, { source = true, chosen = true, values = true, signature = true, includeOptics = true })
         or (data.source ~= "current" and data.source ~= "gameDefaults") or type(data.chosen) ~= "boolean"
-        or not V.Raw(data.signature) or not V.Fields(data.values, { Brightness = true, Contrast = true }) then return false end
-    for _, raw in pairs(data.values) do
+        or type(data.includeOptics) ~= "boolean" or not V.Raw(data.signature)
+        or not ns.Optics.RawMap(data.values) then return false end
+    for key, raw in pairs(data.values) do
         local value = V.Number(raw)
         if not value or value < 0 or value > 100 then return false end
+        if ns.Optics.Known(key) and not data.includeOptics then return false end
     end
     return true
 end
-function B.Capture(runtime, source)
+function B.Capture(runtime, source, includeOptics)
     if source ~= "current" and source ~= "gameDefaults" then return nil, "INVALID_BASELINE_SOURCE" end
     local data = B.Defaults(); data.source, data.chosen = source, true
+    data.includeOptics = includeOptics == true
     data.signature = ns.Compatibility.Inspect(runtime.reader).signature or "unavailable"
     local missing = {}
-    for _, key in ipairs(keys) do
+    local captureKeys = V.Copy(keys)
+    if data.includeOptics then for _, key in ipairs(ns.Optics.Keys) do captureKeys[#captureKeys + 1] = key end end
+    for _, key in ipairs(captureKeys) do
         local item = ns.ReadOnly.Read(runtime.reader, key)
         local raw
         if source == "gameDefaults" then
@@ -34,7 +39,7 @@ function B.Capture(runtime, source)
             elseif item.code == "OK" then raw = item.raw end
         end
         local number = V.Number(raw)
-        if number and number >= 0 and number <= 100 then data.values[key] = raw
+        if number and ns.Optics.RawMap({ [key] = raw }) then data.values[key] = raw
         else missing[#missing + 1] = key end
     end
     return data, missing
@@ -45,7 +50,7 @@ end
 function B.CompleteMissing(runtime)
     local data = runtime.db.baseline
     if not data.chosen or (data.values.Brightness and data.values.Contrast) then return end
-    local fresh = B.Capture(runtime, data.source)
+    local fresh = B.Capture(runtime, data.source, data.includeOptics)
     for _, key in ipairs(keys) do
         if not data.values[key] and fresh.values[key] then
             data.values[key] = fresh.values[key]

@@ -41,11 +41,12 @@ return function(fixture, eq, test)
         f.select("natural"); eq(f.values.ResampleAlwaysSharpen, "1"); f.quality({})
         eq(f.values.ResampleAlwaysSharpen, "0"); eq(f.values.ResampleSharpness, "1.000")
     end)
-    test("O04 typed mode requests reject bad detail and unavailable custom optics before any write", function()
+    test("O04 invalid detail is rejected and unavailable unowned optics are reported without disabling Brightness", function()
         local f = make(); eq(f.p.Update(function(c) c.studio.modes.nightVision.detail = 101 end), nil)
         eq(f.p.Update(function(c) c.studio.modes.nightVision.detail = 51 end), nil)
         f.detail("nightVision", 90); f.values.ResampleSharpness = nil
-        eq(f.p.Select("nightVision"), nil); eq(#f.calls, 0)
+        assert(f.p.Select("nightVision")); f.mock.Flush(); eq(f.values.Brightness, "75"); assert(#f.p.omitted > 0)
+        for _, call in ipairs(f.calls) do eq(call[1], "Brightness") end
         f.r.db.config.studio.modes.nightVision.sharpening = "inherit"; f.select("nightVision"); eq(f.values.Brightness, "75")
     end)
     test("O05 unrelated unavailable bloom does not block sharpening or discard its quality original", function()
@@ -133,7 +134,7 @@ return function(fixture, eq, test)
         old.schemaVersion, old.optics = 8, nil
         local function legacy(m) for _, k in ipairs({ "brightnessMode", "sharpening", "detail", "useBloom", "bloom", "styling" }) do m[k] = nil end end
         for _, m in pairs(old.config.studio.modes) do legacy(m) end; legacy(old.config.studio.presets[id].settings)
-        local g = make(old, f.values); eq(#g.calls, 0); eq(g.r.storeStatus, "MIGRATED_8_TO_9")
+        local g = make(old, f.values); eq(#g.calls, 0); eq(g.r.storeStatus, "MIGRATED_8_TO_10")
         eq(g.r.db.optics.quality.ResampleSharpness, 0.4); eq(g.original("ResampleSharpness"), "1.000")
         eq(g.r.db.config.studio.modes.clarity.brightness, 78); eq(g.r.db.config.studio.modes.clarity.brightnessMode, "custom")
         eq(g.r.db.config.studio.presets[id].settings.sharpening, "inherit"); eq(g.r.db.onboarding.completed, true); eq(old.optics, nil)
@@ -239,6 +240,13 @@ return function(fixture, eq, test)
         assert(f.p.Compare("before")); f.mock.Flush()
         eq(f.r.db.optics.comparison.state, "recovery"); eq(f.p.state, "RECOVERY")
         eq(f.values.ResampleSharpness, "0.8"); eq(f.original("ResampleSharpness"), "1.000")
+    end)
+    test("O29 already-original bloom releases without a renderer-dependent setter", function()
+        local f = make(); f.r.db.config.studio.modes.nightVision.useBloom = true
+        f.select("nightVision"); f.values.bloomUserMult = "0.8"
+        f.values.Brightness = "052.00"; f.env.C_VideoOptions.IsLinearEnabledOnStart = function() return false end
+        local n = #f.calls; assert(f.p.RestoreVisuals()); f.mock.Flush()
+        eq(#f.calls, n); eq(f.r.db.experiments.journal.entries.bloomUserMult, nil)
     end)
     if os.getenv("LUMENSHIFT_UI_MODEL_PATH") then
         local f = make(); f.r.ui.Open(1); f.mock.Export(os.getenv("LUMENSHIFT_UI_MODEL_PATH") .. "-optics.tsv")

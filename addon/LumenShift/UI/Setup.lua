@@ -13,7 +13,7 @@ function S.New(runtime)
         if not db or not ui.draft then return tell("Preferences could not be loaded. Open Diagnostics for details.") end
         local baseline = ns.Value.Copy(db.baseline)
         if ui.draft.capture or not baseline.chosen or baseline.source ~= ui.draft.baselineSource then
-            baseline = ns.Baseline.Capture(runtime, ui.draft.baselineSource)
+            baseline = ns.Baseline.Capture(runtime, ui.draft.baselineSource, ui.draft.includeOptics)
         end
         if not ns.Baseline.Validate(baseline) then return tell("The baseline choice could not be saved. Try opening setup again.") end
         local saved, why = product.Update(function(copy)
@@ -99,12 +99,17 @@ function S.New(runtime)
         end
         local preview = db.baseline
         if ui.draft.capture or not preview.chosen or preview.source ~= ui.draft.baselineSource then
-            preview = ns.Baseline.Capture(runtime, ui.draft.baselineSource)
+            preview = ns.Baseline.Capture(runtime, ui.draft.baselineSource, ui.draft.includeOptics)
         end
         W.Text(ui.body, ns.Baseline.Summary(preview), 0, -124, 580, 12, W.colors.accent)
-        W.Text(ui.body, "Visual settings only; graphics quality stays independent. Saving does not apply them.", 0, -147, 580, 12, W.colors.muted)
+        local count = 0; for key in pairs(preview.values) do if ns.Optics.Known(key) then count = count + 1 end end
+        W.Text(ui.body, ui.draft.includeOptics and ("Optics captured: " .. count .. "/3 available. Quality profiles still take precedence.")
+            or "Light and contrast only. Saving does not apply them.", 0, -147, 580, 12, W.colors.muted)
         W.Button(ui.pool.env, ui.body, "Capture again", 0, -176, 130, function() ui.draft.capture = true; ui.Build() end, nil, "quiet")
         W.Text(ui.body, "Active modes keep their pre-mode originals when captured.", 150, -184, 430, 11, W.colors.muted)
+        W.Toggle(ui.pool.env, ui.body, "Include sharpening and bloom in return look", 0, -208, 580,
+            function() return ui.draft.includeOptics end,
+            function(value) ui.draft.includeOptics, ui.draft.capture = value, true; ui.Build() end)
         local choices = {
             { "Screen effects", "Tint and soft screen edges", "effects" },
             { "Night Vision sounds", "Play the on / off cue", "sound" },
@@ -116,7 +121,7 @@ function S.New(runtime)
         for index, choice in ipairs(choices) do
             local key = choice[3]
             W.Checkbox(ui.pool.env, ui.body, choice[1], choice[2], ((index - 1) % 2) * 300,
-                -226 - math.floor((index - 1) / 2) * 66, 280, function() return ui.draft[key] end,
+                -248 - math.floor((index - 1) / 2) * 58, 280, function() return ui.draft[key] end,
                 function(value) ui.draft[key] = value end)
         end
         ui.notice:SetText(ui.message or "Click the LumenShift button for modes. Right-click it for Studio.")
@@ -129,7 +134,7 @@ function S.New(runtime)
         ui.draft = { effects = db.config.studio.effects, sound = db.config.preferences.sound,
             animation = db.config.preferences.animation, reducedMotion = db.config.preferences.reducedMotion,
             highContrast = db.config.studio.highContrast, launcher = db.config.studio.launcher.visible,
-            baselineSource = db.baseline.source, capture = not db.baseline.chosen }
+            baselineSource = db.baseline.source, includeOptics = db.baseline.includeOptics, capture = not db.baseline.chosen }
         ui.draft.graphics = ns.NativeGraphics.Draft(runtime)
         -- Retain saved choices. Only the explicitly labelled Apply action writes;
         -- Save & Close and all startup paths remain read-only.

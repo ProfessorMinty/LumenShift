@@ -17,7 +17,7 @@ return function(fixture, native, eq, test)
         local old = f.ns.Value.Copy(f.env.LumenShiftDB)
         old.schemaVersion = 1; old.baseline = nil; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil; old.optics = nil
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_1_TO_9"); eq(copy.schemaVersion, 9); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
+        eq(code, "MIGRATED_1_TO_10"); eq(copy.schemaVersion, 10); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "52"); eq(copy.journal.entries.Brightness.state, "owned")
         eq(copy.config.studio.enabled, false)
         local reload = studio(old, "75"); eq(#reload.calls, 0); eq(reload.engine.Status().state, "RECOVERY")
@@ -56,8 +56,12 @@ return function(fixture, native, eq, test)
     test("P05 quality scans are read-only and empty profiles cannot pretend to apply", function()
         local f = studio(); f.enable(); f.select("nightVision")
         for _, candidate in ipairs(f.ns.Quality.Candidates) do f.values[candidate.key] = "1" end
-        local rows = f.ns.Quality.Scan(f.ns.runtime.reader); eq(#rows, 14)
-        for _, row in ipairs(rows) do eq(row.operational, f.ns.ExperimentPolicy.Known(row.key)); eq(row.observation.raw, "1") end
+        local rows = f.ns.Quality.Scan(f.ns.runtime.reader); eq(#rows, 15)
+        for _, row in ipairs(rows) do
+            if row.key == "assaoDetailShadowStrength" then eq(not not row.operational, false) -- 1 exceeds the isolated trial limit
+            else eq(row.operational, f.ns.ExperimentPolicy.Known(row.key)) end
+            eq(row.observation.raw, "1")
+        end
         for _, id in ipairs({ "balanced", "vista", "performance" }) do
             eq(f.ns.Quality.Select(f.env.LumenShiftDB, id), nil)
         end

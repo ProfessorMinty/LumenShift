@@ -161,10 +161,11 @@ function D.Build(runtime)
         lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
             .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
         local config = db.config
-        local effective, sources = ns.Optics.Resolve(db.optics.visual, db.optics.quality)
+        local effective, sources = ns.Optics.Resolve(db.optics.visual, db.optics.quality, db.optics.reference)
         for _, key in ipairs(ns.Optics.Keys) do
             lines[#lines + 1] = "optical " .. key .. " visual=" .. D.Number(db.optics.visual[key])
-                .. " quality=" .. D.Number(db.optics.quality[key]) .. " effective-request=" .. D.Number(effective and effective[key])
+                .. " quality=" .. D.Number(db.optics.quality[key]) .. " reference=" .. D.Number(db.optics.reference[key])
+                .. " effective-request=" .. D.Number(effective and effective[key])
                 .. " source=" .. safe(sources and sources[key] or "inherited-current") .. " original-record=experiments.journal"
         end
         local comparison = db.optics.comparison
@@ -185,6 +186,8 @@ function D.Build(runtime)
         lines[#lines + 1] = "visual baseline source=" .. safe(db.baseline.source) .. " chosen=" .. bool(db.baseline.chosen)
             .. " Brightness=" .. D.Number(db.baseline.values.Brightness) .. " Contrast=" .. D.Number(db.baseline.values.Contrast)
             .. " captured-client=" .. safe(db.baseline.signature) .. " applied-this-session=" .. bool(runtime.product and runtime.product.baselineVerified)
+        lines[#lines + 1] = "return optics enabled=" .. bool(db.baseline.includeOptics) .. "; contact-depth trial: method/effect unverified"
+        for _, key in ipairs(ns.Optics.Keys) do lines[#lines + 1] = "return " .. key .. "=" .. D.Number(db.baseline.values[key]) end
         for _, id in ipairs(ns.StudioConfig.Order) do
             local mode = config.studio.modes[id]
             if id == "natural" then
@@ -192,7 +195,8 @@ function D.Build(runtime)
             else lines[#lines + 1] = id .. ": brightness=" .. D.Number(mode.brightness) .. " contrast=" .. D.Number(mode.contrast)
                 .. " contrastEnabled=" .. bool(mode.useContrast) .. " tint=" .. bool(mode.tintEnabled) .. " opacity=" .. D.Number(mode.opacity)
                 .. " vignette=" .. D.Number(mode.vignette) .. " letterbox=" .. D.Number(mode.letterbox)
-                .. " brightnessMode=" .. safe(mode.brightnessMode) .. " sharpening=" .. safe(mode.sharpening) .. " detail=" .. D.Number(mode.detail)
+                .. " brightnessMode=" .. safe(mode.brightnessMode) .. " lightStyleIntensity=" .. D.Number(mode.intensity)
+                .. " sharpening=" .. safe(mode.sharpening) .. " detail=" .. D.Number(mode.detail)
                 .. " bloomOverride=" .. bool(mode.useBloom) .. " bloom=" .. D.Number(mode.bloom) .. " styling=" .. safe(mode.styling)
             end
         end

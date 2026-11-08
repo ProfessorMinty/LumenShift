@@ -9,7 +9,9 @@ local candidates = {
         evidence = "SOURCE_DECLARED_70790", admitted = false, version = 1 },
 }
 local watch = { "Gamma", "RenderScale", "graphicsViewDistance", "graphicsGroundClutter", "graphicsEnvironmentDetail",
-    "groundEffectFade", "graphicsPBRLiquidDetail", "graphicsQuality", "raidGraphicsQuality", "RAIDsettingsEnabled" }
+    "groundEffectFade", "graphicsPBRLiquidDetail", "graphicsQuality", "raidGraphicsQuality", "RAIDsettingsEnabled",
+    "SSAO", "RAIDSSAO", "graphicsSSAO", "raidGraphicsSSAO", "assaoRadius", "assaoShadowMult",
+    "assaoShadowPower", "assaoBlurPassCount", "assaoSharpness" }
 -- Additional named research observations. Neither write targets nor tier watchers.
 -- Captured Forever console metadata (70532) and mirrored native UI (70862), docs/33.
 local research = { "textureFilteringMode", "ResampleQuality", "MSAAAlphaTest", "ffxAntiAliasingMode", "vrsValar",
@@ -17,7 +19,7 @@ local research = { "textureFilteringMode", "ResampleQuality", "MSAAAlphaTest", "
     "graphicsProjectedTextures", "volumeFog", "volumeFogInterior", "volumeFogLevel", "sunShafts", "horizonStart",
     "shadowMode", "shadowTextureSize", "shadowSoft", "shadowRt", "SSAO", "DepthBasedOpacity", "bloomEnable", "ffxGlow",
     "reflectionDownscale", "rippleDetail", "waterDetail", "pbrLiquidDetail", "SkyCloudLOD", "particleDensity", "particleMTDensity",
-    "assaoRadius", "assaoShadowMult", "assaoDetailShadowStrength", "assaoBlurPassCount", "assaoSharpness" }
+    "assaoRadius", "assaoShadowMult", "assaoShadowPower", "assaoBlurPassCount", "assaoSharpness" }
 function C.ResearchKeys() return ns.Value.Copy(research) end
 function C.Get(key)
     if ns.NativeGraphics and ns.NativeGraphics.Known(key) then return { kind = "number", layer = "quality", admitted = false } end

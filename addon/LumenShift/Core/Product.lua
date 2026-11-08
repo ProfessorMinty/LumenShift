@@ -29,6 +29,9 @@ local messages = {
     TIER_OR_DEPENDENT_RESTORATION_INCOMPLETE = "Some values did not return to their originals. Export the report; originals are retained. No repair values were guessed.",
     EXTERNAL_CONFLICT_NO_AUTOMATIC_RESTORE = "A setting changed during the trial. Automatic restoration stopped; review the report before restoring the trial.",
     BLOOM_CAPABILITY_UNAVAILABLE = "Bloom support could not be checked. Other controls remain available.",
+    CONTACT_DEPTH_CONTEXT_UNAVAILABLE = "Contact-depth trials need readable, enabled AO settings in each enabled graphics bank. Other controls remain available.",
+    USE_CONTACT_DEPTH_TRIAL = "Contact depth is available as a separate Test & Restore experiment in Advanced Graphics.",
+    RESTORE_CONTACT_DEPTH_FIRST = "Restore the interrupted contact-depth trial in Advanced Graphics before changing native graphics levels.",
     BLOOM_LINEAR_RENDERER_UNAVAILABLE = "Bloom needs the game's linear renderer. Other controls remain available.",
     FINISH_COMPARISON = "Finish the Before / After comparison before applying another change.",
     COMPARISON_CHANGED_EXTERNALLY = "The scene changed outside LumenShift. That change was kept; use Recovery if you want the captured originals.",
@@ -131,7 +134,8 @@ function P.New(runtime)
         ns.Baseline.CompleteMissing(runtime) -- explicit click only; no startup capture/write
         if combat() then return report("Outside combat only. No change queued.") end
         if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return report("FOLLOWUP_TIMER_UNAVAILABLE") end
-        local settings = ns.Value.Copy(config().modes[id])
+        local settings, evaluationError = ns.Modes.Evaluate(config().modes[id], ns.Modes.Home(runtime))
+        if not settings then return report(evaluationError) end
         local contrast = id ~= "natural" and settings.useContrast and { Contrast = settings.contrast } or {}
         local brightnessTarget = id ~= "natural" and settings.brightnessMode == "custom" and settings.brightness or nil
         if (id == "natural" or settings.brightnessMode == "inherit") and db.baseline.chosen then
@@ -143,12 +147,20 @@ function P.New(runtime)
         end
         local needsContrast = next(contrast) ~= nil or db.experiments.journal.entries.Contrast ~= nil
         if runtime.lab and runtime.lab.busy then return report("OTHER_OPERATION_ACTIVE") end
-        if needsContrast then
-            local planned, reason = runtime.lab.CanApply("visual", contrast)
-            if not planned then return report(reason) end -- before ANY Brightness write
-        end
-        local optical = id == "natural" and {} or ns.Optics.ModeTargets(settings)
+        -- The shared writer preflights all participating visual keys together.
+        -- An unrelated quality recovery record must not veto this operation.
+        local optical, omitted = ns.Modes.Optional(runtime, id == "natural" and {} or ns.Optics.ModeTargets(settings))
+        local reference, referenceOmissions = ns.Modes.Reference(runtime)
+        for _, item in ipairs(referenceOmissions) do omitted[#omitted + 1] = item end
+        product.omitted = omitted
+        for _, item in ipairs(omitted) do ns.Log.Record(runtime.reader, "product", "optional-omitted", "WARN", item.reason, { key = item.key }) end
         local shared = needsContrast or next(optical) ~= nil or next(db.optics.visual) ~= nil
+            or next(reference) ~= nil or next(db.optics.reference) ~= nil
+        local function committed()
+            commit(id, settings)
+            local warning = ns.Modes.OmissionText(omitted)
+            if warning then product.lastMessage = warning; if product.Refresh then product.Refresh() end end
+        end
         ns.Log.Record(runtime.reader, "product", "mode-select", "INFO", "USER_REQUEST", { mode = id })
         if shared then
             local previous, previousState, previousSettings = product.active, product.state, product.appliedSettings
@@ -158,7 +170,7 @@ function P.New(runtime)
             local completed = false
             local ok, why = runtime.visual.Apply(targets, function(verified, reason, restored)
                 completed = true; product.busy = false
-                if verified then commit(id, settings)
+                if verified then committed()
                 elseif restored then
                     product.active, product.state, product.appliedSettings = previous, previousState, previousSettings
                     product.RefreshPresentation(true)
@@ -175,7 +187,7 @@ function P.New(runtime)
             if product.Refresh then product.Refresh() end
             return ok, why
         end
-        local function finishMode() commit(id, settings); return true end
+        local function finishMode() committed(); return true end
         local previous = product.active
         product.busy, product.generation = true, product.generation + 1
         local generation = product.generation
@@ -241,15 +253,21 @@ function P.New(runtime)
         end
         if runtime.lab then
             runtime.lab.Observe()
-            if db and db.experiments.journal.entries.Contrast and (runtime.lab.state == "RECOVERY" or runtime.lab.state == "CONFLICT") then
-                clear(); product.active, product.baselineVerified, product.state = "natural", false, "RECOVERY"
+            local contrast = db and db.experiments.journal.entries.Contrast
+            if contrast then
+                local current = ns.ReadOnly.Read(runtime.reader, "Contrast")
+                if contrast.state ~= "owned" or not ns.Planner.SafeObservation(current) or current.raw ~= contrast.lastVerifiedRaw then
+                    clear(); product.active, product.baselineVerified, product.state = "natural", false, "RECOVERY"
+                end
             end
         end
         local status = engine.Status()
         if product.baselineVerified and db and db.baseline.chosen then
+            local home = ns.Optics.Resolve(db.optics.visual, db.optics.quality, db.optics.reference)
             for key, raw in pairs(db.baseline.values) do
                 local seen = ns.ReadOnly.Read(runtime.reader, key)
-                if not ns.Planner.SafeObservation(seen) or ns.Value.Number(seen.raw) ~= ns.Value.Number(raw) then
+                local target = ns.Optics.Known(key) and home[key] or ns.Value.Number(raw)
+                if target and (not ns.Planner.SafeObservation(seen) or ns.Value.Number(seen.raw) ~= target) then
                     product.baselineVerified = false
                 end
             end
@@ -286,6 +304,8 @@ function P.New(runtime)
             product.combatSuspended = false
             local mode = resume and product.appliedSettings or config().modes[product.active]
             if not mode then runtime.presentation.Clear(); return true end
+            if not resume then mode = ns.Modes.Evaluate(mode, ns.Modes.Home(runtime)) end
+            if not mode then runtime.presentation.Clear(); return nil, "INVALID_MODE_CONFIG" end
             product.appliedSettings = ns.Value.Copy(mode)
             return runtime.presentation.Apply(product.active, mode, db.config, db.camera.keepEffects)
         end

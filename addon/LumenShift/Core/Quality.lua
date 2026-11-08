@@ -3,6 +3,7 @@ local Q = {}
 ns.Quality = Q
 -- Observation catalog only. Never a write whitelist or a target-value guess.
 Q.Candidates = {
+    { key = "assaoDetailShadowStrength", label = "Contact depth (trial)", group = "Contact depth", source = "FOREVER_70532_METADATA", dependency = "AO method/tiers; visible effect and temporal stability unverified" },
     { key = "ResampleAlwaysSharpen", label = "Always sharpen", group = "Sharpening", source = "SRC-03", dependency = "Upscaling / render scale" },
     { key = "ResampleSharpness", label = "Sharpness", group = "Sharpening", source = "SRC-11", dependency = "Reversed UI mapping; upscaling" },
     { key = "groundEffectDensity", label = "Foliage density", group = "Foliage", source = "SRC-03", dependency = "Ground clutter and fade distances" },

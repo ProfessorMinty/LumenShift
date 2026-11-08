@@ -79,7 +79,7 @@ function S.New(runtime)
             .. (ns.Quality.Profiles[db.config.selected.quality] or "Current Baseline") .. "     /     BRIGHTNESS  "
             .. (current.raw or "unavailable") .. "     /     " .. state)
         local lab = runtime.lab and runtime.lab.Status()
-        ui.footer:SetText(product.lastMessage or ns.Product.Message(lab and lab.error) or ns.Product.Message(status.error) or ui.hint or "")
+        ui.footer:SetText(ui.capabilityHint or product.lastMessage or ns.Product.Message(lab and lab.error) or ns.Product.Message(status.error) or ui.hint or "")
         if ui.labStateText and lab then
             local states = { BASELINE = "Original settings restored.", ACTIVE = "Settings applied.", APPLYING = "Applying...",
                 AWAITING_VERIFICATION = "Checking the change...", RECOVERY = "Recovery is available below.", CONFLICT = "An external change was kept. Review recovery below." }
@@ -103,6 +103,7 @@ function S.New(runtime)
         for _, frame in pairs(ui.pageFrames) do frame:Hide() end
         ui.labStateText, ui.trialStateText, ui.cameraStateText = nil, nil, nil
         ui.graphicsStateText = nil
+        ui.capabilityHint = nil
         ui.title:SetText(pages[ui.page][1]); ui.subtitle:SetText(pages[ui.page][2])
         for id, button in pairs(ui.nav) do button.SetSelected(id == ui.page) end
         local key = ui.page .. ":" .. ((ui.page == 1 or ui.page == 3) and ui.edited or "shared")
@@ -144,7 +145,12 @@ function S.New(runtime)
                 button("Change baseline in setup", 0, -342, 260, function() runtime.setup.Open() end, "quiet")
             end
             height = ns.OpticsUI.Build(runtime, ui, parent, env)
-            ui.Primary("Apply " .. ns.StudioConfig.Label(ui.edited), function() product.Select(ui.edited) end)
+            local _, omitted = ns.Modes.Optional(runtime, ui.edited == "natural" and {} or ns.Optics.ModeTargets(cfg().modes[ui.edited]))
+            local _, referenceOmissions = ns.Modes.Reference(runtime)
+            for _, item in ipairs(referenceOmissions) do omitted[#omitted + 1] = item end
+            ui.capabilityHint = ns.Modes.OmissionText(omitted)
+            ui.Primary("Apply " .. ns.StudioConfig.Label(ui.edited), function() product.Select(ui.edited) end,
+                ns.Modes.OmissionText(omitted) or "Saved edits apply only when you click Apply. Detail and quality stay independent.")
         elseif ui.page == 2 then
             if ui.qualityTab ~= "detail" then
                 ui.graphicsDraft = ui.graphicsDraft or ns.NativeGraphics.Draft(runtime)

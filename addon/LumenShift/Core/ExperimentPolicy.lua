@@ -3,6 +3,18 @@ local E, V = {}, ns.Value
 ns.ExperimentPolicy = E
 E.Version = 2
 function E.Capability(reader, key)
+    if key == "assaoDetailShadowStrength" then
+        -- An enabled AO selector is observable; the renderer implementation is not.
+        local normal, enabled = ns.ReadOnly.Read(reader, "SSAO"), ns.ReadOnly.Read(reader, "RAIDsettingsEnabled")
+        local n, r = V.Number(normal.raw), V.Number(enabled.raw)
+        if normal.code ~= "OK" or not n or n < 1 or n > 4 or n % 1 ~= 0
+            or enabled.code ~= "OK" or (r ~= 0 and r ~= 1) then return nil, "CONTACT_DEPTH_CONTEXT_UNAVAILABLE" end
+        if r == 1 then
+            local raid = ns.ReadOnly.Read(reader, "RAIDSSAO"); local value = V.Number(raid.raw)
+            if raid.code ~= "OK" or not value or value < 1 or value > 4 or value % 1 ~= 0 then return nil, "CONTACT_DEPTH_CONTEXT_UNAVAILABLE" end
+        end
+        return true
+    end
     if key ~= "bloomUserMult" then return true end
     local api = reader.env.C_VideoOptions
     local result = ns.ReadOnly.Call(reader, type(api) == "table" and api.IsLinearEnabledOnStart or nil)
@@ -14,9 +26,10 @@ function E.Layer(key) return key == "Contrast" and "visual" or "quality" end
 -- Bounds are TEST POLICIES, never claims of measured native safe/effective domains.
 -- No overall/tier/restart/HDR/camera CVars. Only the exact named leaf candidates below.
 E.Keys = { "Contrast", "ResampleAlwaysSharpen", "ResampleSharpness", "groundEffectDensity", "groundEffectDist",
-    "lodObjectCullSize", "lodObjectFadeScale", "farclip", "terrainLodDist", "bloomUserMult", "weatherDensity" }
+    "lodObjectCullSize", "lodObjectFadeScale", "farclip", "terrainLodDist", "bloomUserMult", "weatherDensity", "assaoDetailShadowStrength" }
 local rules = { Contrast = { 0, 100, 1, "source-ui" }, ResampleAlwaysSharpen = { 0, 1, 1, "experimental-boolean" },
-    ResampleSharpness = { 0, 2, 0.1, "source-ui-reversed" }, bloomUserMult = { 0, 1, 0.2, "source-ui-conditional" } }
+    ResampleSharpness = { 0, 2, 0.1, "source-ui-reversed" }, bloomUserMult = { 0, 1, 0.2, "source-ui-conditional" },
+    assaoDetailShadowStrength = { 0, 0.5, 0.05, "addon-trial-limit-within-historical-0-to-5-not-native-optimum" } }
 local relative = { groundEffectDensity = 32, groundEffectDist = 40, lodObjectCullSize = 2,
     lodObjectFadeScale = 20, farclip = 250, terrainLodDist = 100, weatherDensity = 1 }
 function E.Bounds(key, original)

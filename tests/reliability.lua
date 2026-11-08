@@ -158,7 +158,7 @@ return function(fixture, eq, test)
     test("R14 schema-7 migration keeps completed setup, presets and pending originals", function()
         local f = make(); assert(f.p.Select("nightVision"))
         local old = f.ns.Value.Copy(f.r.db); old.schemaVersion = 7; old.camera.keepEffects = nil; old.onboarding.completed = true
-        local copy, code = f.ns.Store.Open(old); eq(code, "MIGRATED_7_TO_9")
+        local copy, code = f.ns.Store.Open(old); eq(code, "MIGRATED_7_TO_10")
         eq(copy.camera.keepEffects, true); eq(copy.onboarding.completed, true); eq(old.camera.keepEffects, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "052.00"); eq(copy.journal.entries.Brightness.state, "pending")
         copy.camera.keepEffects = "yes"; eq(f.ns.Store.Open(copy), nil)

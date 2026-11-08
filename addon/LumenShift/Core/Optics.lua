@@ -19,14 +19,23 @@ function O.Extract(targets)
 end
 -- One effective value; quality remains underneath an explicit mode override.
 -- Numeric values express intent. Exact pre-change strings live only in journals.
-function O.Resolve(visual, quality)
-    if not O.ValidRequest(visual) or not O.ValidRequest(quality) then return nil, "INVALID_OPTICAL_REQUEST" end
-    local result, sources = V.Copy(quality), {}
-    for key in pairs(result) do sources[key] = "quality" end
+function O.Reference(baseline)
+    local values = {}
+    if baseline and baseline.chosen and baseline.includeOptics then
+        for key, raw in pairs(baseline.values) do if O.Known(key) then values[key] = V.Number(raw) end end
+    end
+    return values
+end
+function O.Resolve(visual, quality, reference)
+    reference = reference or {}
+    if not O.ValidRequest(visual) or not O.ValidRequest(quality) or not O.ValidRequest(reference) then return nil, "INVALID_OPTICAL_REQUEST" end
+    local result, sources = V.Copy(reference), {}
+    for key in pairs(result) do sources[key] = "reference" end
+    for key, value in pairs(quality) do result[key], sources[key] = value, "quality" end
     for key, value in pairs(visual) do result[key], sources[key] = value, "visual" end
     return result, sources
 end
-function O.Defaults() return { visual = {}, quality = {} } end
+function O.Defaults() return { visual = {}, quality = {}, reference = {} } end
 function O.ModeTargets(mode)
     local result = {}
     if mode.sharpening == "custom" then
@@ -47,8 +56,8 @@ function O.RawMap(data)
     return true
 end
 function O.Validate(data)
-    if not V.Fields(data, { visual = true, quality = true, comparison = true })
-        or not O.ValidRequest(data.visual) or not O.ValidRequest(data.quality) then return false end
+    if not V.Fields(data, { visual = true, quality = true, reference = true, comparison = true })
+        or not O.ValidRequest(data.visual) or not O.ValidRequest(data.quality) or not O.ValidRequest(data.reference) then return false end
     local c = data.comparison
     if c ~= nil then
         if not V.Fields(c, { before = true, after = true, expected = true, state = true })

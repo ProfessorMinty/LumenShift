@@ -256,7 +256,7 @@ return function(fixture, eq, test)
     end)
     test("D23 schema-2 migration preserves existing state and malformed experimental data is quarantined", function()
         local f = setup(); local old = f.ns.Value.Copy(f.env.LumenShiftDB); old.schemaVersion = 2; old.baseline = nil; old.camera = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil; old.optics = nil
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_2_TO_9"); eq(migrated.schemaVersion, 9)
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_2_TO_10"); eq(migrated.schemaVersion, 10)
         eq(old.schemaVersion, 2); eq(old.experiments, nil); eq(next(migrated.experiments.journal.entries), nil)
         migrated.experiments.profiles.vista.Unknown = 100
         local reloaded = setup(migrated); eq(reloaded.runtime.db, nil); eq(reloaded.env.LumenShiftDB, migrated); eq(#reloaded.calls, 0)
@@ -280,7 +280,7 @@ return function(fixture, eq, test)
         assert(f.runtime.exportUI.text:find("ROUNDTRIP_PASS_VISUAL_EFFECT_NOT_TESTED", 1, true))
     end)
     test("D26 experimental descriptor admission rejects expanded or forged domains", function()
-        local f = setup(); local policy = f.ns.ExperimentPolicy; local context = policy.Context("1.60.1:70790:16001")
+        local f = setup(nil, { assaoDetailShadowStrength = "0" }); local policy = f.ns.ExperimentPolicy; local context = policy.Context("1.60.1:70790:16001")
         for _, key in ipairs(policy.Keys) do
             local bounds = assert(policy.Bounds(key, f.values[key]))
             local descriptor = policy.Descriptor(key, bounds, context.signature)

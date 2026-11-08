@@ -20,7 +20,7 @@ local function mode(brightness, r, g, b, opacity, vignette)
     return { brightness = brightness, tint = { r = r, g = g, b = b },
         tintEnabled = opacity > 0, opacity = opacity, vignette = vignette,
         letterbox = 0, contrast = 60, useContrast = false,
-        brightnessMode = "custom", sharpening = "inherit", detail = 50,
+        brightnessMode = "custom", intensity = 100, sharpening = "inherit", detail = 50,
         useBloom = false, bloom = 0, styling = "goggles" }
 end
 function C.Defaults()
@@ -37,7 +37,7 @@ end
 function C.UpgradeMode(m)
     if type(m) ~= "table" then return end
     -- Preserve every existing look, including customized Clarity brightness/style.
-    local additions = { brightnessMode = "custom", sharpening = "inherit", detail = 50,
+    local additions = { brightnessMode = "custom", intensity = 100, sharpening = "inherit", detail = 50,
         useBloom = false, bloom = 0, styling = "goggles" }
     for key, value in pairs(additions) do if m[key] == nil then m[key] = value end end
 end
@@ -46,7 +46,7 @@ C.Number = number
 function C.ValidateMode(m)
     return V.Fields(m, { brightness = true, tint = true, tintEnabled = true, opacity = true,
         vignette = true, letterbox = true, contrast = true, useContrast = true,
-        brightnessMode = true, sharpening = true, detail = true, useBloom = true, bloom = true, styling = true })
+        brightnessMode = true, intensity = true, sharpening = true, detail = true, useBloom = true, bloom = true, styling = true })
         and number(m.brightness, 0, 100) and number(m.contrast, 0, 100)
         and type(m.useContrast) == "boolean" -- validated on each explicit Apply
         and V.Fields(m.tint, { r = true, g = true, b = true })
@@ -54,6 +54,7 @@ function C.ValidateMode(m)
         and type(m.tintEnabled) == "boolean" and number(m.opacity, 0, 0.12)
         and number(m.vignette, 0, 0.15) and number(m.letterbox, 0, 0.12)
         and (m.brightnessMode == "custom" or m.brightnessMode == "inherit")
+        and number(m.intensity, 0, 100) and m.intensity % 5 == 0
         and (m.sharpening == "inherit" or m.sharpening == "custom" or m.sharpening == "off")
         and number(m.detail, 0, 100) and m.detail % 5 == 0
         and type(m.useBloom) == "boolean" and number(m.bloom, 0, 1)
@@ -114,20 +115,21 @@ end
 function C.ExportPreset(data, id)
     if not C.Validate(data) or not data.presets[id] then return nil, "UNKNOWN_PRESET" end
     local p = data.presets[id]; local m = p.settings
-    local fields = { "LSMODE2", p.mode, m.brightness, m.brightnessMode, m.contrast, m.useContrast and 1 or 0,
+    local fields = { "LSMODE3", p.mode, m.brightness, m.brightnessMode, m.contrast, m.useContrast and 1 or 0,
         m.sharpening, m.detail, m.useBloom and 1 or 0, m.bloom, m.styling, m.tintEnabled and 1 or 0,
-        m.tint.r, m.tint.g, m.tint.b, m.opacity, m.vignette, m.letterbox }
+        m.tint.r, m.tint.g, m.tint.b, m.opacity, m.vignette, m.letterbox, m.intensity }
     return table.concat(fields, ";")
 end
 function C.ImportPreset(data, name, text)
     if type(text) ~= "string" or #text > 2048 or text:find("[%c|]") then return nil, "INVALID_PRESET_DATA" end
     local f = {}; for field in text:gmatch("[^;]+") do f[#f + 1] = field end
-    if #f ~= 18 or table.concat(f, ";") ~= text or f[1] ~= "LSMODE2" or not C.Labels[f[2]] or f[2] == "natural" then return nil, "INVALID_PRESET_DATA" end
+    if not (f[1] == "LSMODE2" and #f == 18 or f[1] == "LSMODE3" and #f == 19)
+        or table.concat(f, ";") ~= text or not C.Labels[f[2]] or f[2] == "natural" then return nil, "INVALID_PRESET_DATA" end
     for _, i in ipairs({ 6, 9, 12 }) do if f[i] ~= "0" and f[i] ~= "1" then return nil, "INVALID_PRESET_DATA" end end
     local m = { brightness = V.Number(f[3]), brightnessMode = f[4], contrast = V.Number(f[5]), useContrast = f[6] == "1",
         sharpening = f[7], detail = V.Number(f[8]), useBloom = f[9] == "1", bloom = V.Number(f[10]), styling = f[11],
         tintEnabled = f[12] == "1", tint = { r = V.Number(f[13]), g = V.Number(f[14]), b = V.Number(f[15]) },
-        opacity = V.Number(f[16]), vignette = V.Number(f[17]), letterbox = V.Number(f[18]) }
+        opacity = V.Number(f[16]), vignette = V.Number(f[17]), letterbox = V.Number(f[18]), intensity = f[1] == "LSMODE2" and 100 or V.Number(f[19]) }
     if not C.ValidateMode(m) then return nil, "INVALID_PRESET_DATA" end
     local copy, id = C.SavePreset(data, name, f[2])
     if not copy then return nil, id end

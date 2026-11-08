@@ -65,7 +65,7 @@ return function(fixture, eq, test)
         local f = make(); f.select("nightVision")
         local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.baseline = 5, nil; old.graphics = nil; old.optics = nil
         old.addonVersion = "0.2.0-dev.9"; old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_9")
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_10")
         eq(migrated.onboarding.completed, true); eq(migrated.baseline.chosen, false)
         eq(migrated.config.preferences.sound, true); eq(migrated.journal.entries.Brightness.originalRaw, "52")
         eq(old.schemaVersion, 5); eq(old.baseline, nil)
@@ -158,12 +158,14 @@ return function(fixture, eq, test)
         eq(f.values.Brightness, "052.25"); eq(f.values.Contrast, "060.25"); eq(#f.calls, 2)
         eq(next(f.r.db.journal.entries), nil); eq(next(f.r.db.experiments.journal.entries), nil); f.zero()
     end)
-    test("H17 research observations never grant write admission or dump console scripts", function()
+    test("H17 research observations and dependency watchers never grant write admission or dump console scripts", function()
         local f = make(); f.env.ConsoleGetAllCommands = function() error("MUST_NOT_DUMP") end
         local watch = {}; for _, key in ipairs(f.ns.Catalog.WatchKeys()) do watch[key] = true end
         for _, key in ipairs(f.ns.Catalog.ResearchKeys()) do
             eq(f.ns.Catalog.Get(key).admitted, false); eq(f.ns.ExperimentPolicy.Known(key), false)
-            eq(watch[key], nil); f.values[key] = "1"; f.defaults[key] = "0"
+            -- Some research fields are now read-only dependency watchers for the isolated AO trial.
+            eq(f.ns.Catalog.Admitted(f.ns.Catalog.Get(key), f.ns.ExperimentPolicy.Context("1.60.1:70790:16001")), false)
+            f.values[key] = "1"; f.defaults[key] = "0"
         end
         local report = f.ns.Report.Export(f.r)
         assert(report:find("EXTRA GRAPHICS OBSERVATIONS", 1, true)); assert(report:find("assaoSharpness", 1, true))

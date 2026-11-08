@@ -85,6 +85,10 @@ function U.Build(runtime, ui, parent, env)
         text("Lower is sharper: 0 = strongest, 2 = weakest. This is WoW's reversed scale.", 0, y, 836, W.colors.muted)
         y = y - 40
     end
+    if ui.labKey == "assaoDetailShadowStrength" then
+        text("Contact-depth experiment: active AO method and visible effect are unverified. More detail can cause shimmer in motion. The 0–0.5 trial limit is deliberately narrower than historical metadata.", 0, y, 836, W.colors.muted)
+        y = y - 65
+    end
     ui.labStateText = text("", 0, y, 836, W.colors.accent)
     y = y - 46
     action("Preview exact modification (read only)", 0, y, 405, function()
@@ -104,6 +108,9 @@ function U.Build(runtime, ui, parent, env)
         text("Set Contrast per mode. The return mode uses your Original or Game Defaults choice.", 0, y, 836, W.colors.muted)
         action("Edit visual modes", 0, y - 36, 220, function() ui.Open(1); return true end, "quiet")
         y = y - 91
+    elseif ui.labKey == "assaoDetailShadowStrength" then
+        text("This temporary trial is not saved into modes or quality profiles. Use recovery below if it was interrupted.", 0, y, 836, W.colors.muted)
+        y = y - 65
     else
         for i, id in ipairs({ "balanced", "vista", "performance" }) do
             local profile = id

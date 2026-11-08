@@ -11,6 +11,20 @@ function U.Build(runtime, ui, parent, env)
     local function text(label, y, color) return W.Text(parent, label, 0, y, 830, 12, color or W.colors.muted) end
     local y = -375
     if ui.edited ~= "natural" then
+        W.Section(parent, "STARTING LOOK", 0, y, 836)
+        for i, variant in ipairs(ns.Modes.Variants[ui.edited]) do
+            local index = i
+            local button = W.Button(env, parent, variant.name, (i - 1) * 284, y - 40, 268, function()
+                product.Update(function(copy) copy.studio.modes[ui.edited] = ns.Modes.Variant(ui.edited, index) end)
+                ui.Invalidate(3); ui.RebuildInPlace()
+            end)
+            W.Tip(env, button, variant.note)
+        end
+        text("Choosing a starting look replaces this mode's saved edits. Apply changes the scene; save a personal variation to keep your edits.", y - 89)
+        W.Slider(env, parent, "Light & style intensity", 0, y - 137, 0, 100, 5, function() return mode().intensity end,
+            function(value) return product.Update(function(copy) copy.studio.modes[ui.edited].intensity = value end) end, nil, 398)
+        text("0 uses return-look light and no tint/edges. Detail, bloom and deliberate framing stay independent.", y - 208)
+        y = y - 258
         W.Section(parent, "DETAIL", 0, y, 836)
         for i, choice in ipairs({ { "inherit", "Inherit quality" }, { "off", "Off (extra)" }, { "custom", "Custom" } }) do
             local value = choice[1]
@@ -38,6 +52,15 @@ function U.Build(runtime, ui, parent, env)
         text("Clear keeps the native visual changes and removes tint, screen edges and bars. Screen effects remain optional.", y - 86)
         y = y - 137
     end
+    if ui.edited == "natural" then
+        W.Section(parent, "OPTICAL REFERENCE", 0, y, 836)
+        local reference = ns.Optics.Reference(db.baseline)
+        local labels = {}
+        for _, key in ipairs(ns.Value.Keys(reference)) do labels[#labels + 1] = key .. " " .. ns.Report.Number(reference[key]) end
+        text(#labels > 0 and table.concat(labels, " / ") or "Return optics are not captured. Include sharpening and bloom in Setup to opt in.", y - 35)
+        text("Priority: mode detail, then quality preference, then this return reference. Recovery keeps separate exact originals.", y - 74)
+        y = y - 125
+    end
     W.Section(parent, "BEFORE / AFTER", 0, y, 836)
     text("Apply a look first. Before shows your return look and underlying quality; After shows the applied look. Finish returns to After.", y - 35)
     for i, choice in ipairs({ { "before", "Before" }, { "after", "After" }, { "done", "Finish comparison" } }) do
@@ -56,6 +79,14 @@ function U.Build(runtime, ui, parent, env)
             product.Update(function(copy) copy.studio.modes[selected] = ns.StudioConfig.Defaults().modes[selected] end)
             ui.Invalidate(1); ui.Invalidate(3); ui.RebuildInPlace()
         end, nil, "quiet")
+    end
+    if ui.edited ~= "natural" then
+        y = y - 66
+        W.Button(env, parent, "Explore contact depth (experimental)", 0, y, 340, function()
+            ui.labKey, ui.qualityTrials = "assaoDetailShadowStrength", false; ui.Open(8)
+        end, nil, "quiet")
+        text("A separate, temporary AO detail trial. Effect and motion stability need visual comparison.", y - 47)
+        y = y - 60
     end
     return -y + 54
 end
