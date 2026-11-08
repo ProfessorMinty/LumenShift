@@ -16,6 +16,8 @@ The [Forever graphics investigation](docs/33-FOREVER-GRAPHICS-DEEP-DIVE.md) cove
 
 The [mode and optics audit](docs/38-MODE-AUDIT-AND-OPTICS.md) records what every mode actually does, the owner's existing sharpening/AO observations, stronger Night Vision options, real night-vision design context and the remaining implementation work. It distinguishes native sharpening/contact depth from unsupported world-outline shaders and identifies Camera presentation and composite-mode gaps. This research does not change the dev.12 runtime or certify the proposed effects.
 
+The broader [graphics control research](docs/39-GRAPHICS-CONTROL-LANDSCAPE.md) covers native settings, hidden CVars, Lua/console APIs, camera/viewport tools, HDR, drivers and external shaders/client modifications. It includes a searchable historical inventory of 701 graphics/related CVars and 25 graphics console commands, with source/default/security provenance. External dark-edge and monochrome shaders are technically real; their existence does not make them Lua-addon features or establish Forever compatibility.
+
 Setup separates Appearance from Graphics. Save & Close saves choices without applying them; Apply & Reload explicitly applies selected graphics banks before reload. Ordinary mode use remains enabled; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
 ## Install and use
