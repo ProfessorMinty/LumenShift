@@ -18,7 +18,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         return
     end
     if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
-        if runtime.product then runtime.product.Observe() end
+        if runtime.product then runtime.product.Observe(event == "PLAYER_REGEN_ENABLED") end
         if event == "PLAYER_ENTERING_WORLD" and runtime.loaded then
             ns.Compatibility.WarnOnce(runtime)
             ns.Report.Run(runtime, "world-entry-read-only")
@@ -43,6 +43,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.tierTrial = ns.WriteBoundary.NewTierTrials(runtime)
     runtime.names = ns.WriteBoundary.NewExperiments(runtime, true)
     runtime.graphics = ns.WriteBoundary.NewNativeGraphics(runtime)
+    runtime.visual = ns.WriteBoundary.NewVisual(runtime)
     runtime.product = ns.Product.New(runtime)
     runtime.camera = ns.Camera.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)

@@ -28,6 +28,8 @@ local messages = {
     CAMERA_ENTRY_INTERRUPTED = "Camera entry was interrupted. The interface was left visible; restore names from the Camera page if needed.",
     TIER_OR_DEPENDENT_RESTORATION_INCOMPLETE = "Some values did not return to their originals. Export the report; originals are retained. No repair values were guessed.",
     EXTERNAL_CONFLICT_NO_AUTOMATIC_RESTORE = "A setting changed during the trial. Automatic restoration stopped; review the report before restoring the trial.",
+    BLOOM_CAPABILITY_UNAVAILABLE = "Bloom support could not be checked. Other controls remain available.",
+    BLOOM_LINEAR_RENDERER_UNAVAILABLE = "Bloom needs the game's linear renderer. Other controls remain available.",
     MODE_PARTIAL = "The mode did not finish applying. Your original values are retained; open Recovery.",
     BASELINE_VALUE_UNAVAILABLE = "This baseline value was unavailable during setup. Open Setup and capture it again, or choose another mode.",
 }
@@ -37,7 +39,7 @@ function P.Message(code)
 end
 
 function P.New(runtime)
-    local product = { active = "natural", busy = false, generation = 0, lastError = nil }
+    local product = { active = "natural", state = "IDLE", busy = false, generation = 0, lastError = nil }
     local env, db, engine = runtime.reader.env, runtime.db, runtime.engine
     local function report(code, message)
         product.lastError, product.lastMessage = code, message or P.Message(code)
@@ -57,14 +59,16 @@ function P.New(runtime)
     local function commit(id, settings)
         local previous = product.active
         product.active, product.lastError, product.lastMessage = id, nil, nil
+        product.state, product.combatSuspended = "ACTIVE", false
         product.baselineVerified = id == "natural"
         product.appliedBrightness = settings.brightness
+        product.appliedSettings = ns.Value.Copy(settings)
         db.config.selected.visual = id
         ns.Log.Record(runtime.reader, "product", "mode-commit", "INFO", "PASS", { mode = id,
             requested = id ~= "natural" and settings.brightness or nil,
             detail = id == "natural" and (db.baseline.chosen and "SELECTED_BASELINE_VERIFIED" or "CAPTURED_ORIGINAL_RESTORED") or nil })
         if runtime.presentation then
-            local ok, code = runtime.presentation.Apply(id, settings, db.config)
+            local ok, code = runtime.presentation.Apply(id, settings, db.config, db.camera.keepEffects)
             if not ok then
                 product.lastError, product.lastMessage = code, P.Message(code); ns.Diagnostics.Emit(runtime, "LumenShift: " .. code)
                 ns.Log.Record(runtime.reader, "presentation", "apply", "ERROR", code)
@@ -105,7 +109,7 @@ function P.New(runtime)
         if product.busy or next(db.journal.entries) or next(db.experiments.journal.entries) then return report("Restore visuals and quality before disabling controls.") end
         config().enabled = false
         engine.Cancel()
-        product.active, product.baselineVerified = "natural", false; clear()
+        product.active, product.baselineVerified, product.state = "natural", false, "IDLE"; clear()
         if runtime.audio then runtime.audio.Stop() end
         if product.Refresh then product.Refresh() end
         return true
@@ -120,7 +124,6 @@ function P.New(runtime)
         if not ns.StudioConfig.Labels[id] or not ns.StudioConfig.Validate(config()) then return report("INVALID_MODE_CONFIG") end
         if not ns.Baseline.Validate(db.baseline) then return report("INVALID_BASELINE_CONFIG") end
         ns.Baseline.CompleteMissing(runtime) -- explicit click only; no startup capture/write
-        product.baselineVerified = false
         if combat() then return report("Outside combat only. No change queued.") end
         if type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then return report("FOLLOWUP_TIMER_UNAVAILABLE") end
         local settings = ns.Value.Copy(config().modes[id])
@@ -140,20 +143,31 @@ function P.New(runtime)
             if not planned then return report(reason) end -- before ANY Brightness write
         end
         ns.Log.Record(runtime.reader, "product", "mode-select", "INFO", "USER_REQUEST", { mode = id })
-        local function finishMode()
-            if not needsContrast then commit(id, settings); return true end
-            product.busy = true
-            local started, why = runtime.lab.Apply("visual", contrast, function(verified, reason)
-                product.busy = false
+        if needsContrast then
+            local previous, previousState, previousSettings = product.active, product.state, product.appliedSettings
+            local targets = ns.Value.Copy(contrast); targets.Brightness = brightnessTarget
+            product.busy, product.state = true, "APPLYING"
+            local completed = false
+            local ok, why = runtime.visual.Apply(targets, function(verified, reason, restored)
+                completed = true; product.busy = false
                 if verified then commit(id, settings)
-                else clear(); product.active = "natural"; report("MODE_PARTIAL: " .. (reason or "CONTRAST_FAILED")) end
+                elseif restored then
+                    product.active, product.state, product.appliedSettings = previous, previousState, previousSettings
+                    product.RefreshPresentation(true)
+                    report("MODE_COMPENSATED", "The mode could not apply; the previous values were restored. " .. P.Message(reason))
+                else
+                    clear(); product.state, product.baselineVerified = "PARTIAL", false
+                    report("MODE_PARTIAL: " .. (reason or "APPLY_FAILED"))
+                end
             end)
-            if not started then
-                product.busy = false; clear(); product.active = "natural"
-                return report("MODE_PARTIAL: " .. (why or "CONTRAST_FAILED"))
+            if not ok and not completed then
+                product.busy, product.state = false, previousState
+                return report(why)
             end
-            return true
+            if product.Refresh then product.Refresh() end
+            return ok, why
         end
+        local function finishMode() commit(id, settings); return true end
         local previous = product.active
         product.busy, product.generation = true, product.generation + 1
         local generation = product.generation
@@ -162,20 +176,20 @@ function P.New(runtime)
         if status.state ~= "AWAITING_VERIFICATION" then
             product.busy = false
             if ok then return finishMode() end
-            if status.state ~= "ACTIVE" then clear(); product.active = "natural" end
+            if status.state ~= "ACTIVE" then clear(); product.active, product.state = "natural", "RECOVERY" end
             return report(code or "SWITCH_FAILED")
         end
         -- A second read on a later timer turn, NOT a claim of measured settling.
-        -- Brightness verification is read-only; a requested Contrast leg follows only on success.
+        -- Brightness-only verification is read-only; composite modes use NewVisual above.
         -- Failure locks recovery and removes presentation.
         local followup = function()
             if generation ~= product.generation then return end
             product.busy = false
             if engine.Status().transactionID ~= status.transactionID then
-                clear(); product.active = "natural"; report("OPERATION_SUPERSEDED: use Recovery to inspect the current transaction."); return
+                clear(); product.active, product.state = "natural", "RECOVERY"; report("OPERATION_SUPERSEDED: use Recovery to inspect the current transaction."); return
             end
             local verified, reason = engine.Verify()
-            if not verified then clear(); product.active = "natural"; report(reason or "VERIFY_FAILED"); return end
+            if not verified then clear(); product.active, product.state = "natural", "RECOVERY"; report(reason or "VERIFY_FAILED"); return end
             if ok then finishMode()
             else
                 product.active = previous
@@ -183,25 +197,32 @@ function P.New(runtime)
             end
         end
         local handler = runtime.log and runtime.log.Guard("product", "followup", followup, function()
-            product.busy = false; engine.Cancel(); clear(); product.active = "natural"
+            product.busy = false; engine.Cancel(); clear(); product.active, product.state = "natural", "RECOVERY"
         end) or followup
         local scheduled = pcall(env.C_Timer.After, 0.15, handler)
         if not scheduled then
-            product.busy = false; engine.Cancel(); clear(); product.active = "natural"
+            product.busy = false; engine.Cancel(); clear(); product.active, product.state = "natural", "RECOVERY"
             return report("FOLLOWUP_TIMER_FAILED: original retained; use Diagnostics and Recovery.")
         end
         if product.Refresh then product.Refresh() end
         return ok, code
     end
+    function product.ActiveLabel()
+        if product.state == "PARTIAL" then return "Partial / Recovery" end
+        if product.state == "RECOVERY" then return "Recovery needed" end
+        if product.state == "APPLYING" or product.busy then return "Applying mode..." end
+        if product.state == "IDLE" or product.active == "natural" and not product.baselineVerified then return "No mode applied" end
+        return ns.StudioConfig.Label(product.active)
+    end
     function product.Toggle()
         return product.Select(product.active == "nightVision" and "natural" or "nightVision")
     end
-    function product.Observe()
+    function product.Observe(resumeCosmetics)
         if product.busy then return end
         if runtime.lab then
             runtime.lab.Observe()
             if db and db.experiments.journal.entries.Contrast and (runtime.lab.state == "RECOVERY" or runtime.lab.state == "CONFLICT") then
-                clear(); product.active, product.baselineVerified = "natural", false
+                clear(); product.active, product.baselineVerified, product.state = "natural", false, "RECOVERY"
             end
         end
         local status = engine.Status()
@@ -218,16 +239,19 @@ function P.New(runtime)
             if status.state == "BASELINE" and db and not next(db.journal.entries) then
                 local item = ns.ReadOnly.Read(runtime.reader, "Brightness")
                 if ns.Planner.SafeObservation(item) and ns.Value.Number(item.raw) == product.appliedBrightness then
+                    if resumeCosmetics and product.combatSuspended then product.RefreshPresentation(true) end
                     if product.Refresh then product.Refresh() end
                     return -- presentation may be active at an already-matching, unowned value
                 end
             end
-            clear(); product.active = "natural"
+            clear(); product.active, product.state = "natural", "RECOVERY"
             if status.state ~= "BASELINE" then report("Graphics ownership is uncertain; effects suspended. Open Recovery.") end
         end
+        if resumeCosmetics and product.combatSuspended then product.RefreshPresentation(true) end
         if product.Refresh then product.Refresh() end
     end
     function product.Combat()
+        product.combatSuspended = true
         ns.Log.Record(runtime.reader, "product", "combat", "INFO", "PRESENTATION_SUSPENDED_NO_WRITE")
         if runtime.presentation then runtime.presentation.Combat() end
         if runtime.audio then runtime.audio.Stop() end
@@ -235,10 +259,31 @@ function P.New(runtime)
         if runtime.exportUI then runtime.exportUI.window:Hide() end
         if runtime.setup and runtime.setup.window then runtime.setup.window:Hide() end
     end
-    function product.RefreshPresentation()
+    function product.RefreshPresentation(resume)
         if runtime.presentation and db then
-            return runtime.presentation.Apply(product.active, config().modes[product.active], db.config)
+            if product.state ~= "ACTIVE" or product.IsCombat() then runtime.presentation.Clear(); return true end
+            product.combatSuspended = false
+            local mode = resume and product.appliedSettings or config().modes[product.active]
+            if not mode then runtime.presentation.Clear(); return true end
+            product.appliedSettings = ns.Value.Copy(mode)
+            return runtime.presentation.Apply(product.active, mode, db.config, db.camera.keepEffects)
         end
+    end
+    function product.RestoreVisuals(onComplete)
+        if product.busy then return report("BUSY") end
+        product.busy = true
+        local ok, why = runtime.visual.Restore(function(restored, reason)
+            product.busy, product.baselineVerified = false, false
+            clear()
+            if restored then
+                product.active, product.state, product.lastError = "natural", "IDLE", nil
+                product.lastMessage = "Captured pre-change Brightness and Contrast restored. Your saved look choices are unchanged."
+            else product.state = "PARTIAL"; report("MODE_PARTIAL: " .. (reason or "RESTORE_FAILED")) end
+            if product.Refresh then product.Refresh() end
+            if onComplete then onComplete() end
+        end)
+        if not ok then product.busy = false; return report(why) end
+        return true
     end
     function product.Update(mutator)
         if not db then return report("SAVED_DATA_QUARANTINED") end

@@ -39,7 +39,7 @@ function R.New(runtime, openStudio)
             local id = ns.StudioConfig.Order[i]
             button.background:SetColorTexture(0, 0, 0, 0)
             button.label:SetTextColor(unpack(i == self.selection and W.colors.accent or W.colors.text))
-            local active = product.active == id and (id ~= "natural" or not db.baseline.chosen or product.baselineVerified)
+            local active = product.state == "ACTIVE" and product.active == id and (id ~= "natural" or not db.baseline.chosen or product.baselineVerified)
             button.label:SetText(i .. " " .. ns.StudioConfig.Label(id))
             if active then button.activeMark:Show() else button.activeMark:Hide() end
         end

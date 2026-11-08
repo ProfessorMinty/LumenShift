@@ -65,7 +65,7 @@ return function(fixture, eq, test)
         local f = make(); f.select("nightVision")
         local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.baseline = 5, nil; old.graphics = nil
         old.addonVersion = "0.2.0-dev.9"; old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_7")
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_8")
         eq(migrated.onboarding.completed, true); eq(migrated.baseline.chosen, false)
         eq(migrated.config.preferences.sound, true); eq(migrated.journal.entries.Brightness.originalRaw, "52")
         eq(old.schemaVersion, 5); eq(old.baseline, nil)
@@ -123,7 +123,7 @@ return function(fixture, eq, test)
     test("H13 default Contrast failure keeps both recovery originals and no false completion", function()
         local f = make(); f.choose("gameDefaults")
         f.setter = function(key, value) f.values[key] = key == "Contrast" and "55" or value; return true end
-        f.select("natural"); eq(f.r.product.baselineVerified, false); assert(f.r.product.lastError)
+        eq(f.r.product.Select("natural"), nil); f.mock.Flush(); eq(f.r.product.baselineVerified, false); assert(f.r.product.lastError)
         eq(f.r.db.journal.entries.Brightness.originalRaw, "52")
         eq(f.r.db.experiments.journal.entries.Contrast.originalRaw, "60")
         eq(f.values.Contrast, "55"); f.zero()

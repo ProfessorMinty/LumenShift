@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-dev.13 — Reliable mode transactions and presentation (2026-11-08)
+
+- Apply Brightness/Contrast as one planned transaction, preserve both originals, compensate verified attempts in reverse and report partial recovery accurately.
+- Keep visual effects visible with the HUD hidden through an optional Camera preference; resume permitted cosmetics after combat without graphics writes.
+- Size vignette edges relative to the viewport and check the native linear-renderer capability for bloom only.
+- Schema 8 preserves existing settings/journals and adds the Camera effects preference. Native visual acceptance remains pending.
+- Direct captured-visual restoration and current/original Contrast display in Diagnostic Center; preserve the last applied appearance after compensation.
+- **284 Lua 5.1 mocks pass, 0 fail; 9 packaging tests pass.** Syntax/structural checks cover 35 runtime modules, 11 test files and four bindings. UI review is off-client; no new native acceptance. [Delivery details and test steps](docs/42-DEV13-RELIABILITY.md).
+
 ## 0.2.0-dev.12 — Native graphics selection (2026-11-07)
 
 - Add normal/raid graphics choices using native 1–10 recipes and recommended per-key defaults, independent of visual modes and detail profiles. Keep Current is the initial choice; no hardware benchmark or universal best-quality claim.

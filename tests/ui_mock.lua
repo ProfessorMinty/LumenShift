@@ -31,6 +31,10 @@ return function(env)
     function methods:IsVisible() return self.shown and (not self.parent or self.parent:IsVisible()) end
     function methods:SetAlpha(alpha) self.alpha = alpha end
     function methods:SetScript(name, fn) self.scripts[name] = fn end
+    function methods:HookScript(name, fn)
+        local previous = self.scripts[name]
+        self.scripts[name] = function(...) if previous then previous(...) end; fn(...) end
+    end
     function methods:GetScript(name) return self.scripts[name] end
     function methods:RegisterEvent(name) self.events[name] = true end
     function methods:UnregisterEvent(name) self.events[name] = nil end

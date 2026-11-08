@@ -36,6 +36,8 @@ function S.Open(raw)
     end
     local data = V.Copy(raw)
     if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 7
+        and type(data.camera) == "table" and data.camera.keepEffects == nil then data.camera.keepEffects = true end
     local migrated = false
     if data.schemaVersion == 1 then
         if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
@@ -82,8 +84,11 @@ function S.Open(raw)
         data.graphics = ns.NativeGraphics.Defaults()
         data.schemaVersion, migrated = 7, migrated and migrated:gsub("_TO_6$", "_TO_7") or "MIGRATED_6_TO_7"
     end
+    if data.schemaVersion == 7 then
+        data.schemaVersion, migrated = 8, migrated and migrated:gsub("_TO_7$", "_TO_8") or "MIGRATED_7_TO_8"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1/2/3/4/5/6 migrations above are permitted.
+        -- Only the explicitly supported schema-1/2/3/4/5/6/7 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
     if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true })

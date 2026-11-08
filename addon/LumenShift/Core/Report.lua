@@ -36,7 +36,7 @@ function D.Environment(runtime)
     result.apis.C_Timer_After = type(env.C_Timer) == "table" and type(env.C_Timer.After) == "function"
     result.apis.Settings_canvas = type(env.Settings) == "table" and type(env.Settings.RegisterCanvasLayoutCategory) == "function"
     result.apis.IsGraphicsSettingValueSupported = type(env.IsGraphicsSettingValueSupported) == "function"
-    for _, name in ipairs({ "IsSecondaryLightingSupported", "IsPBRWaterSupported", "IsOutlineModeSupported", "IsSpellVisualDensitySystemSupported" }) do
+    for _, name in ipairs({ "IsLinearEnabledOnStart", "IsSecondaryLightingSupported", "IsPBRWaterSupported", "IsOutlineModeSupported", "IsSpellVisualDensitySystemSupported" }) do
         local video = env.C_VideoOptions
         result.apis[name] = type(video) == "table" and type(video[name]) == "function"
     end
@@ -159,8 +159,10 @@ function D.Build(runtime)
                 .. " locked=" .. bool(item.flags and item.flags.locked)
         end
         lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
-            .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI)
+            .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
         local config = db.config
+        lines[#lines + 1] = "visual-operation=" .. safe(runtime.product and runtime.product.state)
+            .. " effects=" .. safe(runtime.presentation and runtime.presentation.Status())
         lines[#lines + 1] = "active visual presentation=" .. safe(runtime.product and runtime.product.active)
             .. " | last verified quality selection=" .. safe(runtime.lab and runtime.lab.activeProfile)
         lines[#lines + 1] = "mode-selection=explicit-user-action; saved-enable-flag=" .. bool(config.studio.enabled)

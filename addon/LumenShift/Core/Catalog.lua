@@ -49,7 +49,8 @@ function C.TestContext(context)
     return type(context) == "table" and context.testOnly == true
         and ns.Compatibility.Experimental(context.signature)
         and (context.experiment == "BRIGHTNESS_75_ROUNDTRIP" or context.experiment == "BOUNDED_LEAF_CALIBRATION"
-            or context.experiment == "QUALITY_TIER_TRIAL" or context.experiment == "CAMERA_NAMES" or context.experiment == "NATIVE_GRAPHICS_BANK")
+            or context.experiment == "QUALITY_TIER_TRIAL" or context.experiment == "CAMERA_NAMES" or context.experiment == "NATIVE_GRAPHICS_BANK"
+            or context.experiment == "VISUAL_MODE")
 end
 
 function C.BrightnessExperiment(signature)
@@ -76,6 +77,12 @@ end
 
 -- Pure predicate for a FUTURE reviewed catalog. No runtime admission/update API.
 function C.Admitted(descriptor, context)
+    if C.TestContext(context) and context.experiment == "VISUAL_MODE" then
+        if type(descriptor) ~= "table" or (descriptor.name ~= "Brightness" and descriptor.name ~= "Contrast") then return false end
+        local single = ns.Value.Copy(context)
+        single.experiment = descriptor.name == "Brightness" and "BRIGHTNESS_75_ROUNDTRIP" or "BOUNDED_LEAF_CALIBRATION"
+        return C.Admitted(descriptor, single)
+    end
     if C.TestContext(context) and context.experiment == "NATIVE_GRAPHICS_BANK" then
         local expected = type(descriptor) == "table" and ns.NativeGraphics.Descriptor(descriptor.name, context.signature, descriptor.restoreRaw)
         if not expected then return false end

@@ -2,6 +2,14 @@ local _, ns = ...
 local E, V = {}, ns.Value
 ns.ExperimentPolicy = E
 E.Version = 2
+function E.Capability(reader, key)
+    if key ~= "bloomUserMult" then return true end
+    local api = reader.env.C_VideoOptions
+    local result = ns.ReadOnly.Call(reader, type(api) == "table" and api.IsLinearEnabledOnStart or nil)
+    if not result or result.n ~= 1 or type(result[1]) ~= "boolean" then return nil, "BLOOM_CAPABILITY_UNAVAILABLE" end
+    if not result[1] then return nil, "BLOOM_LINEAR_RENDERER_UNAVAILABLE" end
+    return true
+end
 function E.Layer(key) return key == "Contrast" and "visual" or "quality" end
 -- Bounds are TEST POLICIES, never claims of measured native safe/effective domains.
 -- No overall/tier/restart/HDR/camera CVars. Only the exact named leaf candidates below.

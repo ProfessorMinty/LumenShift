@@ -4,6 +4,8 @@
 
 Repository: **ProfessorMinty/LumenShift**. Continue `feat/beta-integration` and PR #5. Starting source is `d4e5f33`; the current playable archive remains **0.2.0-dev.12 / adf7763f**. This document plans implementation; it does not change the runtime or declare new live test results.
 
+**Delivery 1 implementation:** [dev.13 reliability and presentation](42-DEV13-RELIABILITY.md), 2026-11-08. Runtime changes and simulated acceptance are recorded there; this plan retains its original starting snapshot. Deliveries 2–5 remain planned.
+
 ## Working agreement
 
 Proceed under the owner's existing full-product development authorization. Complete routine engineering decisions, fixes, tests, documentation and local development archives without adding approval checkpoints between increments. A working build should remain available while the next increment is developed.

@@ -2,10 +2,39 @@ local _, ns = ...
 local P = {}
 ns.Presentation = P
 function P.New(env)
-    local self = { frame = nil, lastError = nil }
+    local self = { frame = nil, lastError = nil, enabled = false, keepEffects = true, barsFraction = 0 }
+    local function inCombat()
+        local ok, value = pcall(env.InCombatLockdown)
+        return not ok or value ~= false
+    end
+    function self.Status()
+        if self.suspended then return "SUSPENDED_COMBAT" end
+        if not self.enabled then return "OFF" end
+        if inCombat() then return "SUSPENDED_COMBAT" end
+        if not self.keepEffects and not env.UIParent:IsShown() then return "HIDDEN_WITH_UI" end
+        return self.frame and self.frame:IsVisible() and "VISIBLE" or "HIDDEN"
+    end
+    function self.SyncVisibility()
+        if not self.frame then return end
+        if self.enabled and not inCombat() and (self.keepEffects or env.UIParent:IsShown()) then self.frame:Show()
+        else self.frame:Hide() end
+    end
+    local function layout()
+        local scale = env.UIParent:GetEffectiveScale()
+        self.frame:SetScale(scale)
+        local width, height = env.UIParent:GetWidth(), env.UIParent:GetHeight()
+        local thickness = math.max(1, math.min(width, height) * 0.10)
+        for index, edge in ipairs(self.edges) do
+            if index <= 2 then edge:SetHeight(thickness) else edge:SetWidth(thickness) end
+        end
+        for _, bar in ipairs(self.bars) do bar:SetHeight(math.max(1, height * self.barsFraction)) end
+    end
     local function build()
         if self.frame then return end
         local frame = env.CreateFrame("Frame", nil, env.UIParent)
+        -- Native SetParent accepts nil. An addon-owned unprotected root survives
+        -- Alt+Z without reparenting the HUD or any foreign frame. Created out of combat.
+        frame:SetParent(nil)
         frame:SetAllPoints(env.UIParent); frame:SetFrameStrata("BACKGROUND"); frame:SetFrameLevel(0)
         frame:EnableMouse(false)
         self.frame, self.edges, self.bars = frame, {}, {}
@@ -16,10 +45,10 @@ function P.New(env)
             ns.Widgets.Asset(texture, "Interface/AddOns/LumenShift/Media/vignette.tga")
             if i <= 2 then
                 texture:SetPoint(edge .. "LEFT", frame, edge .. "LEFT")
-                texture:SetPoint(edge .. "RIGHT", frame, edge .. "RIGHT"); texture:SetHeight(110)
+                texture:SetPoint(edge .. "RIGHT", frame, edge .. "RIGHT")
             else
                 texture:SetPoint("TOP" .. edge, frame, "TOP" .. edge)
-                texture:SetPoint("BOTTOM" .. edge, frame, "BOTTOM" .. edge); texture:SetWidth(110)
+                texture:SetPoint("BOTTOM" .. edge, frame, "BOTTOM" .. edge)
             end
             if i == 1 then texture:SetTexCoord(0, 0, 0, 1, 1, 0, 1, 1)
             elseif i == 2 then texture:SetTexCoord(0, 1, 0, 0, 1, 1, 1, 0)
@@ -33,22 +62,35 @@ function P.New(env)
             bar:SetColorTexture(0, 0, 0, 1); self.bars[i] = bar
         end
         frame:Hide()
+        local function resize()
+            if not inCombat() then
+                local ok = pcall(layout)
+                if not ok then self.Clear(); self.lastError = "PRESENTATION_UNAVAILABLE" end
+            end
+        end
+        env.UIParent:HookScript("OnShow", self.SyncVisibility)
+        env.UIParent:HookScript("OnHide", self.SyncVisibility)
+        env.UIParent:HookScript("OnSizeChanged", resize)
+        frame:RegisterEvent("UI_SCALE_CHANGED"); frame:RegisterEvent("DISPLAY_SIZE_CHANGED")
+        frame:SetScript("OnEvent", resize)
     end
-    function self.Clear() if self.frame then self.frame:Hide() end end
-    function self.Combat() self.Clear() end -- never resize/hide the user's HUD
-    function self.Apply(id, mode, config)
+    function self.Clear() self.enabled, self.suspended = false, false; if self.frame then self.frame:Hide() end end
+    function self.Combat() self.Clear(); self.suspended = true end -- never resize/hide the user's HUD
+    function self.Apply(id, mode, config, keepEffects)
         self.Clear()
         if id == "natural" or not config.studio.effects then return true end
         local checked, inCombat = pcall(env.InCombatLockdown)
         if not checked or inCombat ~= false then return true end
         local ok = pcall(function()
             build()
+            self.keepEffects, self.enabled = keepEffects ~= false, true
             local rgb = mode.tint
             self.tint:SetColorTexture(rgb.r, rgb.g, rgb.b, mode.tintEnabled and mode.opacity or 0)
             for _, edge in ipairs(self.edges) do edge:SetAlpha(mode.vignette) end
             local bars = config.studio.screenshot and mode.letterbox or 0
-            for _, bar in ipairs(self.bars) do bar:SetHeight(math.max(1, env.UIParent:GetHeight() * bars)); bar:SetAlpha(bars > 0 and 1 or 0) end
-            self.frame:Show()
+            self.barsFraction = bars
+            for _, bar in ipairs(self.bars) do bar:SetAlpha(bars > 0 and 1 or 0) end
+            layout(); self.SyncVisibility()
         end)
         if not ok then self.Clear(); self.lastError = "PRESENTATION_UNAVAILABLE"; return nil, self.lastError end
         self.lastError = nil

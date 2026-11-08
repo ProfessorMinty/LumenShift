@@ -59,11 +59,13 @@ function Q.Scan(reader)
         local row = ns.Value.Copy(candidate)
         row.observation = ns.ReadOnly.Read(reader, row.key)
         local bounds = ns.ExperimentPolicy.Bounds(row.key, row.observation.raw)
-        row.operational = ns.ExperimentPolicy.Known(row.key) and bounds ~= nil
+        local supported, capabilityReason = ns.ExperimentPolicy.Capability(reader, row.key)
+        row.operational = supported and ns.ExperimentPolicy.Known(row.key) and bounds ~= nil
             and ns.Planner.SafeObservation(row.observation) and ns.Compatibility.Experimental(ns.Compatibility.Inspect(reader).signature)
-        row.reason = ns.QualityTrial.Known(row.key) and "Native tier trial in Advanced Graphics; checks named settings on restoration."
+        row.reason = not supported and ns.Product.Message(capabilityReason)
+            or ns.QualityTrial.Known(row.key) and "Native tier trial in Advanced Graphics; checks named settings on restoration."
             or row.operational and "Experimental control available in Advanced Graphics."
-            or not ns.ExperimentPolicy.Known(row.key) and "Control not implemented; observation only."
+            or not ns.ExperimentPolicy.Known(row.key) and "Use the native Graphics Quality controls where available; this row is a read-only observation."
             or "Currently unavailable or outside the supported test range; see Diagnostics."
         rows[#rows + 1] = row
     end

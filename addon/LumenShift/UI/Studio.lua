@@ -52,6 +52,7 @@ function S.New(runtime)
     function ui.Primary(label, fn, hint)
         ui.hint = hint or "Preferences save as you edit. Apply changes your current view."
         if label then
+            ui.primary:Enable()
             ui.primary.label:SetText(label); W.Script(ui.primary, "OnClick", fn); ui.primary:Show()
             W.Asset(ui.primary.icon, "Interface/AddOns/LumenShift/Media/" .. (ui.page == 7 and "ui-export" or pageIcons[ui.page]) .. ".tga")
         else ui.primary:Hide(); W.Script(ui.primary, "OnClick", nil) end
@@ -73,8 +74,7 @@ function S.New(runtime)
         local states = { BASELINE = "Ready", ACTIVE = "Applied", RECOVERY = "Recovery available",
             CONFLICT = "External change preserved", AWAITING_VERIFICATION = "Checking change..." }
         local state = product.busy and "Checking change..." or states[status.state] or status.state
-        local activeLabel = product.active == "natural" and db.baseline.chosen and not product.baselineVerified
-            and "No mode applied" or ns.StudioConfig.Label(product.active)
+        local activeLabel = product.ActiveLabel()
         ui.status:SetText("ACTIVE  " .. activeLabel .. "     /     DETAIL PROFILE  "
             .. (ns.Quality.Profiles[db.config.selected.quality] or "Current Baseline") .. "     /     BRIGHTNESS  "
             .. (current.raw or "unavailable") .. "     /     " .. state)
@@ -134,7 +134,7 @@ function S.New(runtime)
                     function(value) return editMode("brightness", value) end, nil, 398)
                 W.Slider(env, parent, "Contrast", 438, -252, 0, 100, 1, function() return cfg().modes[ui.edited].contrast end,
                     function(value) return editMode("contrast", value) end, nil, 398)
-                toggle("Adjust Contrast with this mode", 438, -319, 398, function() return cfg().modes[ui.edited].useContrast end,
+                toggle("Custom Contrast (off: use return look)", 438, -319, 398, function() return cfg().modes[ui.edited].useContrast end,
                     function(value) return editMode("useContrast", value) end)
                 text("Adjustments apply when you click Apply.", 0, -325, 398, 12, W.colors.muted)
             else
@@ -298,14 +298,20 @@ function S.New(runtime)
             text(#results > 0 and table.concat(results, "     /     ") or "Run diagnostics to check current capabilities.", 0, -45, 820, 16)
             button("Run Diagnostics", 0, -86, 200, function() ns.Report.Run(runtime, "user"); ui.BuildPage() end)
             button("Advanced Graphics", 220, -86, 200, function() ui.Open(8) end, "quiet")
-            section("BRIGHTNESS RECOVERY", -151)
+            section("VISUAL RECOVERY", -151)
             local status = runtime.engine.Status()
             local observed = ns.ReadOnly.Read(runtime.reader, "Brightness")
-            text("CURRENT  " .. ns.Report.Number(observed.raw) .. "     /     CAPTURED ORIGINAL  " .. ns.Report.Number(status.original)
+            text("BRIGHTNESS  " .. ns.Report.Number(observed.raw) .. "     /     CAPTURED ORIGINAL  " .. ns.Report.Number(status.original)
                 .. "     /     " .. status.state, 0, -192, 830, 14)
-            button("Apply " .. ns.StudioConfig.Label("natural") .. " visual baseline", 0, -235, 430, function() product.Select("natural") end)
-            button("Restore My Brightness — preview only", 446, -235, 390, function() runtime.engine.Prepare("restore"); ui.BuildPage() end)
-            local y = -285
+            local contrast = ns.ReadOnly.Read(runtime.reader, "Contrast")
+            local owned = db.experiments.journal.entries.Contrast
+            text("CONTRAST  " .. ns.Report.Number(contrast.raw) .. "     /     CAPTURED ORIGINAL  " .. ns.Report.Number(owned and owned.originalRaw)
+                .. "     /     " .. (owned and owned.state or "not owned"), 0, -220, 830, 14)
+            button("Apply " .. ns.StudioConfig.Label("natural") .. " visual baseline", 0, -263, 430, function() product.Select("natural") end)
+            button("Restore captured visuals", 446, -263, 390, function()
+                product.RestoreVisuals(function() ui.BuildPage() end); ui.BuildPage()
+            end)
+            local y = -313
             if status.token then
                 local token = status.token
                 text("Review recovery: original " .. ns.Report.Number(status.preview and status.preview.original)
@@ -330,14 +336,16 @@ function S.New(runtime)
         elseif ui.page == 9 then
             section("A CLEAR VIEW", 0)
             text("Hide the interface. Keep the scene.", 0, -46, 820, 22)
-            text("Camera Mode uses the game's Alt+Z behavior. Your visual mode and quality profile stay active.", 0, -86, 820, 14, W.colors.muted)
+            text("Camera Mode uses the game's Alt+Z behavior. Native visual settings and quality stay active. Choose whether to keep screen effects below.", 0, -86, 820, 14, W.colors.muted)
             toggle("Hide friendly player and pet names in Camera Mode", 0, -138, 620, function() return db.camera.hideWithUI end,
                 function(value) db.camera.hideWithUI = value end)
-            text("To return: use your Camera Mode keybinding, or press Alt+Z and click Exit Camera Mode. Alt+Z itself only shows the interface; it does not restore names.", 0, -191, 820, 14, W.colors.muted)
-            section("FLOATING NAMES", -272)
-            ui.cameraStateText = text("", 0, -313, 820, 13, W.colors.muted)
-            button("Toggle friendly player and pet names", 0, -378, 406, function() runtime.camera.ToggleNames(); ui.Refresh() end)
-            button("Restore original name settings", 430, -378, 406, function() runtime.camera.RestoreNames(); ui.Refresh() end, "quiet")
+            toggle("Keep visual effects in Camera", 0, -188, 620, function() return db.camera.keepEffects end,
+                function(value) db.camera.keepEffects = value; product.RefreshPresentation() end)
+            text("To return: use your Camera Mode keybinding, or press Alt+Z and click Exit Camera Mode. Alt+Z itself only shows the interface; it does not restore names.", 0, -241, 820, 14, W.colors.muted)
+            section("FLOATING NAMES", -322)
+            ui.cameraStateText = text("", 0, -363, 820, 13, W.colors.muted)
+            button("Toggle friendly player and pet names", 0, -428, 406, function() runtime.camera.ToggleNames(); ui.Refresh() end)
+            button("Restore original name settings", 430, -428, 406, function() runtime.camera.RestoreNames(); ui.Refresh() end, "quiet")
             ui.Primary("Enter Camera Mode — hide interface", function() runtime.camera.Toggle(); ui.BuildPage() end,
                 "Optional shortcut: Key Bindings > LumenShift > Camera Mode.")
         end

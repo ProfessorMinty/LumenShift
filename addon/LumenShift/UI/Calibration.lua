@@ -65,16 +65,21 @@ function U.Build(runtime, ui, parent, env)
             ui.labKey = chosen; ui.labTarget = nil; lab.Cancel(); return true
         end)
         b.SetSelected(ui.labKey == key)
+        local supported, reason = ns.ExperimentPolicy.Capability(runtime.reader, key)
+        if not supported then b:Disable(); W.Tip(env, b, ns.Product.Message(reason)) end
     end
     local y = -105 - math.ceil(#ns.ExperimentPolicy.Keys / 3) * 38 - 26
     local item = ns.ReadOnly.Read(runtime.reader, ui.labKey)
     local bounds, reason = ns.ExperimentPolicy.Bounds(ui.labKey, item.raw)
+    local supported, capabilityReason = ns.ExperimentPolicy.Capability(runtime.reader, ui.labKey)
+    if not supported then bounds, reason = nil, ns.Product.Message(capabilityReason) end
     text((labels[ui.labKey] or ui.labKey) .. " now: " .. ns.Report.Number(item.raw), 0, y, 398)
     text(bounds and ("Test range: " .. bounds.min .. "–" .. bounds.max .. "  /  step " .. bounds.step)
         or ("Unavailable: " .. (reason or item.code)), 0, y - 30, 398, W.colors.muted)
     text("Value to try", 438, y, 220)
     local edit = W.Edit(env, parent, ui.labTarget or item.raw or "", 694, y + 5, 142, function(value) ui.labTarget = value end)
     primary("Test & Restore", function() ui.labTarget = edit:GetText(); return lab.Test(ui.labKey, ns.Value.Number(ui.labTarget)) end)
+    if not supported then ui.primary:Disable() end
     y = y - 79
     if ui.labKey == "ResampleSharpness" then
         text("Lower is sharper: 0 = strongest, 2 = weakest. This is WoW's reversed scale.", 0, y, 836, W.colors.muted)

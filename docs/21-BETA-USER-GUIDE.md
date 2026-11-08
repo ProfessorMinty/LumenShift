@@ -1,4 +1,4 @@
-# LumenShift 0.2.0-dev.12 — install and explore
+# LumenShift 0.2.0-dev.13 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
@@ -6,11 +6,15 @@ Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report con
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. Do not delete saved data to work around it. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-dev.12-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-dev.13-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
 Dev.10 opens setup once to ask for the new return-mode choice while preserving your other preferences. **Original** captures your current Brightness/Contrast; **Game Defaults** reads the defaults reported by WoW. The numbers appear below the cards. This choice covers visual settings; graphics quality remains independent. After saving, setup should not repeat on later logins. Setup saves before **Finish & Reload UI**; **Save & Close** avoids reloading. Opening setup and startup never apply graphics or hide the HUD. The new Graphics page applies only through its explicitly labelled Apply & Reload UI action. Reopen preferences through Settings → AddOns → LumenShift → Setup wizard if desired.
+
+## Delivery 1 reliability test
+
+Follow the short [dev.13 button-based checks](42-DEV13-RELIABILITY.md#install-and-check-with-buttons) for combined Brightness/Contrast changes, exact restoration, Camera effects, combat and reload. Diagnostic Center now shows both visual settings and offers **Restore captured visuals** directly. The saved **Keep visual effects in Camera** preference controls hidden-HUD presentation. These fixes have mock coverage; their new native behavior still needs observation.
 
 ## Native graphics setup and first test
 

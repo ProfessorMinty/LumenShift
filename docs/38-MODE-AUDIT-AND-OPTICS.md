@@ -2,6 +2,8 @@
 
 Audit date: 2026-11-07. Runtime reviewed: **0.2.0-dev.12**, commit `adf7763fa0dc19b41fc39b10ebf80815c3a5cf6e`, branch `feat/beta-integration`, ProfessorMinty/LumenShift. This is a research and source-audit delivery, **not a new runtime build**. No installed game, graphics value, preset or asset was changed for this audit.
 
+**Follow-up 2026-11-08:** [dev.13 / Delivery 1](42-DEV13-RELIABILITY.md) implements the composite-mode, Camera presentation, combat-resume, bloom-capability and label/viewport fixes with regression coverage. The dev.12 findings below remain the historical audit; other optical proposals are still future work. No new native acceptance is implied.
+
 ## Conclusions
 
 LumenShift has a substantial configuration/recovery foundation, but its six visual modes still primarily change Brightness, optional Contrast and UI decoration. They do not yet have distinct native optical recipes. Stronger Night Vision sharpening is practical through existing native controls. Darker contact areas are a separate ambient-occlusion investigation. Arbitrary black contours around all world geometry, thermal vision, true monochrome phosphor and programmable world color grading have no supported implementation path in the inspected addon APIs.

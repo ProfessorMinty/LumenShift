@@ -21,6 +21,7 @@ local function fixture(saved)
     env.issecretvalue = function(v) return v == "SECRET" end
     env.GetBuildInfo = function() return "1.60.1", "70790", "Nov 4 2026", 16001 end
     env.InCombatLockdown = function() return false end
+    env.C_VideoOptions = { IsLinearEnabledOnStart = function() return true end }
     local values = { Brightness = "52", Contrast = "60" }
     env.C_CVar = {
         AreCVarsLoaded = function() return true end,
@@ -1048,5 +1049,6 @@ assert(loadfile("tests/quality.lua"))()(fixture, eq, test)
 assert(loadfile("tests/camera.lua"))()(fixture, eq, test)
 assert(loadfile("tests/baseline.lua"))()(fixture, eq, test)
 assert(loadfile("tests/native_graphics.lua"))()(fixture, eq, test)
+assert(loadfile("tests/reliability.lua"))()(fixture, eq, test)
 print(string.format("SIMULATED: %d passed, %d failed (%s); no native game tests", passed, failed, _VERSION))
 assert(failed == 0, "Mock test failures")

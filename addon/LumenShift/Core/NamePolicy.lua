@@ -22,11 +22,11 @@ function N.ValidateTargets(targets, layer)
     for key, value in pairs(targets) do if not N.Known(key) or (value ~= 0 and value ~= 1) then return false end end
     return true
 end
-function N.Defaults() return { journal = ns.Store.EmptyJournal(), sideEffects = {}, hideWithUI = true } end
+function N.Defaults() return { journal = ns.Store.EmptyJournal(), sideEffects = {}, hideWithUI = true, keepEffects = true } end
 function N.Validate(data)
-    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true })
+    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true })
         or not ns.Store.ValidateJournal(data.journal) or type(data.sideEffects) ~= "table"
-        or type(data.hideWithUI) ~= "boolean" then return false end
+        or type(data.hideWithUI) ~= "boolean" or type(data.keepEffects) ~= "boolean" then return false end
     for key, record in pairs(data.journal.entries) do
         if not N.Known(key) or record.layer ~= "camera" or record.descriptorVersion ~= N.Version then return false end
     end

@@ -8,7 +8,7 @@ C.Descriptions = {
     natural = "Your chosen Original or Game Defaults look. No presentation effects.",
     nightVision = "Visibility boost with optional phosphor-green tint.",
     cinematic = "Quiet amber atmosphere; optional screenshot letterbox.",
-    lantern = "Warm light and a gentle visibility lift for interiors.",
+    lantern = "Warm tint and a gentle visibility lift for interiors.",
     clarity = "Neutral, unobstructed visibility for regular gameplay.",
     moonlight = "Cool blue atmosphere with configurable visibility.",
 }
@@ -36,7 +36,7 @@ function C.ValidateMode(m)
     return V.Fields(m, { brightness = true, tint = true, tintEnabled = true, opacity = true,
         vignette = true, letterbox = true, contrast = true, useContrast = true })
         and number(m.brightness, 0, 100) and number(m.contrast, 0, 100)
-        and type(m.useContrast) == "boolean" -- a session-calibrated target is still required before writing
+        and type(m.useContrast) == "boolean" -- validated on each explicit Apply
         and V.Fields(m.tint, { r = true, g = true, b = true })
         and number(m.tint.r, 0, 1) and number(m.tint.g, 0, 1) and number(m.tint.b, 0, 1)
         and type(m.tintEnabled) == "boolean" and number(m.opacity, 0, 0.12)
