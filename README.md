@@ -18,6 +18,8 @@ The [mode and optics audit](docs/38-MODE-AUDIT-AND-OPTICS.md) records what every
 
 The broader [graphics control research](docs/39-GRAPHICS-CONTROL-LANDSCAPE.md) covers native settings, hidden CVars, Lua/console APIs, camera/viewport tools, HDR, drivers and external shaders/client modifications. It includes a searchable historical inventory of 701 graphics/related CVars and 25 graphics console commands, with source/default/security provenance. External dark-edge and monochrome shaders are technically real; their existence does not make them Lua-addon features or establish Forever compatibility.
 
+The [community visual research](docs/40-COMMUNITY-VISUAL-RESEARCH.md) compares firsthand Forever experiments and creator approaches to sharpening, atmosphere, camera composition and sustainable performance. It checks popular recipes against native metadata and proposes concrete improvements and comparisons for each mode. Community preferences and proposed effects remain separate from verified client behavior.
+
 Setup separates Appearance from Graphics. Save & Close saves choices without applying them; Apply & Reload explicitly applies selected graphics banks before reload. Ordinary mode use remains enabled; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
 ## Install and use
