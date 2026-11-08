@@ -14,6 +14,8 @@ Setup offers **Original** (your captured Brightness/Contrast) or **Game Defaults
 
 The [Forever graphics investigation](docs/33-FOREVER-GRAPHICS-DEEP-DIVE.md) covers native/hidden image-quality, lighting, water and detail controls, their evidence and the plan for more substantial modes. Dev.10 also fixes built-in sharpening recipes and adds read-only research observations; the proposed rendering features are not all implemented yet.
 
+The [mode and optics audit](docs/38-MODE-AUDIT-AND-OPTICS.md) records what every mode actually does, the owner's existing sharpening/AO observations, stronger Night Vision options, real night-vision design context and the remaining implementation work. It distinguishes native sharpening/contact depth from unsupported world-outline shaders and identifies Camera presentation and composite-mode gaps. This research does not change the dev.12 runtime or certify the proposed effects.
+
 Setup separates Appearance from Graphics. Save & Close saves choices without applying them; Apply & Reload explicitly applies selected graphics banks before reload. Ordinary mode use remains enabled; it cannot silently leave controls disabled because graphics were still loading. The previous completed-but-disabled setup also works with a direct mode click. No acknowledgement checkbox, non-75 Brightness unlock or repeated calibration requirement stands between a normal click and its action.
 
 ## Install and use
