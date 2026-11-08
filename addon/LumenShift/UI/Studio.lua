@@ -80,6 +80,7 @@ function S.New(runtime)
             .. (current.raw or "unavailable") .. "     /     " .. state)
         local lab = runtime.lab and runtime.lab.Status()
         ui.footer:SetText(ui.capabilityHint or product.lastMessage or ns.Product.Message(lab and lab.error) or ns.Product.Message(status.error) or ui.hint or "")
+        if ui.page == 9 then ui.footer:SetText(ns.Product.Message(runtime.camera.error) or (runtime.camera.busy and "Restoring / checking Camera changes...") or ui.hint or "") end
         if ui.labStateText and lab then
             local states = { BASELINE = "Original settings restored.", ACTIVE = "Settings applied.", APPLYING = "Applying...",
                 AWAITING_VERIFICATION = "Checking the change...", RECOVERY = "Recovery is available below.", CONFLICT = "An external change was kept. Review recovery below." }
@@ -95,13 +96,14 @@ function S.New(runtime)
                 .. "\n" .. (runtime.camera.error and ns.Product.Message(runtime.camera.error) or runtime.names.Status().state))
         end
         if ui.page == 9 then ui.primary.label:SetText(runtime.camera.active and "Exit Camera Mode" or "Enter Camera Mode — hide interface") end
+        if ui.performanceText then ui.performanceText:SetText(runtime.performance.Text()) end
         if ui.graphicsStateText then ui.graphicsStateText:SetText(ns.GraphicsUI.Status(runtime.graphics)) end
         if ui.radial then ui.radial.Refresh() end
     end
     function ui.BuildPage()
         ns.Log.Record(runtime.reader, "studio", "page", "DEBUG", "OPEN", { count = ui.page })
         for _, frame in pairs(ui.pageFrames) do frame:Hide() end
-        ui.labStateText, ui.trialStateText, ui.cameraStateText = nil, nil, nil
+        ui.labStateText, ui.trialStateText, ui.cameraStateText, ui.performanceText = nil, nil, nil, nil
         ui.graphicsStateText = nil
         ui.capabilityHint = nil
         ui.title:SetText(pages[ui.page][1]); ui.subtitle:SetText(pages[ui.page][2])
@@ -180,6 +182,7 @@ function S.New(runtime)
                     if not ok then ns.Diagnostics.Emit(runtime, "LumenShift: " .. ns.GraphicsUI.Message(code)) end
                     ui.BuildPage()
                 end, "Review changes previews the settings. Apply changes only the selected banks.")
+                height = ns.GraphicsUI.Comparison(runtime, ui, parent, env, height + 32)
                 height = math.max(474, height)
             else
             button("Native graphics levels", 600, 0, 236, function() ui.qualityTab = nil; ui.BuildPage() end, "quiet")
@@ -347,20 +350,7 @@ function S.New(runtime)
         elseif ui.page == 8 then
             height = ns.CalibrationUI.Build(runtime, ui, parent, env)
         elseif ui.page == 9 then
-            section("A CLEAR VIEW", 0)
-            text("Hide the interface. Keep the scene.", 0, -46, 820, 22)
-            text("Camera Mode uses the game's Alt+Z behavior. Native visual settings and quality stay active. Choose whether to keep screen effects below.", 0, -86, 820, 14, W.colors.muted)
-            toggle("Hide friendly player and pet names in Camera Mode", 0, -138, 620, function() return db.camera.hideWithUI end,
-                function(value) db.camera.hideWithUI = value end)
-            toggle("Keep visual effects in Camera", 0, -188, 620, function() return db.camera.keepEffects end,
-                function(value) db.camera.keepEffects = value; product.RefreshPresentation() end)
-            text("To return: use your Camera Mode keybinding, or press Alt+Z and click Exit Camera Mode. Alt+Z itself only shows the interface; it does not restore names.", 0, -241, 820, 14, W.colors.muted)
-            section("FLOATING NAMES", -322)
-            ui.cameraStateText = text("", 0, -363, 820, 13, W.colors.muted)
-            button("Toggle friendly player and pet names", 0, -428, 406, function() runtime.camera.ToggleNames(); ui.Refresh() end)
-            button("Restore original name settings", 430, -428, 406, function() runtime.camera.RestoreNames(); ui.Refresh() end, "quiet")
-            ui.Primary("Enter Camera Mode — hide interface", function() runtime.camera.Toggle(); ui.BuildPage() end,
-                "Optional shortcut: Key Bindings > LumenShift > Camera Mode.")
+            height = ns.CameraUI.Build(runtime, ui, parent, env)
         end
         parent:SetHeight(height)
         ui.scrollMaximum = math.max(0, height - 474)

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-dev.16 — Camera composition and graphics observations
+
+- Camera thirds/aspect composition guides, guide-free native screenshot capture and a HUD-independent exit/capture bar.
+- Manual field of view uses current native bounds, exact originals and conflict-aware restoration; no camera tracking or guessed fallback.
+- Optional temporary photo-quality recipes preserve everyday/raid choices and restore captured banks independently. Names, framing and photo entry/exit serialize through the single write boundary.
+- Practical graphics goals and a bounded user-started 10-second FPS observation; session A/B results include actual elapsed time, combat counts, requested choices and observed settings. No auto-tuning or hardware benchmark claims.
+- Schema 11 preserves previous customization/completion/recovery. No startup writes, new assets, game installation, merge or publication.
+- Validation: 366 Lua 5.1 mocks / 9 packaging tests passed; 42 runtime modules / 56 syntax files plus four bindings. Native acceptance remains unobserved; steps in docs/45-DEV16-CAMERA-AND-PERFORMANCE.md.
+
 ## 0.2.0-dev.15 — Distinct starting looks and return optics (2026-11-08)
 
 - Audit Delivery 2: reverify 314 existing tests, add no-setter bloom recovery when renderer support becomes unavailable, and prevent unrelated quality recovery from vetoing or relabelling a valid composite visual mode. Original recovery records remain intact.

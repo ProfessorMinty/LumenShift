@@ -10,11 +10,18 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         if runtime.engine then runtime.engine.Notify() end
         if runtime.names then runtime.names.Observe() end
         if runtime.graphics then runtime.graphics.Observe() end
+        if runtime.photo then runtime.photo.Observe() end
+        if runtime.framing then runtime.framing.Observe() end
         if runtime.product then runtime.product.Observe() end
         return
     end
     if event == "PLAYER_REGEN_DISABLED" then
         if runtime.product then runtime.product.Combat() end
+        if runtime.camera then runtime.camera.Combat() end
+        return
+    end
+    if event == "PLAYER_LEAVING_WORLD" then
+        if runtime.performance and runtime.performance.active then runtime.performance.Cancel("SAMPLE_SCENE_CHANGED") end
         return
     end
     if event == "PLAYER_REGEN_ENABLED" or event == "PLAYER_ENTERING_WORLD" then
@@ -42,10 +49,14 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.lab = ns.WriteBoundary.NewExperiments(runtime)
     runtime.tierTrial = ns.WriteBoundary.NewTierTrials(runtime)
     runtime.names = ns.WriteBoundary.NewExperiments(runtime, true)
+    runtime.framing = ns.WriteBoundary.NewExperiments(runtime, "framing")
     runtime.graphics = ns.WriteBoundary.NewNativeGraphics(runtime)
+    runtime.photo = ns.WriteBoundary.NewNativeGraphics(runtime, true)
     runtime.visual = ns.WriteBoundary.NewVisual(runtime)
     runtime.product = ns.Product.New(runtime)
     runtime.camera = ns.Camera.New(runtime)
+    runtime.performance = ns.Performance.New(runtime)
+    runtime.composition = ns.Composition.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)
     runtime.audio = ns.Audio.New(runtime.reader)
     if db and UIParent then
@@ -70,6 +81,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     self:RegisterEvent("PLAYER_REGEN_DISABLED")
     self:RegisterEvent("PLAYER_REGEN_ENABLED")
     self:RegisterEvent("PLAYER_ENTERING_WORLD")
+    self:RegisterEvent("PLAYER_LEAVING_WORLD")
     ns.Report.Run(runtime, "startup-read-only")
     runtime.log.Add("bootstrap", "initialize", "INFO", "COMPLETE_NO_STARTUP_WRITE")
 end))

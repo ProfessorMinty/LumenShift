@@ -1,6 +1,34 @@
 local _, ns = ...
 local U, W, G = {}, ns.Widgets, ns.NativeGraphics
 ns.GraphicsUI = U
+function U.Comparison(runtime, ui, parent, env, offset)
+    local perf = runtime.performance
+    local y = -offset
+    W.Text(parent, "FIND YOUR BALANCE", 0, y, 820, 12, W.colors.muted)
+    for i, item in ipairs({ { "smooth", "Smooth gameplay" }, { "scenery", "Richer scenery" }, { "quiet", "Quieter operation" } }) do
+        local id = item[1]
+        local button = W.Button(env, parent, item[2], (i - 1) * 282, y - 32, 270, function() perf.priority = id; ui.RebuildInPlace() end)
+        button.SetSelected(perf.priority == id)
+    end
+    local tips = {
+        smooth = "Compare your current view, then try one lower native level if it feels uneven. Judge spell readability during your own raid test.",
+        scenery = "Compare your current view, then try one higher native level. Look at shadows, water and distant detail while moving.",
+        quiet = "Compare a lower native level and your usual FPS cap in WoW Settings. FPS alone cannot measure power, fan noise or heat.",
+    }
+    W.Text(parent, tips[perf.priority], 0, y - 88, 820, 13, W.colors.muted)
+    W.Text(parent, "SCENE FOR THIS OBSERVATION", 0, y - 158, 820, 12, W.colors.muted)
+    for i, id in ipairs({ "outdoor", "town", "interior", "raid", "battleground" }) do
+        local scene = id
+        local button = W.Button(env, parent, ns.Performance.Scenes[id], (i - 1) * 169, y - 190, 158, function() perf.scene = scene; ui.RebuildInPlace() end)
+        button.SetSelected(perf.scene == id)
+    end
+    W.Text(parent, "Hold the same viewpoint and workload for both samples. Sample A, apply your chosen graphics above, then sample B. No settings change during sampling.", 0, y - 248, 820, 13, W.colors.muted)
+    W.Button(env, parent, "Observe FPS for 10 seconds", 0, y - 318, 310, function() perf.Start(); ui.Refresh() end)
+    W.Button(env, parent, "Cancel observation", 330, y - 318, 240, function() perf.Cancel(); ui.Refresh() end, nil, "quiet")
+    ui.performanceText = W.Text(parent, perf.Text(), 0, y - 382, 820, 13)
+    W.Text(parent, "Ten native FPS readings, not frame-time percentiles or a hardware benchmark. Short samples cannot predict raid performance. Results remain for this session and in your exported report.", 0, y - 486, 820, 12, W.colors.muted)
+    return offset + 558
+end
 function U.Status(engine)
     local status = engine.Status()
     local labels = { IDLE = "Ready", ACTIVE = "Graphics applied", RECOVERY = "Captured originals available",

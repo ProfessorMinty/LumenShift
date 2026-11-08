@@ -22,6 +22,8 @@ local research = { "textureFilteringMode", "ResampleQuality", "MSAAAlphaTest", "
     "assaoRadius", "assaoShadowMult", "assaoShadowPower", "assaoBlurPassCount", "assaoSharpness" }
 function C.ResearchKeys() return ns.Value.Copy(research) end
 function C.Get(key)
+    if ns.Framing and ns.Framing.Known(key) then return { kind = "number", layer = "camera", admitted = false } end
+    if key == "maxFPS" or key == "maxFPSBk" then return { kind = "number", diagnosticOnly = true, admitted = false } end
     if ns.NativeGraphics and ns.NativeGraphics.Known(key) then return { kind = "number", layer = "quality", admitted = false } end
     if ns.NamePolicy and ns.NamePolicy.Known(key) then return { kind = "number", layer = "camera", admitted = false } end
     if candidates[key] then return ns.Value.Copy(candidates[key]) end
@@ -52,7 +54,7 @@ function C.TestContext(context)
         and ns.Compatibility.Experimental(context.signature)
         and (context.experiment == "BRIGHTNESS_75_ROUNDTRIP" or context.experiment == "BOUNDED_LEAF_CALIBRATION"
             or context.experiment == "QUALITY_TIER_TRIAL" or context.experiment == "CAMERA_NAMES" or context.experiment == "NATIVE_GRAPHICS_BANK"
-            or context.experiment == "VISUAL_MODE")
+            or context.experiment == "VISUAL_MODE" or context.experiment == "CAMERA_FRAMING")
 end
 
 function C.BrightnessExperiment(signature)
@@ -90,6 +92,16 @@ function C.Admitted(descriptor, context)
     end
     if C.TestContext(context) and context.experiment == "NATIVE_GRAPHICS_BANK" then
         local expected = type(descriptor) == "table" and ns.NativeGraphics.Descriptor(descriptor.name, context.signature, descriptor.restoreRaw)
+        if not expected then return false end
+        for key, value in pairs(expected) do if type(value) ~= "table" and descriptor[key] ~= value then return false end end
+        return names(descriptor.dependencies) and #descriptor.dependencies == 0
+            and names(descriptor.conflicts) and #descriptor.conflicts == 0
+    end
+    if C.TestContext(context) and context.experiment == "CAMERA_FRAMING" then
+        if type(descriptor) ~= "table" or not ns.Value.Finite(descriptor.min) or not ns.Value.Finite(descriptor.max)
+            or descriptor.min <= 0 or descriptor.max >= 180 or descriptor.min >= descriptor.max then return false end
+        -- The native boundary separately rechecks the current API-provided bounds.
+        local expected = ns.Framing.Descriptor(descriptor.name, { min = descriptor.min, max = descriptor.max }, context.signature)
         if not expected then return false end
         for key, value in pairs(expected) do if type(value) ~= "table" and descriptor[key] ~= value then return false end end
         return names(descriptor.dependencies) and #descriptor.dependencies == 0

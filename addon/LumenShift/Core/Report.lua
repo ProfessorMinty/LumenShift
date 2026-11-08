@@ -160,6 +160,43 @@ function D.Build(runtime)
         end
         lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
             .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
+        local fov = ns.ReadOnly.Read(runtime.reader, "cameraFov")
+        local framing = db.camera.framing.journal.entries.cameraFov
+        local bounds = ns.Framing.Range(runtime.reader)
+        lines[#lines + 1] = "cameraFov current=" .. D.Number(fov.raw) .. " original=" .. D.Number(framing and framing.originalRaw)
+            .. " state=" .. safe(framing and framing.state or "unowned") .. " nativeMin=" .. D.Number(bounds and bounds.min)
+            .. " nativeMax=" .. D.Number(bounds and bounds.max) .. " secure=" .. bool(fov.flags and fov.flags.secure)
+            .. " readOnly=" .. bool(fov.flags and fov.flags.readOnly) .. " locked=" .. bool(fov.flags and fov.flags.locked)
+        lines[#lines + 1] = "Camera guides thirds=" .. bool(db.camera.thirds) .. " aspect=" .. safe(db.camera.aspect)
+            .. " capture=" .. safe(runtime.composition and runtime.composition.status or "unavailable")
+            .. " photoRequested=" .. bool(db.camera.photoEnabled) .. " photoLevel=" .. D.Number(db.camera.photoLevel)
+        for _, bank in ipairs(ns.NativeGraphics.Banks) do
+            local record = db.camera.photo.records[bank]
+            lines[#lines + 1] = "photo graphics " .. bank .. " state=" .. safe(record and record.state or "unowned")
+            if record then
+                for _, key in ipairs(ns.Value.Keys(record.original)) do
+                    lines[#lines + 1] = "photo " .. key .. " original=" .. D.Number(record.original[key])
+                        .. " expected=" .. D.Number(record.expected[key]) .. " current=" .. D.Number(ns.ReadOnly.Read(runtime.reader, key).raw)
+                end
+            end
+        end
+        if runtime.performance then
+            lines[#lines + 1] = "FPS observation state=" .. safe(runtime.performance.status) .. " samples=session-only; not frame-time percentiles"
+            for index, sample in ipairs(runtime.performance.results) do
+                lines[#lines + 1] = "FPS sample " .. index .. " userScene=" .. safe(sample.scene) .. " priority=" .. safe(sample.priority)
+                    .. " build=" .. safe(sample.signature) .. " elapsed=" .. D.Number(sample.elapsed) .. " requestedWindow=" .. sample.window
+                    .. " readings=" .. sample.count .. " combatReadings=" .. sample.combatSamples .. " combatUnknown=" .. sample.combatUnknown
+                    .. " mean=" .. D.Number(sample.mean) .. " min=" .. D.Number(sample.low) .. " max=" .. D.Number(sample.high)
+                for _, bank in ipairs(ns.NativeGraphics.Banks) do
+                    local choice = sample.requested and sample.requested[bank]
+                    lines[#lines + 1] = "sample requested " .. bank .. "=" .. safe(choice and choice.source) .. " level=" .. D.Number(choice and choice.level)
+                end
+                for _, key in ipairs(ns.Value.Keys(sample.effective)) do
+                    lines[#lines + 1] = "sample observed " .. key .. "=" .. D.Number(sample.effective[key])
+                end
+            end
+            lines[#lines + 1] = "FPS: scene label is user-selected; workload/viewpoint matching, GPU limits, power and future raid performance are unobserved."
+        end
         local config = db.config
         local effective, sources = ns.Optics.Resolve(db.optics.visual, db.optics.quality, db.optics.reference)
         for _, key in ipairs(ns.Optics.Keys) do

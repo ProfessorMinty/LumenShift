@@ -65,7 +65,7 @@ return function(fixture, eq, test)
         local f = make(); f.select("nightVision")
         local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.baseline = 5, nil; old.graphics = nil; old.optics = nil
         old.addonVersion = "0.2.0-dev.9"; old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_10")
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_5_TO_11")
         eq(migrated.onboarding.completed, true); eq(migrated.baseline.chosen, false)
         eq(migrated.config.preferences.sound, true); eq(migrated.journal.entries.Brightness.originalRaw, "52")
         eq(old.schemaVersion, 5); eq(old.baseline, nil)

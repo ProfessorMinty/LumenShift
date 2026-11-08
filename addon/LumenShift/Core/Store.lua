@@ -49,6 +49,9 @@ function S.Open(raw)
     end
     if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 7
         and type(data.camera) == "table" and data.camera.keepEffects == nil then data.camera.keepEffects = true end
+    if type(data.schemaVersion) == "number" and data.schemaVersion <= 10 and type(data.camera) == "table" then
+        ns.NamePolicy.Upgrade(data.camera)
+    end
     local migrated = false
     if data.schemaVersion == 1 then
         if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
@@ -106,6 +109,9 @@ function S.Open(raw)
     if data.schemaVersion == 9 then
         if type(data.optics) == "table" and data.optics.reference == nil then data.optics.reference = {} end
         data.schemaVersion, migrated = 10, migrated and migrated:gsub("_TO_9$", "_TO_10") or "MIGRATED_9_TO_10"
+    end
+    if data.schemaVersion == 10 then
+        data.schemaVersion, migrated = 11, migrated and migrated:gsub("_TO_10$", "_TO_11") or "MIGRATED_10_TO_11"
     end
     if data.schemaVersion ~= ns.schemaVersion then
         -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.

@@ -756,9 +756,9 @@ end
 function B.NewExperiments(runtime, cameraMode)
     local reader, db = runtime.reader, runtime.db
     local sessionSignature = ns.Compatibility.Inspect(reader).signature
-    local data = db and (cameraMode and db.camera or db.experiments)
-    local policy = cameraMode and ns.NamePolicy or ns.ExperimentPolicy
-    local function watchKeys() return cameraMode and ns.NamePolicy.Keys or ns.Catalog.WatchKeys() end
+    local data = db and (cameraMode == "framing" and db.camera.framing or cameraMode and db.camera or db.experiments)
+    local policy = cameraMode == "framing" and ns.Framing or cameraMode and ns.NamePolicy or ns.ExperimentPolicy
+    local function watchKeys() return cameraMode and policy.Keys or ns.Catalog.WatchKeys() end
     local lab = { state = data and not next(data.journal.entries) and "BASELINE" or "RECOVERY",
         busy = false, certificates = {}, preview = nil, serial = 0, lastError = nil, activeProfile = "currentBaseline" }
     local pending, pendingCompletion, executing, owned = nil, nil, false, {}
@@ -776,6 +776,9 @@ function B.NewExperiments(runtime, cameraMode)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate()
+        if cameraMode == "framing" and reader.namesOnlyBusy and reader.namesOnlyBusy()
+            or cameraMode ~= "framing" and reader.framingBusy and reader.framingBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if not cameraMode and db and next(db.camera.photo.records) then return nil, "RESTORE_PHOTO_FIRST" end
         if not cameraMode and db and db.optics.comparison then return nil, "FINISH_COMPARISON" end
         if reader.visualBusy and reader.visualBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
@@ -827,7 +830,7 @@ function B.NewExperiments(runtime, cameraMode)
             local item = data.journal.entries[key]
             if item and (not ns.Compatibility.Experimental(item.signature) or item.descriptorVersion ~= policy.Version
                 or key == "Brightness" or not policy.Known(key)) then return nil, "RECOVERY_DESCRIPTOR_MISMATCH" end
-            local bounds, why = policy.Bounds(key, item and item.originalRaw or seen[key] and seen[key].raw)
+            local bounds, why = policy.Bounds(key, item and item.originalRaw or seen[key] and seen[key].raw, reader)
             if overrides and overrides[key] then bounds = overrides[key] end
             if not bounds then return nil, why end
             descriptors[key] = policy.Descriptor(key, bounds, sessionSignature)
@@ -870,6 +873,10 @@ function B.NewExperiments(runtime, cameraMode)
         end
         local current = ns.ReadOnly.Read(reader, key)
         local number = V.Number(target)
+        if cameraMode == "framing" then
+            local bounds = ns.Framing.Range(reader)
+            if not bounds or not number or number < bounds.min or number > bounds.max then return false, current.raw, "FOV_OUTSIDE_NATIVE_BOUNDS" end
+        end
         if not ns.Planner.SafeObservation(current) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
         if not ns.Catalog.Admitted(descriptor, policy.Context(sessionSignature))
             or not number or number < descriptor.min or number > descriptor.max then return false, current, "INVALID_EXPERIMENT_TARGET" end
@@ -1012,7 +1019,7 @@ function B.NewExperiments(runtime, cameraMode)
         if not data or next(data.journal.entries) then return nil, "RESTORE_EXPERIMENTS_BEFORE_CALIBRATING" end
         if runtime.engine and runtime.engine.Status().state ~= "BASELINE" then return nil, "RESTORE_BRIGHTNESS_BEFORE_CALIBRATING" end
         local item = ns.ReadOnly.Read(reader, key)
-        local bounds, why = policy.Bounds(key, item.raw)
+        local bounds, why = policy.Bounds(key, item.raw, reader)
         if not bounds then return nil, why end
         if not V.Finite(target) or target < bounds.min or target > bounds.max then return nil, "OUTSIDE_BOUNDED_TEST_POLICY" end
         if math.abs(target / bounds.step - math.floor(target / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP" end
@@ -1056,7 +1063,7 @@ function B.NewExperiments(runtime, cameraMode)
     end
     local function targetBounds(key, target)
         local entry = data and data.journal.entries[key]
-        local bounds, why = policy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw)
+        local bounds, why = policy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw, reader)
         if not bounds then return nil, why end
         if not V.Finite(target) or target < bounds.min or target > bounds.max then return nil, "OUTSIDE_BOUNDED_TEST_POLICY:" .. key end
         if math.abs(target / bounds.step - math.floor(target / bounds.step + 0.5)) > 0.000001 then return nil, "INVALID_TEST_STEP:" .. key end
@@ -1098,7 +1105,7 @@ function B.NewExperiments(runtime, cameraMode)
             local bounds, why
             if sources and sources[key] == "reference" then
                 local entry = data.journal.entries[key]
-                bounds, why = policy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw)
+                bounds, why = policy.Bounds(key, entry and entry.originalRaw or ns.ReadOnly.Read(reader, key).raw, reader)
             else bounds, why = targetBounds(key, target) end
             if not bounds then return nil, why end
             overrides[key] = bounds
@@ -1188,7 +1195,11 @@ function B.NewExperiments(runtime, cameraMode)
             return result, why
         end
     end
-    if cameraMode then reader.nameBusy = function() return lab.busy or executing end
+    if cameraMode then
+        local previousBusy = reader.nameBusy
+        local occupied = function() return lab.busy or executing end
+        if cameraMode == "framing" then reader.framingBusy = occupied else reader.namesOnlyBusy = occupied end
+        reader.nameBusy = function() return occupied() or previousBusy and previousBusy() end
     else reader.experimentBusy = function() return lab.busy or executing end end
     -- The player's Test & Restore click is the action. No prior certificate or exported card is required.
     function lab.Test(key, target)
@@ -1220,7 +1231,7 @@ function B.NewTierTrials(runtime)
     local function gate()
         if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
         if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
-        if db and db.graphics.records.normal then return nil, "RESTORE_GRAPHICS_BANK_FIRST" end
+        if db and (db.graphics.records.normal or next(db.camera.photo.records)) then return nil, "RESTORE_GRAPHICS_BANK_FIRST" end
         if ns.Compatibility.Inspect(reader).signature ~= signature then return nil, "SESSION_BUILD_CHANGED" end
         if not ns.Compatibility.Experimental(signature) then return nil, "IDENTITY_UNAVAILABLE" end
         if not setterAvailable(reader) then return nil, "SETTER_UNAVAILABLE" end
@@ -1387,9 +1398,9 @@ end
 
 -- Native normal/raid recipes. Compact bank snapshots preserve parent selectors
 -- and captured custom leaves; nativeSet above is still the only setter call.
-function B.NewNativeGraphics(runtime)
+function B.NewNativeGraphics(runtime, photo)
     local G, reader, db = ns.NativeGraphics, runtime.reader, runtime.db
-    local data = db and db.graphics
+    local data = db and (photo and db.camera.photo or db.graphics)
     local engine = { busy = false, state = data and next(data.records) and "RECOVERY" or "IDLE" }
     local executing, sequence = false, 0
     local function refresh()
@@ -1403,6 +1414,14 @@ function B.NewNativeGraphics(runtime)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate(bank)
+        if photo and reader.normalGraphicsBusy and reader.normalGraphicsBusy()
+            or not photo and reader.photoGraphicsBusy and reader.photoGraphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if not photo and db and next(db.camera.photo.records) then return nil, "RESTORE_PHOTO_FIRST" end
+        if photo and not next(data.records) then
+            for _, record in pairs(db.graphics.records) do
+                if record.state ~= "owned" or record.error or not G.Matches(reader, record.expected) then return nil, "GRAPHICS_RECOVERY_REQUIRED" end
+            end
+        end
         if db and db.optics.comparison then return nil, "FINISH_COMPARISON" end
         if reader.brightnessBusy and reader.brightnessBusy()
             or reader.experimentBusy and reader.experimentBusy()
@@ -1513,6 +1532,7 @@ function B.NewNativeGraphics(runtime)
         if not V.Copy(record) then return nil, "GRAPHICS_SNAPSHOT_LIMIT" end
         for key in pairs(targets) do if not record.original[key] then return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:" .. key end end
         if restoring then
+            if photo and not G.Matches(reader, record.expected) then return nil, "PHOTO_EXTERNAL_CONFLICT" end
             local seen, errorCode = snapshot(record)
             if not seen then return nil, errorCode end
             record.expected = seen -- explicit Restore replaces the currently displayed bank
@@ -1627,8 +1647,34 @@ function B.NewNativeGraphics(runtime)
         if not record then return true, "NO_CHANGE" end
         return run(bank, V.Copy(record.original), true, callback)
     end
+    function engine.RestorePhoto(callback)
+        if not photo or engine.busy then return nil, "BUSY" end
+        if not data or not G.Validate(data) then return nil, "GRAPHICS_DATA_QUARANTINED" end
+        local index, failure = 0, nil
+        local function advance(ok, code)
+            if not ok then failure = failure or code end
+            index = index + 1
+            local bank = G.Banks[index]
+            if not bank then
+                if failure then engine.state, engine.error = "RECOVERY", failure; refresh() end
+                if callback then callback(not failure, failure) end
+                return
+            end
+            local record = data.records[bank]
+            if not record then advance(true); return end
+            local called = false
+            -- Continue inside this boundary: a native completion callback still
+            -- holds the public reentry guard until it returns.
+            local started, why = run(bank, V.Copy(record.original), true, function(done, reason)
+                called = true; advance(done, reason)
+            end)
+            if not started and not called then advance(false, why) end
+        end
+        advance(true); return true
+    end
     function engine.Observe()
         if engine.busy or executing or not data then return end
+        if not photo and db and next(db.camera.photo.records) then return end
         for _, record in pairs(data.records) do
             if record.state == "owned" and not G.Matches(reader, record.expected) then
                 mark(record, "GRAPHICS_EXTERNAL_CONFLICT"); engine.state = "RECOVERY"
@@ -1637,7 +1683,7 @@ function B.NewNativeGraphics(runtime)
     end
     function engine.Status() return { busy = engine.busy, state = engine.state, error = engine.error } end
     -- Block native callback reentry during preflight, writes and verification.
-    for _, name in ipairs({ "Apply", "Restore" }) do
+    for _, name in ipairs({ "Apply", "Restore", "RestorePhoto" }) do
         local fn = engine[name]
         engine[name] = function(...)
             if executing then return nil, "BUSY" end
@@ -1653,6 +1699,9 @@ function B.NewNativeGraphics(runtime)
             return result, why
         end
     end
-    reader.graphicsBusy = function() return engine.busy or executing end
+    local previousBusy = reader.graphicsBusy
+    local occupied = function() return engine.busy or executing end
+    if photo then reader.photoGraphicsBusy = occupied else reader.normalGraphicsBusy = occupied end
+    reader.graphicsBusy = function() return occupied() or previousBusy and previousBusy() end
     return engine
 end
