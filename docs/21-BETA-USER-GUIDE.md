@@ -1,12 +1,14 @@
-# LumenShift 0.2.0-beta.2 — install and explore
+# LumenShift 0.2.0-beta.3 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+Beta.3 includes the [Phase 5 audit fixes and remaining-work list](47-PHASE5-AUDIT-AND-COMPLETION.md). Saving setup updates the applied effects/mute preferences without changing graphics. A failed keyboard API releases LumenShift keyboard capture while mouse controls remain available. No SavedVariables reset is needed.
 
 ## Install the whole folder
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. Do not delete saved data to work around it. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-beta.2-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-beta.3-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 

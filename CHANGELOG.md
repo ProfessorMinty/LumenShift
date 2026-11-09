@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.3 — Phase 5 audit fixes (2026-11-08)
+
+- Release keyboard capture when focus, modifier or propagation APIs fail; consume activation before running its action, preserve unrelated held-key releases, and retain mouse controls. Redact native exception details in diagnostic logging.
+- Saving setup now refreshes the already-applied effects and stops a muted cue without applying mode-editor changes or writing graphics CVars. Existing completion, presets and schema-12 recovery data remain intact.
+- Add ten adversarial keyboard, setup-comfort and preset-capacity regressions. All 393 Lua 5.1 tests and 10 packaging tests pass; syntax covers 60 Lua files plus four bindings, with 44 runtime modules. Current completion audit and remaining work: docs/47-PHASE5-AUDIT-AND-COMPLETION.md.
+- No game installation, live test, merge or publication.
+
 ## 0.2.0-beta.2 — Delivery 5 candidate (2026-11-08)
 
 - Audit Camera: preserve independent names choices on exit and cancel pending screenshots across Camera sessions. Schema 12 keeps session return intent separate from exact originals.

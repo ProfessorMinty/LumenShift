@@ -1,10 +1,10 @@
 # Beta acceptance and eventual distribution
 
-> Current beta.2 completes Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
+> Current beta.3 adds the [Phase 5 audit fixes](47-PHASE5-AUDIT-AND-COMPLETION.md) to completed Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
 
-## Current beta.2 acceptance record
+## Current beta.3 acceptance record
 
-Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.2**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
+Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.3**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
 
 | Area | Acceptance check |
 |---|---|

@@ -30,6 +30,14 @@ function S.New(runtime)
         if ui.draft.graphics then db.graphics.choices = ns.Value.Copy(ui.draft.graphics) end
         product.baselineVerified = false
         ui.draft.capture = false
+        -- Apply saved comfort preferences to the already-applied presentation,
+        -- not to unrelated mode-editor changes. This never changes CVars.
+        product.RefreshPresentation(true)
+        if runtime.audio and not db.config.preferences.sound then runtime.audio.Stop() end
+        if not db.config.preferences.animation or db.config.preferences.reducedMotion then
+            if ui.window then W.Fade(ui.window, db.config.preferences) end
+            if runtime.ui and runtime.ui.window then W.Fade(runtime.ui.window, db.config.preferences) end
+        end
         if runtime.ui and runtime.ui.BuildPage then runtime.ui.BuildPage(); runtime.ui.Refresh() end
         db.onboarding.completed = true
         ns.Log.Record(runtime.reader, "setup", "save", "INFO", "PREFERENCES_SAVED_NO_GRAPHICS_WRITE")

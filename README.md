@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.2** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.3** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.3 audits Phase 5 and fixes keyboard-failure input capture and setup comfort preferences not refreshing the active appearance. [Audit, verification and remaining completion work](docs/47-PHASE5-AUDIT-AND-COMPLETION.md).
 
 Beta.2 completes Delivery 5: editable saved presets, Delete/Undo, retained drafts, scrolling setup, keyboard focus/navigation, display fitting, reduced-motion fixes and readable status. Its Delivery 4 audit fixes independent Camera/name restoration and capture cancellation across sessions. [Current changes, support matrix and test steps](docs/46-BETA2-POLISH-AND-AUDIT.md).
 
@@ -55,7 +57,7 @@ Optional Contrast and named sharpening, foliage, distance, LOD, bloom and weathe
 
 The single native graphics call remains in WriteBoundary. Planner, per-key originals, ownership, conflict detection and readback remain internal requirements. An interrupted session or unresolved conflict needs an explicit recovery decision; startup never guesses a restore. SavedVariables is not immediately durable or crash-proof. Restore before updating or removing the addon.
 
-The owner supplied successful **dev.6 Brightness 45 → 75 → 45** native readbacks on **Forever 1.60.1:70862:16001**, with no report warnings/errors. [Evidence and compatibility policy](docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) distinguish that success from dev.7's new simulated paths. See the [quality feature/evidence matrix](docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera architecture](docs/30-CAMERA-MODE.md). **Dev.16 is an expanded interactive build, not an accepted feature-complete beta.** New native graphics controls have mock coverage; full dependency restoration and owner in-game acceptance remain unverified.
+The owner supplied successful **dev.6 Brightness 45 → 75 → 45** native readbacks on **Forever 1.60.1:70862:16001**, with no report warnings/errors. [Evidence and compatibility policy](docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) distinguish that success from dev.7's new simulated paths. See the [quality feature/evidence matrix](docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera architecture](docs/30-CAMERA-MODE.md). **The current beta.3 is an integrated candidate awaiting owner acceptance.** New native graphics controls have mock coverage; full dependency restoration and owner in-game acceptance remain unverified.
 
 ## Diagnostics
 
