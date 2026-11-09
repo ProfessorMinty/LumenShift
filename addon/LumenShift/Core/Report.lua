@@ -183,6 +183,8 @@ function D.Build(runtime)
             .. " readOnly=" .. bool(fov.flags and fov.flags.readOnly) .. " locked=" .. bool(fov.flags and fov.flags.locked)
         lines[#lines + 1] = "Camera guides thirds=" .. bool(db.camera.thirds) .. " aspect=" .. safe(db.camera.aspect)
             .. " capture=" .. safe(runtime.composition and runtime.composition.status or "unavailable")
+            .. " controlsHidden=" .. bool(runtime.composition and runtime.composition.controlsHidden)
+            .. " keyboard=" .. bool(runtime.composition and runtime.composition.keyboard and runtime.composition.keyboard.enabled)
             .. " photoRequested=" .. bool(db.camera.photoEnabled) .. " photoLevel=" .. D.Number(db.camera.photoLevel)
         for _, bank in ipairs(ns.NativeGraphics.Banks) do
             local record = db.camera.photo.records[bank]

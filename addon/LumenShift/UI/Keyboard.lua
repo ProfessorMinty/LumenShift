@@ -87,6 +87,7 @@ function K.Attach(env, window, viewport, shortcuts)
         W.Script(window, "OnKeyDown", nil)
         W.Script(window, "OnKeyUp", nil); nav.consumed = {}
         if not released then pcall(window.Hide, window) end
+        if nav.OnFailure then pcall(nav.OnFailure, code) end
         ns.Log.Record(ns.runtime and ns.runtime.reader, "keyboard", "fallback", "WARN", code)
     end
     local function propagate(value)
@@ -123,7 +124,7 @@ function K.Attach(env, window, viewport, shortcuts)
             if not success then disable("KEYBOARD_ACTION_FAILED"); return end
             action = handler
         end
-        if not action and value == "TAB" then nav.Tab(); return end
+        if not action and value == "TAB" and #nav.controls > 0 then nav.Tab(); return end
         if not action and (value == "ENTER" or value == "SPACE") and nav.current and nav.current:IsVisible() and not nav.current.lumenEdit then
             local control = nav.current
             local click = control:GetScript("OnClick")

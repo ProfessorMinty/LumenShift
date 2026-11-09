@@ -6,7 +6,7 @@ function U.Build(runtime, ui, parent, env)
     local function rebuild() ui.RebuildInPlace() end
     W.Text(parent, "COMPOSE YOUR SHOT", 0, 0, 820, 12, W.colors.muted)
     W.Text(parent, "Hide the interface. Keep the scene.", 0, -34, 820, 22)
-    W.Text(parent, "Enter hides the HUD. A small capture / exit bar stays available. Capture hides the bar and guides.", 0, -74, 820, 13, W.colors.muted)
+    W.Text(parent, "Hide controls gives a clean view for any screenshot tool. H shows them again. Escape exits Camera Mode.", 0, -74, 820, 13, W.colors.muted)
     W.Toggle(env, parent, "Hide friendly player and pet names", 0, -126, 400, function() return db.camera.hideWithUI end,
         function(value) db.camera.hideWithUI = value end)
     W.Toggle(env, parent, "Keep visual effects", 430, -126, 400, function() return db.camera.keepEffects end,
@@ -45,6 +45,6 @@ function U.Build(runtime, ui, parent, env)
     W.Button(env, parent, "Toggle friendly player and pet names", 0, -928, 406, function() camera.ToggleNames(); ui.Refresh() end)
     W.Button(env, parent, "Restore original name settings", 430, -928, 406, function() camera.RestoreNames(); ui.Refresh() end, nil, "quiet")
     ui.Primary("Enter Camera Mode — hide interface", function() camera.Toggle(); rebuild() end,
-        "Exit with the visible button, Camera keybinding, or Alt+Z then Exit. Combat shows the HUD; it never restores graphics.")
+        "Escape or Exit Camera Mode returns the HUD and Camera settings. H hides/shows capture controls. Combat shows the HUD.")
     return 986
 end

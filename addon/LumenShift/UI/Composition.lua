@@ -3,15 +3,20 @@ local C, W = {}, ns.Widgets
 ns.Composition = C
 function C.New(runtime)
     local env, db = runtime.reader.env, runtime.db
-    local self = { capturing = false, status = "READY", generation = 0 }
+    local self = { capturing = false, controlsHidden = false, status = "READY", generation = 0 }
     local function sync()
         if not self.root then return end
-        if runtime.camera.active and not runtime.product.IsCombat() and not self.capturing then self.root:Show() else self.root:Hide() end
+        local active = runtime.camera.active and not runtime.product.IsCombat()
+        if active and not self.capturing and not self.controlsHidden then self.root:Show() else self.root:Hide() end
+        -- This pixel-free, mouse-transparent frame must survive a clean view or
+        -- pending screenshot so Escape can still exit. It never captures outside Camera.
+        if active and self.keyboard.enabled then self.input:Show() else self.input:Hide() end
     end
     local function layout()
         local root, prefs = self.root, db.camera
         local width, height = env.UIParent:GetWidth(), env.UIParent:GetHeight()
         root:SetScale(env.UIParent:GetEffectiveScale())
+        self.bar:SetScale(math.min(1, math.max(0.1, (width - 24) / 720)))
         local ratio = ({ wide = 16 / 9, cinema = 2.39, square = 1 })[prefs.aspect]
         local w, h = width, height
         if ratio then if width / height > ratio then w = height * ratio else h = width / ratio end end
@@ -25,7 +30,15 @@ function C.New(runtime)
             line:SetAlpha((i <= 4 and prefs.thirds or i > 4 and ratio) and 0.55 or 0)
         end
     end
-    function self.Hide() if self.root then self.root:Hide() end end
+    function self.Hide()
+        if self.root then self.root:Hide(); self.input:Hide() end
+    end
+    function self.ToggleControls()
+        if not runtime.camera.active or runtime.product.IsCombat() or not self.keyboard or not self.keyboard.enabled then return nil end
+        self.controlsHidden = not self.controlsHidden
+        if env.GameTooltip then env.GameTooltip:Hide() end
+        sync(); return true
+    end
     function self.CancelCapture()
         -- A scheduled capture belongs to this Camera entry only. An already
         -- issued native request drains until its event/timeout; it cannot be undone.
@@ -33,17 +46,34 @@ function C.New(runtime)
             self.generation = self.generation + 1
             self.capturing, self.status = false, "CAPTURE_CANCELLED"
         end
-        self.Hide()
+        self.controlsHidden = false; self.Hide()
     end
     local function build()
         if self.root then return end
         local root = env.CreateFrame("Frame", nil, env.UIParent); self.root, self.lines = root, {}
         root:SetParent(nil); root:SetAllPoints(env.UIParent); root:SetFrameStrata("DIALOG"); root:EnableMouse(false)
         for i = 1, 8 do local line = root:CreateTexture(nil, "OVERLAY"); line:SetColorTexture(1, 1, 1, 1); self.lines[i] = line end
-        local bar = env.CreateFrame("Frame", nil, root); bar:SetSize(520, 52); bar:SetPoint("BOTTOM", root, "BOTTOM", 0, 32)
+        local input = env.CreateFrame("Frame", nil, env.UIParent); self.input = input
+        input:SetParent(nil); input:SetSize(1, 1); input:SetPoint("TOPLEFT", env.UIParent, "TOPLEFT")
+        input:SetFrameStrata("DIALOG"); input:SetFrameLevel(50); input:EnableMouse(false)
+        self.keyboard = ns.Keyboard.Attach(env, input, nil, function(key)
+            if key == "ESCAPE" then return function() runtime.camera.Exit() end end
+            if key == "H" then return self.ToggleControls end
+        end)
+        local bar = env.CreateFrame("Frame", nil, root); self.bar = bar
+        bar:SetSize(720, 84); bar:SetPoint("BOTTOM", root, "BOTTOM", 0, 32)
         W.Fill(bar, W.colors.bg); W.Border(bar)
-        W.Button(env, bar, "Capture screenshot", 10, -9, 240, self.Capture, "Hides these guides and controls for the capture.")
-        W.Button(env, bar, "Exit Camera Mode", 264, -9, 246, function() runtime.camera.Exit() end)
+        W.Button(env, bar, "Capture screenshot", 10, -9, 224, self.Capture, "Hides these guides and controls for the capture.")
+        self.hideButton = W.Button(env, bar, "Hide controls", 248, -9, 224, self.ToggleControls,
+            "Clean view for external screenshots or recording. H shows controls again; Escape exits Camera Mode.")
+        W.Button(env, bar, "Exit Camera Mode", 486, -9, 224, function() runtime.camera.Exit() end)
+        local hint = W.Text(bar, "H: hide / show controls   |   Esc: exit Camera Mode", 14, -56, 692, 12, W.colors.muted)
+        self.keyboard.OnFailure = function(code)
+            self.controlsHidden, self.status = false, code; self.hideButton:Disable()
+            hint:SetText("Keyboard unavailable. Use Exit Camera Mode or your Camera keybinding.")
+            sync()
+        end
+        if not self.keyboard.enabled then self.keyboard.OnFailure(self.keyboard.error) end
         root:RegisterEvent("SCREENSHOT_SUCCEEDED"); root:RegisterEvent("SCREENSHOT_FAILED")
         root:RegisterEvent("UI_SCALE_CHANGED"); root:RegisterEvent("DISPLAY_SIZE_CHANGED")
         root:SetScript("OnEvent", function(_, event)
@@ -54,7 +84,7 @@ function C.New(runtime)
                 end
             elseif not runtime.product.IsCombat() then layout() end
         end)
-        root:Hide()
+        self.Hide()
     end
     function self.Show()
         if not db or runtime.product.IsCombat() then return end
@@ -67,7 +97,9 @@ function C.New(runtime)
         end
         self.generation = self.generation + 1
         local id = self.generation
-        self.capturing, self.status = true, "CAPTURING"; self.Hide()
+        self.capturing, self.status = true, "CAPTURING"
+        if env.GameTooltip then env.GameTooltip:Hide() end
+        sync()
         -- Let the hidden guides render before requesting the native screenshot.
         local scheduled = pcall(env.C_Timer.After, 0.1, function()
             if id ~= self.generation then return end

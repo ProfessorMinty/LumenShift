@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.9 — Clean photo capture and Escape (2026-11-09)
+
+- Add Hide controls/H for a clean external screenshot or recording view; retain the selected scene effects while hiding guides, toolbar and tooltip. H reveals controls again.
+- Escape exits Camera through existing HUD/name/FOV/photo restoration, including during queued or issued screenshots. Ordinary keys pass through; chat focus and combat remain respected. Keyboard failure reveals clickable Exit controls.
+- Keep clean view session-only, retain it across capture completion/display refresh, and reset it on exit/re-entry. Fit the three-button toolbar to smaller displays and export clean-view/input status.
+- Add ten input/lifecycle regressions and source-backed Narcissus/Forever photo-feature research in docs/53-PHOTO-MODE-RESEARCH-AND-CONTROLS.md. The planned in-scene editor, new filters and optional model stage are not implemented by this update. Schema 12 and graphics policy remain unchanged.
+
 ## 0.2.0-beta.8 — Camera name eligibility (2026-11-09)
 
 - Correct a reproducible Camera refusal: server-account/character storage flags describe persistence, not a write restriction. Allow those flags only for the existing friendly-player/pet-name controls, including planning, readback, conflict observation, compensation and explicit recovery.
