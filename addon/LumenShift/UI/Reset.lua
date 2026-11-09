@@ -23,7 +23,7 @@ function R.New(runtime, replaceSaved)
                 return tell("A change is still finishing. Try Reset again in a moment.", "OPERATION_ACTIVE")
             end
         end
-        for _, name in ipairs({ "product", "camera", "tierTrial" }) do
+        for _, name in ipairs({ "product", "camera", "tierTrial", "cameraActions", "photoComposition" }) do
             if runtime[name] and runtime[name].busy then
                 return tell("A change is still finishing. Try Reset again in a moment.", "OPERATION_ACTIVE")
             end
@@ -39,6 +39,12 @@ function R.New(runtime, replaceSaved)
     function ui.Confirm()
         if not ui.armed or reader.resetPending then return nil, "RESET_NOT_CONFIRMED" end
         local ok, why = ready(); if not ok then return nil, why end
+        if runtime.cameraActions then
+            local stopped = runtime.cameraActions.StopOrbit()
+            if not stopped then return tell("Camera motion could not stop. Release the camera control and retry.", "CAMERA_STOP_FAILED") end
+        end
+        if runtime.captureSequence then runtime.captureSequence.Cancel() end
+        if runtime.composition then runtime.composition.CancelCapture() end
         local fresh = ns.Store.Open(nil)
         -- Change the global save target, not the live controllers' database.
         -- This fence stops owned input/events and the one native write boundary

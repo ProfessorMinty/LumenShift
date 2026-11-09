@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.13 — Photo composition and output
+
+- Audit standalone photo lifecycle; add reversible framing, zoom/orbit, native AA/ray-shadow/JPEG controls, light leaks and separate saved compositions.
+- Schema 15 preserves settings, recovery and earlier photo looks; no Narcissus dependency. See [implementation, evidence and owner test](docs/58-PHOTO-COMPOSITION-AND-OUTPUT.md).
+
 ## 0.2.0-beta.12 — standalone photo workflow
 
 - Add native pose buttons/favorites, timed captures and bounded bursts, expanded name/bubble choices and look undo/redo.

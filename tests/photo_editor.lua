@@ -14,9 +14,9 @@ return function(cameraFixture, eq, test)
         local f = make(); local old = f.ns.Value.Copy(f.r.db)
         old.schemaVersion, old.camera.editor, old.onboarding.completed = 12, nil, true
         old.camera.thirds = true
-        local g = make(old); eq(g.r.storeStatus, "MIGRATED_12_TO_14"); eq(g.r.db.schemaVersion, 14)
+        local g = make(old); eq(g.r.storeStatus, "MIGRATED_12_TO_15"); eq(g.r.db.schemaVersion, 15)
         eq(g.r.db.onboarding.completed, true); eq(g.r.db.camera.thirds, true); eq(#g.calls, 0)
-        eq(old.camera.editor, nil); eq(g.r.db.camera.editor.version, 1)
+        eq(old.camera.editor, nil); eq(g.r.db.camera.editor.version, 2)
     end)
     test("PE02 every look control validates, changes only photo data and previews without native writes", function()
         local f = make(); local before = f.ns.Value.Copy(f.r.db.config); local ui = enter(f)

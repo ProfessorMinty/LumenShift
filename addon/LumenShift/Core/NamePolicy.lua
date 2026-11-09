@@ -29,6 +29,8 @@ function N.Targets(reader, data)
     return targets, unavailable
 end
 function N.UpgradeTools(data)
+    if data.output == nil then data.output = ns.PhotoOutput.Defaults() end
+    if data.composition == nil then data.composition = ns.PhotoComposition.Defaults() end
     if data.tools == nil then data.tools = ns.PhotoTools.Defaults() end
     if data.nameGroups == nil then data.nameGroups = { players = false, pets = false, npcs = false, bubbles = false } end
 end
@@ -61,14 +63,14 @@ function N.Defaults()
     N.Upgrade(data); return data
 end
 function N.Validate(data)
-    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true, editor = true, tools = true, nameGroups = true })
+    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true, editor = true, tools = true, nameGroups = true, output = true, composition = true })
         or not ns.Store.ValidateJournal(data.journal) or type(data.sideEffects) ~= "table"
         or type(data.hideWithUI) ~= "boolean" or type(data.keepEffects) ~= "boolean" then return false end
     if type(data.thirds) ~= "boolean" or not ({ none = true, wide = true, cinema = true, square = true })[data.aspect]
         or type(data.photoEnabled) ~= "boolean" or not V.Finite(data.photoLevel) or data.photoLevel % 1 ~= 0
         or data.photoLevel < 1 or data.photoLevel > 10 or not ns.Framing.Validate(data.framing)
         or not ns.NativeGraphics.Validate(data.photo) or not ns.PhotoConfig.Validate(data.editor) then return false end
-    if not ns.PhotoTools.Validate(data.tools) or not V.Fields(data.nameGroups, { players = true, pets = true, npcs = true, bubbles = true }) then return false end
+    if not ns.PhotoOutput.Validate(data.output) or not ns.PhotoComposition.Validate(data.composition) or not ns.PhotoTools.Validate(data.tools) or not V.Fields(data.nameGroups, { players = true, pets = true, npcs = true, bubbles = true }) then return false end
     for _, group in ipairs(N.Groups) do if type(data.nameGroups[group.id]) ~= "boolean" then return false end end
     if data.nameReturn ~= nil and (not V.Fields(data.nameReturn, { targets = true })
         or not N.ValidateTargets(data.nameReturn.targets, "camera")) then return false end

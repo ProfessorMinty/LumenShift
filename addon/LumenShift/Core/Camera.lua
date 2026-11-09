@@ -83,11 +83,15 @@ function C.New(runtime)
         if not ok then return report(nil, why) end
         return true
     end
-    function camera.ApplyFOV(value, onComplete)
+    function camera.ApplyFraming(values, onComplete)
+        if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         if camera.busy then return report(nil, "BUSY") end
         if runtime.captureSequence and runtime.captureSequence.active and runtime.captureSequence.state ~= "WAITING_FOR_PREVIEW"
             or runtime.composition and runtime.composition.capturing then return report(nil, "BUSY") end
-        local ok, why = runtime.framing.Apply("camera", { cameraFov = value }, function(done, code)
+        local targets = {}
+        for key, entry in pairs(db.camera.framing.journal.entries) do targets[key] = ns.Value.Number(entry.lastVerifiedRaw) end
+        for key, value in pairs(values) do targets[key] = value end
+        local ok, why = runtime.framing.Apply("camera", targets, function(done, code)
             report(done, code); if onComplete then onComplete(done, code) end
             if camera.interrupted and camera.active and not runtime.product.IsCombat() then
                 ns.ReadOnly.Call(reader, reader.env.C_Timer and reader.env.C_Timer.After, 0, camera.Exit)
@@ -96,7 +100,15 @@ function C.New(runtime)
         if not ok then return report(nil, why) end
         return true
     end
+    function camera.ApplyFOV(value, callback) return camera.ApplyFraming({ cameraFov = value }, callback) end
     function camera.RestoreFOV(callback)
+        if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
+        local targets = {}
+        for key, entry in pairs(db.camera.framing.journal.entries) do if key ~= "cameraFov" then targets[key] = ns.Value.Number(entry.lastVerifiedRaw) end end
+        if runtime.captureSequence.active or runtime.composition.capturing then return report(nil, "BUSY") end
+        return runtime.framing.Apply("camera", targets, callback)
+    end
+    function camera.RestoreFraming(callback)
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         if camera.active and (runtime.captureSequence and runtime.captureSequence.active or runtime.composition and runtime.composition.capturing) then return report(nil, "BUSY") end
         if not next(db.camera.framing.journal.entries) then if callback then callback(true) end; return true end
@@ -108,6 +120,8 @@ function C.New(runtime)
         return true
     end
     function camera.Exit()
+        if runtime.photoComposition then runtime.photoComposition.Cancel() end
+        if runtime.cameraActions then runtime.cameraActions.StopOrbit() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
         if runtime.photoPreview then runtime.photoPreview.Cancel("EXIT") end
         -- Showing the HUD is always the first attempt, even if name restoration fails.
@@ -115,12 +129,14 @@ function C.New(runtime)
         if not shown then return report(nil, why) end
         if runtime.composition then runtime.composition.CancelCapture() end
         if runtime.photoEditor then runtime.photoEditor.Hide() end
-        if camera.busy or names.busy or runtime.framing.busy or runtime.photo.busy or runtime.photoEditor and runtime.photoEditor.busy then
+        if camera.busy or names.busy or runtime.framing.busy or runtime.photo.busy or runtime.output and runtime.output.busy or runtime.photoEditor and runtime.photoEditor.busy then
             camera.interrupted = true; return report(nil, "BUSY")
         end
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         camera.active, camera.busy = false, true
         local tasks, firstError = {}, nil
+        if next(db.camera.output.records) then tasks[#tasks + 1] = runtime.output.RestoreAll end
+        if db.camera.composition.zoom then tasks[#tasks + 1] = runtime.cameraActions.Restore end
         if db.camera.editor.session then tasks[#tasks + 1] = runtime.photoEditor.Restore end
         if db.camera.nameReturn then tasks[#tasks + 1] = function(done)
             return names.Apply("camera", ns.Value.Copy(db.camera.nameReturn.targets), function(ok, code)
@@ -128,7 +144,7 @@ function C.New(runtime)
                 done(ok, code)
             end)
         end end
-        if next(db.camera.framing.journal.entries) then tasks[#tasks + 1] = camera.RestoreFOV end
+        if next(db.camera.framing.journal.entries) then tasks[#tasks + 1] = camera.RestoreFraming end
         if next(db.camera.photo.records) then tasks[#tasks + 1] = runtime.photo.RestorePhoto end
         local index = 0
         local function advance(ok, code)
@@ -156,6 +172,8 @@ function C.New(runtime)
         return not firstError or nil, firstError
     end
     function camera.Combat()
+        if runtime.photoComposition then runtime.photoComposition.Cancel() end
+        if runtime.cameraActions then runtime.cameraActions.Cancel() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
         camera.interrupted = true
         if runtime.photoPreview then runtime.photoPreview.Cancel("COMBAT") end

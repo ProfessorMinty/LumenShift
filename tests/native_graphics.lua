@@ -38,7 +38,8 @@ return function(fixture, eq, test)
             local record = def and (f.env.LumenShiftDB.camera.photo.records[def.bank] or f.env.LumenShiftDB.graphics.records[def.bank])
             local visual = f.env.LumenShiftDB.journal.entries[key] or f.env.LumenShiftDB.experiments.journal.entries[key]
                 or f.env.LumenShiftDB.camera.journal.entries[key] or f.env.LumenShiftDB.camera.framing.journal.entries[key]
-            assert(record and record.original[key] ~= nil or visual and visual.originalRaw, "capture must precede every write")
+            local output = f.ns.PhotoOutput.Known(key) and f.env.LumenShiftDB.camera.output.records[f.ns.PhotoOutput.Known(key)]
+            assert(output and output.original[key] or record and record.original[key] ~= nil or visual and visual.originalRaw, "capture must precede every write")
             f.calls[#f.calls + 1] = { key, target }
             if f.setter then return f.setter(key, target, #f.calls) end
             return f.native(key, target)
@@ -219,7 +220,7 @@ return function(fixture, eq, test)
     test("N17 saved graphics data is strict, schema-6 migration preserves prior preferences", function()
         local f = make(); local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.graphics, old.optics = 6, nil, nil
         old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, why = f.ns.Store.Open(old); eq(why, "MIGRATED_6_TO_14"); eq(migrated.schemaVersion, 14)
+        local migrated, why = f.ns.Store.Open(old); eq(why, "MIGRATED_6_TO_15"); eq(migrated.schemaVersion, 15)
         eq(migrated.onboarding.completed, true); eq(migrated.config.preferences.sound, true); eq(old.graphics, nil)
         f.apply("normal", 6); f.apply("raid", 4); assert(f.ns.Store.Open(f.r.db))
         for _, mutate in ipairs({

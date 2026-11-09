@@ -1,5 +1,7 @@
 # Narcissus photo architecture and LumenShift expansion
 
+Implementation follow-up: [Delivery A / beta.12](57-STANDALONE-PHOTO-WORKFLOW.md) and [Delivery B / beta.13 plus Phase 1 audit](58-PHOTO-COMPOSITION-AND-OUTPUT.md) are now implemented. The research below retains its original findings and planned scope; Portrait Stage remains deferred.
+
 > Follow-up: Delivery A is implemented in [beta.12](57-STANDALONE-PHOTO-WORKFLOW.md). The research snapshot and proposed later deliveries below remain historical evidence.
 2026-11-09 · Northern Lights Labs · Source investigation; runtime remains **0.2.0-beta.11**.
 

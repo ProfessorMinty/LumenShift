@@ -897,7 +897,7 @@ function B.NewExperiments(runtime, cameraMode)
         local current = ns.ReadOnly.Read(reader, key)
         local number = V.Number(target)
         if cameraMode == "framing" then
-            local bounds = ns.Framing.Range(reader)
+            local bounds = ns.Framing.Range(reader, key)
             if not bounds or not number or number < bounds.min or number > bounds.max then return false, current.raw, "FOV_OUTSIDE_NATIVE_BOUNDS" end
         end
         if not ns.Planner.SafeObservation(current, key) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
@@ -1440,6 +1440,7 @@ function B.NewNativeGraphics(runtime, photo)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate(bank)
+        if reader.outputBusy and reader.outputBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if photo and reader.normalGraphicsBusy and reader.normalGraphicsBusy()
             or not photo and reader.photoGraphicsBusy and reader.photoGraphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if not photo and db and next(db.camera.photo.records) then return nil, "RESTORE_PHOTO_FIRST" end
@@ -1512,16 +1513,17 @@ function B.NewNativeGraphics(runtime, photo)
         record.state, record.error = code and code:find("CONFLICT", 1, true) and "conflict" or "failed", code
         engine.error = code
     end
-    local function step(bank, record, key, raw, restoring, signature)
+    local function step(bank, record, key, raw, restoring, signature, ray)
         local ready, why = gate(bank)
         if not ready or ready ~= signature then return nil, why or "SESSION_BUILD_CHANGED" end
         local matches, changed = G.Matches(reader, record.expected)
         if not matches then return nil, "GRAPHICS_EXTERNAL_CONFLICT:" .. changed end
         if not restoring then
-            local ok, reason = G.Support(reader, key, V.Number(raw))
+            local ok, reason
+            if ray then ok, reason = G.RaySupport(reader, V.Number(raw)) else ok, reason = G.Support(reader, key, V.Number(raw)) end
             if not ok then return nil, reason .. ":" .. key end
         end
-        local plan, journal, _, reason = G.Step(reader, key, raw, restoring, signature)
+        local plan, journal, _, reason = G.Step(reader, key, raw, restoring, signature, ray)
         if not plan then return nil, reason or "GRAPHICS_PLAN_FAILED" end
         if #plan.operations == 0 then return true end
         local tx = R.Begin(journal, plan, sequence, "ACTIVE")
@@ -1542,7 +1544,7 @@ function B.NewNativeGraphics(runtime, photo)
         end
         return true
     end
-    local function run(bank, targets, restoring, callback)
+    local function run(bank, targets, restoring, callback, ray)
         local signature, why = gate(bank)
         if not signature then return nil, why end
         local previous = data.records[bank] and V.Copy(data.records[bank])
@@ -1584,7 +1586,7 @@ function B.NewNativeGraphics(runtime, photo)
         local failure
         for _, key in ipairs(G.Order(bank, targets, restoring)) do
             if not watchForeign(foreign) then failure = "OTHER_BANK_OR_VISUAL_CHANGED"; break end
-            local ok, code = step(bank, record, key, tostring(targets[key]), restoring, signature)
+            local ok, code = step(bank, record, key, tostring(targets[key]), restoring, signature, ray)
             if not ok then failure = code; break end
             if not watchForeign(foreign) then failure = "OTHER_BANK_OR_VISUAL_CHANGED"; break end
             if bank == "raid" and targets.RAIDsettingsEnabled == nil
@@ -1676,6 +1678,11 @@ function B.NewNativeGraphics(runtime, photo)
         end
         return nextBank(true)
     end
+    function engine.ApplyRay(value, callback)
+        if not photo or engine.busy or not runtime.camera.active or runtime.captureSequence.active or runtime.composition.capturing then return nil, "CAMERA_NOT_READY" end
+        local supported, why = G.RaySupport(reader, value); if not supported then return nil, why end
+        return run("normal", { shadowRt = value }, false, callback, true)
+    end
     function engine.Restore(bank, callback)
         if engine.busy then return nil, "BUSY" end
         if not data or not G.Validate(data) then return nil, "GRAPHICS_DATA_QUARANTINED" end
@@ -1719,7 +1726,7 @@ function B.NewNativeGraphics(runtime, photo)
     end
     function engine.Status() return { busy = engine.busy, state = engine.state, error = engine.error } end
     -- Block native callback reentry during preflight, writes and verification.
-    for _, name in ipairs({ "Apply", "Restore", "RestorePhoto" }) do
+    for _, name in ipairs({ "Apply", "ApplyRay", "Restore", "RestorePhoto" }) do
         local fn = engine[name]
         engine[name] = function(...)
             if executing then return nil, "BUSY" end
@@ -1740,4 +1747,176 @@ function B.NewNativeGraphics(runtime, photo)
     if photo then reader.photoGraphicsBusy = occupied else reader.normalGraphicsBusy = occupied end
     reader.graphicsBusy = function() return occupied() or previousBusy and previousBusy() end
     return engine
+end
+
+-- Compound AA/output transactions use a closed-group pure planner. There is
+-- still exactly one nativeSet call site; no console execution or driver restart.
+function B.NewPhotoOutput(runtime)
+    local P, reader, db = ns.PhotoOutput, runtime.reader, runtime.db
+    local data = db and db.camera.output
+    local self = { busy = false, state = data and next(data.records) and "RECOVERY" or "READY", serial = 0 }
+    local executing = false
+    local function refresh()
+        if self.Refresh then self.Refresh() end
+    end
+    local function gate()
+        if not data or not P.Validate(data) then return nil, "OUTPUT_DATA_INVALID" end
+        if reader.resetPending or runtime.product.IsCombat() then return nil, "COMBAT_OR_RESTRICTION" end
+        if not setterAvailable(reader) or type(reader.env.C_Timer) ~= "table" or type(reader.env.C_Timer.After) ~= "function" then return nil, "OUTPUT_API_UNAVAILABLE" end
+        for _, name in ipairs({ "brightnessBusy", "visualBusy", "experimentBusy", "nameBusy", "normalGraphicsBusy", "photoGraphicsBusy" }) do
+            if reader[name] and reader[name]() then return nil, "OTHER_OPERATION_ACTIVE" end
+        end
+        if runtime.product.busy then return nil, "BUSY" end
+        local signature = ns.Compatibility.Inspect(reader).signature
+        if not ns.Compatibility.Experimental(signature) then return nil, "IDENTITY_UNAVAILABLE" end
+        return signature
+    end
+    local function matches(group, expected)
+        local seen = P.Read(reader, group)
+        for key, raw in pairs(expected) do if not P.Safe(seen[key], key) or seen[key].raw ~= raw then return false end end
+        return true
+    end
+    local function finish(ok, code, callback)
+        self.busy, self.state, self.error = false, ok and "READY" or "RECOVERY", code
+        ns.Log.Record(reader, "photo-output", "operation", ok and "INFO" or "WARN", code or "VERIFIED")
+        refresh(); if callback then callback(ok, code) end
+        if runtime.camera.interrupted and runtime.camera.active and not runtime.product.IsCombat() then
+            ns.ReadOnly.Call(reader, reader.env.C_Timer and reader.env.C_Timer.After, 0, runtime.camera.Exit)
+        end
+        return ok, code
+    end
+    local function run(group, targets, restoring, callback)
+        if self.busy then return nil, "BUSY" end
+        local signature, why = gate(); if not signature then return nil, why end
+        if runtime.camera.active and (runtime.captureSequence.active or runtime.composition.capturing) then return nil, "CAPTURE_SEQUENCE_ACTIVE" end
+        local prior = data.records[group] and V.Copy(data.records[group])
+        if restoring and not prior then if callback then callback(true) end; return true end
+        if not restoring then
+            if not runtime.camera.active then return nil, "CAMERA_NOT_READY" end
+            local admitted, reason = P.Admit(reader, group, targets); if not admitted then return nil, reason end
+        elseif group == "aa" then
+            local admitted, reason = P.Admit(reader, group, prior.original); if not admitted then return nil, reason end
+        end
+        local plan, code = P.Plan(group, P.Read(reader, group), prior, targets, signature, restoring)
+        if not plan then return nil, code end
+        if not plan.changed then
+            if restoring then data.records[group] = nil end
+            return finish(true, nil, callback)
+        end
+        local record = { original = plan.original, expected = V.Copy(plan.expected), signature = signature, state = "pending" }
+        data.records[group] = record -- original tuple/quality precedes all writes
+        self.busy, self.state, self.serial = true, "VERIFYING", self.serial + 1
+        local id, attempted, failure = self.serial, {}, nil
+        local function write(key, raw, exact, compensating)
+            local ready, err = gate()
+            if ready ~= signature then return nil, err or "SESSION_BUILD_CHANGED" end
+            if data.records[group] ~= record or not matches(group, record.expected) then return nil, "OUTPUT_EXTERNAL_CONFLICT" end
+            if group == "aa" or not restoring then
+                local eligible, reason = P.Admit(reader, group, compensating and plan.expected or restoring and record.original or targets)
+                if not eligible then return nil, reason end
+            end
+            local result, errorCode = nativeSet(reader, key, raw)
+            local seen = P.Read(reader, group)
+            if not P.Safe(seen[key], key) then return nil, "OUTPUT_READBACK_UNAVAILABLE" end
+            record.expected[key] = seen[key].raw
+            for other, expected in pairs(record.expected) do
+                if other ~= key and (not P.Safe(seen[other], other) or seen[other].raw ~= expected) then return nil, "OUTPUT_DEPENDENCY_CONFLICT" end
+            end
+            if not result or result.n ~= 1 or result[1] ~= true then return nil, errorCode or "OUTPUT_SETTER_FAILED" end
+            if exact and seen[key].raw ~= raw or not exact and not P.Equal(key, seen[key].raw, raw) then return nil, "OUTPUT_READBACK_MISMATCH" end
+            return true
+        end
+        for _, op in ipairs(plan.operations) do
+            attempted[#attempted + 1] = op
+            local ok, reason = write(op.key, op.target, restoring)
+            if not ok then failure = reason; break end
+        end
+        local compensated = false
+        if failure and not restoring and not failure:find("CONFLICT", 1, true) and matches(group, record.expected) then
+            compensated = true
+            for i = #attempted, 1, -1 do
+                local op = attempted[i]
+                if record.expected[op.key] ~= op.before then
+                    local ok = write(op.key, op.before, true, true); if not ok then compensated = false; break end
+                end
+            end
+        end
+        if failure and not compensated then
+            record.state, record.error = failure:find("CONFLICT", 1, true) and "conflict" or "failed", failure
+            return finish(false, failure, callback)
+        end
+        local scheduled = ns.ReadOnly.Call(reader, reader.env.C_Timer.After, .15, function()
+            if id ~= self.serial then return end
+            local outer = executing; executing = true
+            local handled = pcall(function()
+            local ready, reason = gate()
+            local verified = ready == signature and data.records[group] == record and matches(group, record.expected)
+            if verified then
+                for _, key in ipairs(P.Groups[group]) do
+                    local target = compensated and plan.expected[key] or restoring and record.original[key] or targets[key]
+                    if (restoring or compensated) and record.expected[key] ~= target
+                        or not restoring and not compensated and not P.Equal(key, record.expected[key], target) then verified = false end
+                end
+            end
+            if not verified then
+                record.state, record.error = "conflict", reason or "OUTPUT_LATE_CONFLICT"
+                finish(false, record.error, callback)
+            else
+                if compensated then data.records[group] = prior
+                elseif restoring then data.records[group] = nil
+                else record.state = "owned" end
+                finish(not failure, failure, callback)
+            end
+            end)
+            executing = outer
+            if not handled then
+                if record.state == "pending" then record.state, record.error = "failed", "OUTPUT_HANDLER_ERROR" end
+                self.busy, self.state, self.error = false, "RECOVERY", "OUTPUT_HANDLER_ERROR"
+                ns.Log.Record(reader, "photo-output", "callback", "ERROR", self.error)
+            end
+        end)
+        if not scheduled then record.state, record.error = "failed", "OUTPUT_TIMER_FAILED"; return finish(false, record.error, callback) end
+        refresh(); return true
+    end
+    function self.Apply(group, targets, callback) return run(group, targets, false, callback) end
+    function self.Restore(group, callback) return run(group, {}, true, callback) end
+    function self.RestoreAll(callback)
+        local index, failure = 0, nil
+        local groups = { "aa", "jpeg" }
+        local function advance(ok, code)
+            if not ok then failure = failure or code end
+            index = index + 1
+            if not groups[index] then if callback then callback(not failure, failure) end; return end
+            local called = false
+            local started, why = run(groups[index], {}, true, function(done, reason) called = true; advance(done, reason) end)
+            if not started and not called then advance(false, why) end
+        end
+        advance(true); return true
+    end
+    function self.Observe()
+        if self.busy or executing or not data then return end
+        for group, record in pairs(data.records) do
+            if record.state == "owned" and not matches(group, record.expected) then
+                record.state, record.error, self.state, self.error = "conflict", "OUTPUT_EXTERNAL_CONFLICT", "RECOVERY", "OUTPUT_EXTERNAL_CONFLICT"
+            end
+        end
+    end
+    for _, name in ipairs({ "Apply", "Restore", "RestoreAll" }) do
+        local fn = self[name]
+        self[name] = function(...)
+            if executing then return nil, "BUSY" end
+            executing = true
+            local ok, result, why = pcall(fn, ...); executing = false
+            if not ok then
+                for _, r in pairs(data and data.records or {}) do if r.state == "pending" then r.state, r.error = "failed", "OUTPUT_HANDLER_ERROR" end end
+                return finish(false, "OUTPUT_HANDLER_ERROR")
+            end
+            if not result then self.error = why; refresh() end
+            return result, why
+        end
+    end
+    local previous = reader.graphicsBusy
+    reader.outputBusy = function() return self.busy or executing end
+    reader.graphicsBusy = function() return reader.outputBusy() or previous and previous() end
+    return self
 end

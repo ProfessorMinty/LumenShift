@@ -145,6 +145,21 @@ function G.Support(reader, key, value)
     if not result or result.n ~= 1 or result[1] ~= 0 then return nil, why or "UNSUPPORTED_GRAPHICS_OPTION" end
     return true
 end
+-- Native global ray-traced-shadow options share the photo bank's canonical capture.
+function G.RaySupport(reader, value)
+    if not V.Finite(value) or value % 1 ~= 0 or value < 0 or value > 3 then return nil, "INVALID_RAY_OPTION" end
+    local secondary = G.Capability(reader, "IsSecondaryLightingSupported")
+    local mac = ns.ReadOnly.Call(reader, reader.env.IsMacClient)
+    if secondary ~= false or not mac or mac.n ~= 1 or mac[1] ~= false then return nil, "RAY_RENDERER_UNAVAILABLE" end
+    local r = ns.ReadOnly.Call(reader, reader.env.IsGraphicsSettingValueSupported, "shadowrt", value, false)
+    return r and r.n == 1 and r[1] == 0 or nil, "RAY_OPTION_UNSUPPORTED"
+end
+function G.RayDescriptor(key, signature)
+    if key ~= "shadowRt" or not ns.Compatibility.Experimental(signature) then return nil end
+    return { name = key, layer = "quality", kind = "number", version = 5, testOnly = true, admitted = false,
+        evidence = "FOREVER_NATIVE_RAY_ENUM", signature = signature, scope = "photo_ray_option", min = 0, max = 3,
+        settle = "scheduled_readback_test", numericEquivalent = true, dependencies = {}, conflicts = {} }
+end
 function G.Recipe(reader, bank, choice, inspectNative)
     if not bankKeys[bank] or not G.Choice(choice) then return nil, "INVALID_GRAPHICS_CHOICE" end
     local targets, omitted = {}, {}
@@ -221,15 +236,16 @@ function G.Descriptor(key, signature, restoreRaw)
 end
 -- Exact captured-value restoration uses an equality-only descriptor. No caller
 -- can use a leaf descriptor to request a new numeric tuning value.
-function G.Step(reader, key, targetRaw, restoring, signature)
+function G.Step(reader, key, targetRaw, restoring, signature, ray)
     local current = ns.ReadOnly.Read(reader, key)
     if not ns.Planner.SafeObservation(current) or not V.Number(targetRaw) then return nil, "UNSAFE_GRAPHICS_OBSERVATION:" .. key end
-    local desc = G.Descriptor(key, signature, restoring and targetRaw or nil)
+    local desc = ray and not restoring and G.RayDescriptor(key, signature) or G.Descriptor(key, signature, restoring and targetRaw or nil)
     if not desc then return nil, "UNKNOWN_GRAPHICS_WRITE:" .. key end
     local journal = { nextEpoch = 2, entries = { [key] = {
         originalRaw = restoring and targetRaw or current.raw, lastVerifiedRaw = current.raw, intendedRaw = targetRaw,
         layer = "quality", epoch = 1, state = "owned", descriptorVersion = 5, signature = signature } } }
-    local plan, why = ns.Planner.Build({ [key] = desc }, G.Context(signature), { [key] = current }, journal,
+    local context = G.Context(signature); if ray and not restoring then context.experiment = "PHOTO_RAY_OPTION" end
+    local plan, why = ns.Planner.Build({ [key] = desc }, context, { [key] = current }, journal,
         "quality", restoring and {} or { [key] = V.Number(targetRaw) })
     return plan, journal, current, why
 end
@@ -244,6 +260,7 @@ function G.Order(bank, targets, restoring)
         if targets[key] ~= nil and not def.overall and not def.flag and not def.leaf then result[#result + 1] = key end
     end
     if not restoring and targets[overall] ~= nil then result[#result + 1] = overall end
+    if not restoring and bank == "normal" and targets.shadowRt ~= nil then result[#result + 1] = "shadowRt" end
     if restoring then
         for _, key in ipairs(bankKeys[bank]) do if byKey[key].leaf and targets[key] ~= nil then result[#result + 1] = key end end
     end

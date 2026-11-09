@@ -5,7 +5,7 @@ local P = {}; ns.PhotoPreview = P
 function P.New(runtime)
     local env, editor = runtime.reader.env, runtime.photoEditor
     local self = { pending = {}, order = {}, generation = 0, busy = false, scheduled = false, status = "IDLE" }
-    local known = { Brightness = true, Contrast = true, ResampleSharpness = true, bloomUserMult = true, cameraFov = true }
+    local known = { Brightness = true, Contrast = true, ResampleSharpness = true, bloomUserMult = true, cameraFov = true, test_cameraOverShoulder = true, test_cameraDynamicPitch = true, test_cameraDynamicPitchBaseFovPad = true }
     local pump, schedule
     local function refresh()
         if runtime.captureSequence then runtime.captureSequence.ObservePreview() end
@@ -14,7 +14,7 @@ function P.New(runtime)
     local function ready()
         local c = runtime.composition
         return editor.active and runtime.camera.active and not runtime.product.IsCombat() and not runtime.reader.resetPending
-            and not runtime.camera.interrupted and c and not c.controlsHidden and not c.capturing
+            and not runtime.camera.interrupted and c and not c.suspended and not c.controlsHidden and not c.capturing
     end
     function self.Pending() return self.busy or self.scheduled or #self.order > 0 or self.action ~= nil end
     function self.Begin()
@@ -69,7 +69,7 @@ function P.New(runtime)
             schedule() -- leaves the writer callback guard before another request
         end
         local called, ok, why = pcall(function()
-            if key == "cameraFov" then return runtime.camera.ApplyFOV(value, done) end
+            if ns.Framing.Known(key) then return runtime.camera.ApplyFraming({ [key] = value }, done) end
             local values = key == "ResampleSharpness" and { ResampleAlwaysSharpen = 1, ResampleSharpness = (100 - value) / 50 }
                 or { [key] = value }
             return editor.Native(values, done)
@@ -83,7 +83,7 @@ function P.New(runtime)
         if not ready() or runtime.captureSequence and runtime.captureSequence.active then return nil, "CAMERA_NOT_READY" end
         if self.halted then return nil, self.error end
         if self.action then return nil, "PHOTO_ACTION_WAITING" end
-        if editor.before and key ~= "cameraFov" then fail("SHOW_AFTER_FIRST"); return nil, self.error end
+        if editor.before and not ns.Framing.Known(key) then fail("SHOW_AFTER_FIRST"); return nil, self.error end
         if self.pending[key] == nil then self.order[#self.order + 1] = key end
         self.pending[key] = value
         local ok, why = schedule(); refresh(); return ok, why

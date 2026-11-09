@@ -11,7 +11,7 @@ function U.New(runtime, composition)
     W.Text(panel, "Compose in the world", 16, -47, 300, 12, W.colors.muted)
     local tabs = {}
     for i, label in ipairs({ "Look", "Light", "Frame", "Pose", "Capture", "Saved" }) do
-        local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -75 - math.floor((i - 1) / 3) * 40, 104, function() self.tab = label; self.Build(true) end)
+        local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -75 - math.floor((i - 1) / 3) * 40, 104, function() runtime.cameraActions.StopOrbit(); self.notice = nil; self.tab = label; self.Build(true) end)
         tabs[label] = button
     end
     local scroll = env.CreateFrame("ScrollFrame", nil, panel); self.scroll = scroll
@@ -21,7 +21,7 @@ function U.New(runtime, composition)
     function self.ClearFocus()
         for _, field in ipairs(pool.frames.EditBox or {}) do field:ClearFocus() end
     end
-    composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit() end)
+    composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit() end)
     local scrollbar = env.CreateFrame("Slider", nil, panel); self.scrollbar = scrollbar
     scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -160); scrollbar:SetSize(8, 402)
     scrollbar:SetOrientation("VERTICAL"); scrollbar:SetValueStep(20); W.Fill(scrollbar, W.colors.sidebar)
@@ -63,6 +63,7 @@ function U.New(runtime, composition)
     end
     function self.Build(resetScroll)
         self.building = true
+        editor.EndLookEdit()
         self.ClearFocus()
         pool.Reset(); self.sliders = {}
         for label, button in pairs(tabs) do button.SetSelected(self.tab == label) end
@@ -95,13 +96,13 @@ function U.New(runtime, composition)
             self.sliders[key] = slider; y = y - 68
         end
         if self.tab == "Look" then
-            for i, recipe in ipairs({ { "neutral", "Neutral" }, { "ember", "Warm Ember" }, { "night", "Cool Night" }, { "portrait", "Soft Portrait" } }) do
+            for i, recipe in ipairs({ { "neutral", "Neutral" }, { "ember", "Warm Ember" }, { "night", "Cool Night" }, { "portrait", "Soft Portrait" }, { "sunflare", "Sun Flare" }, { "bluehour", "Blue Hour" } }) do
                 local id = recipe[1]
                 W.Button(penv, content, recipe[2], (i - 1) % 2 * 160, -math.floor((i - 1) / 2) * 40, 150, function() editor.Recipe(id); self.Build() end)
             end
-            W.Button(penv, content, "Undo look", 0, -88, 150, function() editor.Undo(); self.Build() end)
-            W.Button(penv, content, "Redo look", 160, -88, 150, function() editor.Undo(true); self.Build() end)
-            y = -132; text("Live screen treatments. Your visual modes stay unchanged.", 40)
+            W.Button(penv, content, "Undo look", 0, -128, 150, function() editor.Undo(); self.Build() end)
+            W.Button(penv, content, "Redo look", 160, -128, 150, function() editor.Undo(true); self.Build() end)
+            y = -172; text("Live screen treatments. Your visual modes stay unchanged.", 40)
             lookSlider("strength", "Look strength"); lookSlider("warmth", "Warm / cool"); lookSlider("tint", "Green / rose tint")
             section("VIGNETTE")
             lookSlider("vignette", "Edge darkness"); lookSlider("size", "Clear center size"); lookSlider("feather", "Soft edge", .1)
@@ -118,6 +119,8 @@ function U.New(runtime, composition)
             y = y - 42
             lookSlider("glowR", "Glow red"); lookSlider("glowG", "Glow green"); lookSlider("glowB", "Glow blue")
             lookSlider("glowX", "Glow - horizontal"); lookSlider("glowY", "Glow - vertical")
+            section("EDGE LIGHT"); text("Soft light leak using your glow color. Screen artwork; it does not relight the world.", 54)
+            lookSlider("leak", "Light leak strength"); lookSlider("leakSide", "Light leak position", .1); lookSlider("leakWidth", "Light leak width", .1)
             section("TEXTURE"); lookSlider("grain", "Film grain"); lookSlider("grainScale", "Grain size", .1)
         elseif self.tab == "Light" then
             text("Live preview as you drag. Updates are paced; Exit returns your pre-photo values.", 56)
@@ -155,7 +158,18 @@ function U.New(runtime, composition)
             if range and ns.Planner.SafeObservation(seen) and ns.Value.Number(seen.raw) then
                 liveSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw))
             else text("Field of view unavailable; framing guides remain available.", 52) end
-            W.Button(penv, content, "Restore field of view", 0, y, 310, function() preview.Finish(runtime.camera.RestoreFOV) end); y = y - 48
+            W.Button(penv, content, "Restore field of view", 0, y, 310, function()
+                preview.Finish(function()
+                    local ok, why = runtime.camera.RestoreFOV(function(done, code)
+                        self.notice = not done and ns.Product.Message(code) or nil; self.Refresh()
+                    end)
+                    if not ok then self.notice = ns.Product.Message(why); self.Refresh() end
+                    return ok, why
+                end)
+            end); y = y - 48
+            y = ns.PhotoAdvancedUI.Frame(runtime, penv, content, y, self, function(key, label, low, high, step, value, at)
+                y = at; liveSlider(key, label, low, high, step, value); return y
+            end)
             y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
             section("NEXT CAMERA ENTRY")
             W.Toggle(penv, content, "Temporary photo quality", 0, y, 310, function() return db.camera.photoEnabled end,
@@ -165,6 +179,7 @@ function U.New(runtime, composition)
             text("Photo quality takes effect on your next entry. Exit restores it. Your regular quality choices stay unchanged.", 70)
         elseif self.tab == "Pose" or self.tab == "Capture" then
             y = ns.PhotoToolsUI.Build(runtime, penv, content, self.tab, self)
+            if self.tab == "Capture" then y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self) end
         else
             text("Save styling without native graphics values. Native lighting always starts from your current scene.", 54)
             self.name = self.name or "My photo look"
@@ -182,8 +197,9 @@ function U.New(runtime, composition)
             y = y - 12; section("SHARE A LOOK")
             local transfer = W.Edit(penv, content, ns.PhotoConfig.Export(db.camera.editor.look), 0, y, 310, function() end, 512)
             transfer:SetScript("OnEditFocusGained", function(s) s:HighlightText() end); y = y - 40
-            W.Button(penv, content, "Import pasted LSPHOTO1 look", 0, y, 310, function() editor.Import(transfer:GetText()); self.Build() end); y = y - 48
+            W.Button(penv, content, "Import pasted photo look", 0, y, 310, function() editor.Import(transfer:GetText()); self.Build() end); y = y - 48
             text("Click the field and copy to share, or paste a look and Import. No scripts are accepted.", 52)
+            y = ns.PhotoAdvancedUI.Saved(runtime, penv, content, y, self)
         end
         self.contentHeight = -y + 16; content:SetHeight(self.contentHeight)
         if resetScroll then scroll:SetVerticalScroll(0) end
@@ -191,11 +207,14 @@ function U.New(runtime, composition)
     end
     function self.Refresh()
         if (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
-            and not preview.Pending() and self.panel:IsVisible() then self.Build(); return end
+            and not preview.Pending() and not runtime.cameraActions.orbit and not runtime.cameraActions.busy and self.panel:IsVisible() then self.Build(); return end
         local seq, pose = runtime.captureSequence, runtime.photoTools
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
             or self.tab == "Pose" and ns.PhotoToolsUI.Status(pose.status)
-        self.status:SetText(extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
+        if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and runtime.cameraActions.status or nil
+        elseif self.tab == "Capture" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
+        elseif self.tab == "Saved" then extra = runtime.photoComposition.status end
+        self.status:SetText(self.notice or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
         self.compare.label:SetText(editor.before and "Show After" or "Show Before")
         if editor.busy and not preview.busy then self.compare:Disable() else self.compare:Enable() end
         positionMarker()
@@ -203,6 +222,9 @@ function U.New(runtime, composition)
     editor.Refresh = self.Refresh
     preview.Refresh = self.Refresh
     runtime.photoTools.Refresh = self.Refresh
+    runtime.cameraActions.Refresh = self.Refresh
+    runtime.output.Refresh = self.Refresh
+    runtime.photoComposition.Refresh = self.Refresh
     composition.root:HookScript("OnHide", function() self.dragging = nil end)
     self.Build(true)
     return self

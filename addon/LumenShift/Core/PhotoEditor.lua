@@ -23,7 +23,7 @@ function P.New(runtime)
         if runtime.photoEffects then
             if self.active and not runtime.product.IsCombat() then
                 local look = data().look
-                local treated = look.strength > 0 and (look.warmth ~= 0 or look.tint ~= 0 or look.vignette > 0 or look.glow > 0 or look.grain > 0) or look.letterbox > 0
+                local treated = look.strength > 0 and (look.warmth ~= 0 or look.tint ~= 0 or look.vignette > 0 or look.glow > 0 or look.grain > 0 or look.leak > 0) or look.letterbox > 0
                 if self.before or not treated then runtime.product.RefreshPresentation(true, true)
                 elseif runtime.presentation then runtime.presentation.Clear() end
                 local ok = pcall(runtime.photoEffects.Apply, data().look, self.before)
@@ -97,7 +97,7 @@ function P.New(runtime)
     function self.Delete(name) if not self.active or reader.resetPending then return nil end; data().saved[name] = nil; refresh("Photo look deleted.") end
     function self.Import(text)
         if not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
-        local look = ns.PhotoConfig.Import(text); if not look then refresh("Invalid LSPHOTO1 look."); return nil end
+        local look = ns.PhotoConfig.Import(text); if not look then refresh("Invalid photo look."); return nil end
         if not replaceLook(look) then return nil end; refresh("Photo look imported."); return true
     end
     function self.Read(key)

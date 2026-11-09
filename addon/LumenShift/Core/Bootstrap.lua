@@ -13,6 +13,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         if runtime.photo then runtime.photo.Observe() end
         if runtime.photoEditor then runtime.photoEditor.Observe() end
         if runtime.framing then runtime.framing.Observe() end
+        if runtime.output then runtime.output.Observe() end
         if runtime.product then runtime.product.Observe() end
         return
     end
@@ -22,8 +23,11 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         return
     end
     if event == "PLAYER_LEAVING_WORLD" then
+        if runtime.photoPreview then runtime.photoPreview.Cancel("WORLD_LEAVE") end
+        if runtime.photoComposition then runtime.photoComposition.Cancel() end
+        if runtime.cameraActions then runtime.cameraActions.Cancel() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
-        if runtime.composition then runtime.composition.CancelCapture() end
+        if runtime.composition then runtime.composition.Suspend() end
         if runtime.performance and runtime.performance.active then runtime.performance.Cancel("SAMPLE_SCENE_CHANGED") end
         return
     end
@@ -61,8 +65,11 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.graphics = ns.WriteBoundary.NewNativeGraphics(runtime)
     runtime.photo = ns.WriteBoundary.NewNativeGraphics(runtime, true)
     runtime.visual = ns.WriteBoundary.NewVisual(runtime)
+    runtime.output = ns.WriteBoundary.NewPhotoOutput(runtime)
     runtime.product = ns.Product.New(runtime)
     runtime.camera = ns.Camera.New(runtime)
+    runtime.cameraActions = ns.CameraActions.New(runtime)
+    runtime.photoComposition = ns.PhotoComposition.New(runtime)
     runtime.photoEditor = ns.PhotoEditor.New(runtime)
     runtime.photoPreview = ns.PhotoPreview.New(runtime)
     runtime.photoEffects = ns.PhotoEffects.New(runtime)

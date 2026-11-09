@@ -16,6 +16,7 @@ function P.New(runtime)
         self.tint = texture(root, nil, "BACKGROUND"); self.tint:SetAllPoints(root)
         self.glow, self.vignette, self.outside, self.bars = {}, {}, {}, {}
         for i = 1, 2 do self.glow[i] = texture(root); self.glow[i]:SetBlendMode("ADD") end
+        self.leak = { texture(root), texture(root) }; for _, t in ipairs(self.leak) do t:SetBlendMode("ADD") end
         self.grain = texture(root, "photo-grain"); self.grain:SetAllPoints(root)
         self.grain:SetTexture("Interface/AddOns/LumenShift/Media/photo-grain.tga", "REPEAT", "REPEAT")
         for i = 1, 2 do self.vignette[i] = texture(root, nil, "OVERLAY") end
@@ -50,6 +51,8 @@ function P.New(runtime)
         end
         ellipse(self.glow, "glow", w * look.glowX, h * look.glowY, h * look.glowSize * 2, h * look.glowSize * 2,
             look.glowSoftness, look.glow * strength, { look.glowR, look.glowG, look.glowB })
+        ellipse(self.leak, "glow", w * (look.leakSide + 1) / 2, h / 2, w * look.leakWidth, h * 2.4, 1,
+            look.leak * strength, { look.glowR, look.glowG, look.glowB })
         self.grain:SetTexCoord(0, w / (128 * look.grainScale), 0, h / (128 * look.grainScale)); self.grain:SetAlpha(look.grain * strength)
         local ew, eh, x, y = w * look.size * 2, h * look.size * 2, w * look.centerX, h * look.centerY
         ellipse(self.vignette, "vignette", x, y, ew, eh, look.feather, look.vignette * strength)

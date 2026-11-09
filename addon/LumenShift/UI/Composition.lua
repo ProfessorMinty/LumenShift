@@ -6,7 +6,7 @@ function C.New(runtime)
     local self = { capturing = false, controlsHidden = false, status = "READY", generation = 0 }
     local function sync()
         if not self.root then return end
-        local active = runtime.camera.active and not runtime.product.IsCombat()
+        local active = runtime.camera.active and not runtime.product.IsCombat() and not self.suspended
         if active and not self.capturing and not self.controlsHidden then self.root:Show() else self.root:Hide() end
         -- This pixel-free, mouse-transparent frame must survive a clean view or
         -- pending screenshot so Escape can still exit. It never captures outside Camera.
@@ -39,6 +39,7 @@ function C.New(runtime)
         if not self.controlsHidden and runtime.photoPreview and runtime.photoPreview.Pending() then
             return runtime.photoPreview.Finish(self.ToggleControls)
         end
+        runtime.cameraActions.StopOrbit()
         self.controlsHidden = not self.controlsHidden
         if env.GameTooltip then env.GameTooltip:Hide() end
         if runtime.photoCompatibility then runtime.photoCompatibility.Clean() end
@@ -115,9 +116,10 @@ function C.New(runtime)
         end)
         self.Hide()
     end
+    function self.Suspend() self.suspended = true; self.CancelCapture() end
     function self.Show()
         if not db or runtime.product.IsCombat() then return end
-        build(); layout(); sync()
+        self.suspended = false; build(); layout(); sync()
         if self.editor then self.editor.Refresh() end
     end
     function self.Capture(callback)
@@ -126,11 +128,12 @@ function C.New(runtime)
         if runtime.captureSequence and runtime.captureSequence.active and not callback then return nil, "CAPTURE_SEQUENCE_ACTIVE" end
         if runtime.photoPreview and runtime.photoPreview.Pending() then return runtime.photoPreview.Finish(function() return self.Capture(callback) end) end
         if runtime.camera.busy or runtime.names.busy or runtime.framing.busy or runtime.photo.busy
-            or runtime.photoEditor.busy or runtime.product.busy or runtime.visual.busy then return nil, "BUSY" end
+            or runtime.output.busy or runtime.cameraActions.busy or runtime.photoComposition.busy or runtime.photoEditor.busy or runtime.product.busy or runtime.visual.busy then return nil, "BUSY" end
         if runtime.photoCompatibility then local ok, why = runtime.photoCompatibility.Clean(); if not ok then self.status = why; return nil, why end end
         if type(env.Screenshot) ~= "function" or type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then
             self.status = "SCREENSHOT_UNAVAILABLE"; return nil, self.status
         end
+        local stopped, reason = runtime.cameraActions.StopOrbit(); if not stopped then return nil, reason end
         self.generation = self.generation + 1
         local id = self.generation
         self.capturing, self.status, self.captureCallback = true, "CAPTURING", callback

@@ -194,6 +194,36 @@ function D.Build(runtime)
         for _, group in ipairs(ns.NamePolicy.Groups) do
             lines[#lines + 1] = "photo hide group " .. group.id .. "=" .. bool(db.camera.nameGroups[group.id])
         end
+        for _, key in ipairs(ns.Framing.Keys) do
+            if key ~= "cameraFov" then
+                local item = ns.ReadOnly.Read(runtime.reader, key); local record = db.camera.framing.journal.entries[key]
+                local capable, why = ns.Framing.Capability(runtime.reader, key)
+                lines[#lines + 1] = "photo framing " .. key .. " current=" .. D.Number(item.raw) .. " original=" .. D.Number(record and record.originalRaw)
+                    .. " supported=" .. bool(capable) .. " reason=" .. safe(why or "none") .. " state=" .. safe(record and record.state or "unowned")
+            end
+        end
+        local actions, zoom = runtime.cameraActions, db.camera.composition.zoom
+        lines[#lines + 1] = "Photo movement: zoom=" .. D.Number(actions and actions.ReadZoom()) .. " original=" .. D.Number(zoom and zoom.original)
+            .. " expected=" .. D.Number(zoom and zoom.expected) .. " state=" .. safe(zoom and zoom.state or "unowned")
+            .. " busy=" .. bool(actions and actions.busy) .. " orbit=" .. safe(actions and actions.orbit or "none")
+            .. " savedCompositions=" .. #ns.Value.Keys(db.camera.composition.saved)
+        for _, group in ipairs({ "aa", "jpeg" }) do
+            local record = db.camera.output.records[group]
+            lines[#lines + 1] = "Photo output " .. group .. " state=" .. safe(record and record.state or "unowned") .. " error=" .. safe(record and record.error or "none")
+            for _, key in ipairs(ns.PhotoOutput.Groups[group]) do
+                local item = ns.ReadOnly.Read(runtime.reader, key)
+                local function raw(value)
+                    if key == "MSAAQuality" then
+                        local index, coverage = ns.PhotoOutput.Sample(value)
+                        return index and tostring(index) .. "," .. tostring(coverage) or "unavailable"
+                    end
+                    return D.Number(value)
+                end
+                lines[#lines + 1] = "photo output " .. key .. " current=" .. raw(item.raw) .. " original=" .. raw(record and record.original[key])
+                    .. " expected=" .. raw(record and record.expected[key]) .. " secure=" .. bool(item.flags and item.flags.secure)
+                    .. " readOnly=" .. bool(item.flags and item.flags.readOnly) .. " locked=" .. bool(item.flags and item.flags.locked)
+            end
+        end
         local photoSession = db.camera.editor.session
         local preview = runtime.photoPreview
         lines[#lines + 1] = "Photo live preview: state=" .. safe(preview and preview.status or "unavailable")
