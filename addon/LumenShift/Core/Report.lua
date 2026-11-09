@@ -202,6 +202,13 @@ function D.Build(runtime)
                     .. " supported=" .. bool(capable) .. " reason=" .. safe(why or "none") .. " state=" .. safe(record and record.state or "unowned")
             end
         end
+        local stage = runtime.portrait
+        local loaded = 0
+        for _, slot in pairs(stage and stage.slots or {}) do if slot.front then loaded = loaded + 1 end end
+        lines[#lines + 1] = "Portrait stage: active=" .. bool(stage and stage.active) .. " backend=" .. safe(stage and stage.backend.kind or "not-created")
+            .. " loading=" .. bool(stage and stage.busy) .. " actors=" .. loaded .. " savedScenes=" .. #ns.Value.Keys(db.camera.portrait.saved)
+            .. " savedLights=" .. #ns.Value.Keys(db.camera.portrait.lights) .. " loadFailures=" .. #ns.Value.Keys(stage and stage.failures or {})
+            .. " layerCapture=" .. bool(stage and stage.layerCapture ~= nil)
         local actions, zoom = runtime.cameraActions, db.camera.composition.zoom
         lines[#lines + 1] = "Photo movement: zoom=" .. D.Number(actions and actions.ReadZoom()) .. " original=" .. D.Number(zoom and zoom.original)
             .. " expected=" .. D.Number(zoom and zoom.expected) .. " state=" .. safe(zoom and zoom.state or "unowned")
@@ -381,7 +388,7 @@ function D.Build(runtime)
         end
         lines[#lines + 1] = key .. " supported trial levels=" .. (#supported > 0 and table.concat(supported, ",") or "none or capability unavailable")
     end
-    lines[#lines + 1] = "Camera: native HUD visibility, friendly names, bounded native FOV, composition guides and optional photo quality; no zoom or motion changes."
+    lines[#lines + 1] = "Camera: standalone World Photo and Portrait Stage; native photo controls, bounded movement, staged models, model lighting and capture."
     lines[#lines + 1] = "Native graphics banks: Keep Current, per-key WoW defaults or native 1-10 recipes; explicit Apply and captured Restore. Startup never applies them. Unknown native dependencies remain a live test limitation. HDR and renderer stay in the game settings."
     lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Session test history is observational, not permission."
     lines[#lines + 1] = "Addon-owned handlers only. Pre-bootstrap syntax/load failures and unrelated game/addon errors may prevent or lie outside this report."

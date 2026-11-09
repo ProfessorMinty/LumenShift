@@ -31,6 +31,7 @@ function P.New(runtime)
         t:SetSize(math.max(1, w), math.max(1, h)); t:SetColorTexture(0, 0, 0, w > 0 and h > 0 and alpha or 0)
     end
     function self.Apply(look, before)
+        if runtime.portrait and runtime.portrait.layerCapture then self.Hide(); return end
         if runtime.product.IsCombat() or not ns.PhotoConfig.ValidLook(look) then self.Hide(); return end
         build()
         if before then self.Hide(); return end

@@ -23,6 +23,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         return
     end
     if event == "PLAYER_LEAVING_WORLD" then
+        if runtime.portrait then runtime.portrait.Exit() end
         if runtime.photoPreview then runtime.photoPreview.Cancel("WORLD_LEAVE") end
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
         if runtime.cameraActions then runtime.cameraActions.Cancel() end
@@ -76,6 +77,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.performance = ns.Performance.New(runtime)
     runtime.composition = ns.Composition.New(runtime)
     runtime.captureSequence = ns.CaptureSequence.New(runtime)
+    runtime.portrait = ns.Portrait.New(runtime)
     runtime.photoTools = ns.PhotoTools.New(runtime)
     runtime.photoCompatibility = ns.PhotoCompatibility.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)

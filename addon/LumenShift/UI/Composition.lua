@@ -48,6 +48,7 @@ function C.New(runtime)
     local function complete(ok, code)
         self.capturing, self.requested, self.status = false, false, code
         local callback = self.captureCallback; self.captureCallback = nil
+        if runtime.portrait then runtime.portrait.CaptureFinished() end
         sync()
         if callback then callback(ok, code) end
     end
@@ -125,6 +126,7 @@ function C.New(runtime)
     function self.Capture(callback)
         if self.capturing or not runtime.camera.active or runtime.product.IsCombat() then return nil, "CAMERA_NOT_READY" end
         if type(callback) ~= "function" then callback = nil end
+        if runtime.portrait and runtime.portrait.layerCapture and not callback then return nil, "PORTRAIT_CAPTURE_ACTIVE" end
         if runtime.captureSequence and runtime.captureSequence.active and not callback then return nil, "CAPTURE_SEQUENCE_ACTIVE" end
         if runtime.photoPreview and runtime.photoPreview.Pending() then return runtime.photoPreview.Finish(function() return self.Capture(callback) end) end
         if runtime.camera.busy or runtime.names.busy or runtime.framing.busy or runtime.photo.busy
@@ -134,6 +136,7 @@ function C.New(runtime)
             self.status = "SCREENSHOT_UNAVAILABLE"; return nil, self.status
         end
         local stopped, reason = runtime.cameraActions.StopOrbit(); if not stopped then return nil, reason end
+        if runtime.portrait then local ok, code = runtime.portrait.Freeze(); if not ok then return nil, code end end
         self.generation = self.generation + 1
         local id = self.generation
         self.capturing, self.status, self.captureCallback = true, "CAPTURING", callback

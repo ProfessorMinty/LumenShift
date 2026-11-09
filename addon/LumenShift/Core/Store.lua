@@ -52,7 +52,7 @@ function S.Open(raw)
     if type(data.schemaVersion) == "number" and data.schemaVersion <= 10 and type(data.camera) == "table" then
         ns.NamePolicy.Upgrade(data.camera)
     end
-    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 14
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 15
         and type(data.camera) == "table" then ns.NamePolicy.UpgradeTools(data.camera) end
     local migrated = false
     if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 12
@@ -130,6 +130,9 @@ function S.Open(raw)
     if data.schemaVersion == 14 then
         if type(data.camera) == "table" then ns.PhotoConfig.Upgrade(data.camera.editor) end
         data.schemaVersion, migrated = 15, migrated and migrated:gsub("_TO_14$", "_TO_15") or "MIGRATED_14_TO_15"
+    end
+    if data.schemaVersion == 15 then
+        data.schemaVersion, migrated = 16, migrated and migrated:gsub("_TO_15$", "_TO_16") or "MIGRATED_15_TO_16"
     end
     if data.schemaVersion ~= ns.schemaVersion then
         -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.

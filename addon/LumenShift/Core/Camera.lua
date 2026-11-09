@@ -120,6 +120,7 @@ function C.New(runtime)
         return true
     end
     function camera.Exit()
+        if runtime.portrait then runtime.portrait.Exit() end
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
         if runtime.cameraActions then runtime.cameraActions.StopOrbit() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
@@ -172,6 +173,7 @@ function C.New(runtime)
         return not firstError or nil, firstError
     end
     function camera.Combat()
+        if runtime.portrait then runtime.portrait.Exit() end
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
         if runtime.cameraActions then runtime.cameraActions.Cancel() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end

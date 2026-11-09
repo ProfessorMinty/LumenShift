@@ -8,22 +8,30 @@ function U.New(runtime, composition)
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); W.Border(panel); W.Window(env, panel, 42, 12)
     W.Text(panel, "Photo Studio", 16, -15, 300, 22)
-    W.Text(panel, "Compose in the world", 16, -47, 300, 12, W.colors.muted)
+    local subtitle = W.Text(panel, "Compose in the world", 16, -47, 300, 12, W.colors.muted)
+    local world, portrait
+    world = W.Button(env, panel, "World Photo", 12, -70, 160, function()
+        local ok, why = runtime.portrait.World(); self.notice = not ok and why or nil; self.Build(true)
+    end)
+    portrait = W.Button(env, panel, "Portrait Stage", 184, -70, 160, function()
+        local ok, why = runtime.portrait.Enter(); self.notice = not ok and why or nil
+        if ok then self.tab = "Pose" end; self.Build(true)
+    end)
     local tabs = {}
     for i, label in ipairs({ "Look", "Light", "Frame", "Pose", "Capture", "Saved" }) do
-        local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -75 - math.floor((i - 1) / 3) * 40, 104, function() runtime.cameraActions.StopOrbit(); self.notice = nil; self.tab = label; self.Build(true) end)
+        local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -112 - math.floor((i - 1) / 3) * 40, 104, function() runtime.cameraActions.StopOrbit(); self.notice = nil; self.tab = label; self.Build(true) end)
         tabs[label] = button
     end
     local scroll = env.CreateFrame("ScrollFrame", nil, panel); self.scroll = scroll
-    scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -160); scroll:SetSize(310, 402); scroll:EnableMouseWheel(true)
-    local content = env.CreateFrame("Frame", nil, scroll); content:SetSize(310, 1); scroll:SetScrollChild(content)
+    scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -198); scroll:SetSize(310, 402); scroll:EnableMouseWheel(true)
+    local content = env.CreateFrame("Frame", nil, scroll); content:SetSize(310, 1); scroll:SetScrollChild(content); content:SetPoint("TOPLEFT", scroll, "TOPLEFT", 0, 0)
     local pool = W.CreatePool(env, content); local penv = pool.env
     function self.ClearFocus()
         for _, field in ipairs(pool.frames.EditBox or {}) do field:ClearFocus() end
     end
     composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit() end)
     local scrollbar = env.CreateFrame("Slider", nil, panel); self.scrollbar = scrollbar
-    scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -160); scrollbar:SetSize(8, 402)
+    scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -198); scrollbar:SetSize(8, 402)
     scrollbar:SetOrientation("VERTICAL"); scrollbar:SetValueStep(20); W.Fill(scrollbar, W.colors.sidebar)
     local thumb = scrollbar:CreateTexture(nil, "OVERLAY"); thumb:SetSize(6, 32); thumb:SetColorTexture(unpack(W.colors.accent)); scrollbar:SetThumbTexture(thumb)
     scrollbar:SetScript("OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
@@ -56,7 +64,7 @@ function U.New(runtime, composition)
         local h = math.min(640, env.UIParent:GetHeight() - 154)
         local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 360), math.max(.4, h / 480))
         panel:SetScale(scale); h = math.max(480, h / scale); panel:SetHeight(h)
-        scroll:SetHeight(h - 276); scrollbar:SetHeight(h - 276)
+        scroll:SetHeight(h - 314); scrollbar:SetHeight(h - 314)
         scrollbar:SetMinMaxValues(0, math.max(0, (self.contentHeight or 1) - scroll:GetHeight()))
         scrollbar:SetValue(math.min(scroll:GetVerticalScroll(), math.max(0, (self.contentHeight or 1) - scroll:GetHeight())))
         positionMarker()
@@ -66,7 +74,13 @@ function U.New(runtime, composition)
         editor.EndLookEdit()
         self.ClearFocus()
         pool.Reset(); self.sliders = {}
-        for label, button in pairs(tabs) do button.SetSelected(self.tab == label) end
+        local staged = runtime.portrait.active
+        world.SetSelected(not staged); portrait.SetSelected(staged)
+        subtitle:SetText(staged and "Compose with staged models" or "Compose in the world")
+        for label, button in pairs(tabs) do
+            button.SetSelected(self.tab == label)
+            button.label:SetText(staged and ({ Frame = "Scene", Pose = "Actors" })[label] or label)
+        end
         local y = 0
         local function text(value, height)
             W.Text(content, value, 0, y, 310, 12, W.colors.muted); y = y - (height or 42)
@@ -95,7 +109,9 @@ function U.New(runtime, composition)
             W.Script(slider.edit, "OnEnterPressed", function(s) preview.Begin(); entered(s) end)
             self.sliders[key] = slider; y = y - 68
         end
-        if self.tab == "Look" then
+        if staged and (self.tab == "Light" or self.tab == "Frame" or self.tab == "Pose" or self.tab == "Saved") then
+            y = ns.PortraitControls.Build(runtime, penv, content, self.tab, self)
+        elseif self.tab == "Look" then
             for i, recipe in ipairs({ { "neutral", "Neutral" }, { "ember", "Warm Ember" }, { "night", "Cool Night" }, { "portrait", "Soft Portrait" }, { "sunflare", "Sun Flare" }, { "bluehour", "Blue Hour" } }) do
                 local id = recipe[1]
                 W.Button(penv, content, recipe[2], (i - 1) % 2 * 160, -math.floor((i - 1) / 2) * 40, 150, function() editor.Recipe(id); self.Build() end)
@@ -179,7 +195,10 @@ function U.New(runtime, composition)
             text("Photo quality takes effect on your next entry. Exit restores it. Your regular quality choices stay unchanged.", 70)
         elseif self.tab == "Pose" or self.tab == "Capture" then
             y = ns.PhotoToolsUI.Build(runtime, penv, content, self.tab, self)
-            if self.tab == "Capture" then y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self) end
+            if self.tab == "Capture" then
+                if staged then y = ns.PortraitControls.Capture(runtime, penv, content, y, self) end
+                y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self)
+            end
         else
             text("Save styling without native graphics values. Native lighting always starts from your current scene.", 54)
             self.name = self.name or "My photo look"
@@ -206,7 +225,7 @@ function U.New(runtime, composition)
         self.Layout(); self.Refresh(); self.building = false
     end
     function self.Refresh()
-        if (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
+        if not runtime.portrait.active and (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
             and not preview.Pending() and not runtime.cameraActions.orbit and not runtime.cameraActions.busy and self.panel:IsVisible() then self.Build(); return end
         local seq, pose = runtime.captureSequence, runtime.photoTools
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
@@ -214,10 +233,14 @@ function U.New(runtime, composition)
         if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and runtime.cameraActions.status or nil
         elseif self.tab == "Capture" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Saved" then extra = runtime.photoComposition.status end
-        self.status:SetText(self.notice or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
+        self.status:SetText(self.notice or runtime.portrait.active and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
         self.compare.label:SetText(editor.before and "Show After" or "Show Before")
         if editor.busy and not preview.busy then self.compare:Disable() else self.compare:Enable() end
         positionMarker()
+    end
+    runtime.portrait.Refresh = function()
+        if not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
+        else self.Refresh() end
     end
     editor.Refresh = self.Refresh
     preview.Refresh = self.Refresh

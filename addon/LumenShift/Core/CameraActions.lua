@@ -102,6 +102,7 @@ function A.New(runtime)
     end
     function self.Cancel()
         self.StopOrbit()
+        local waiting = self.exitAfterZoom
         self.generation = self.generation + 1; self.exitAfterZoom = nil
         if self.busy then
             -- Stop requesting movement; do not infer a restorable zoom after interruption.
@@ -109,6 +110,7 @@ function A.New(runtime)
             if db.camera.composition.zoom then db.camera.composition.zoom.state = "failed" end
             refresh("Zoom interrupted; no automatic return.")
         end
+        if waiting then waiting(false, "ZOOM_INTERRUPTED") end
     end
     function self.ForgetZoom()
         if not ready() then return nil, "CAMERA_NOT_READY" end

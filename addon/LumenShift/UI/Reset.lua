@@ -43,6 +43,7 @@ function R.New(runtime, replaceSaved)
             local stopped = runtime.cameraActions.StopOrbit()
             if not stopped then return tell("Camera motion could not stop. Release the camera control and retry.", "CAMERA_STOP_FAILED") end
         end
+        if runtime.portrait then runtime.portrait.Exit() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
         if runtime.composition then runtime.composition.CancelCapture() end
         local fresh = ns.Store.Open(nil)

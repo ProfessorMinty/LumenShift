@@ -26,6 +26,7 @@ function S.New(runtime)
         return true
     end
     function self.Start(options)
+        if runtime.portrait and (runtime.portrait.busy or runtime.portrait.layerCapture) then return nil, "PORTRAIT_NOT_READY" end
         if self.active or runtime.composition.capturing or not context() then return nil, "CAMERA_NOT_READY" end
         local prefs = ns.Value.Copy(options or runtime.db.camera.tools)
         if not ns.PhotoTools.Validate(prefs) then return nil, "INVALID_CAPTURE_OPTIONS" end

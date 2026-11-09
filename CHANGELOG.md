@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.14 — Portrait Stage
+
+- Standalone staged models, poses, model lighting, backdrops, saved scenes and compositing capture.
+- Fix interrupted zoom exit completion. Schema 16 keeps preferences, saved looks and originals. No startup stage/reapply or Narcissus dependency.
+- Native stage rendering still needs owner acceptance. See [controls and exact owner test](docs/59-PORTRAIT-STAGE.md).
+
 ## 0.2.0-beta.13 — Photo composition and output
 
 - Audit standalone photo lifecycle; add reversible framing, zoom/orbit, native AA/ray-shadow/JPEG controls, light leaks and separate saved compositions.
