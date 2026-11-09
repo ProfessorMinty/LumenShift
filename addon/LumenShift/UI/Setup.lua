@@ -135,7 +135,7 @@ function S.New(runtime)
             { "Menu animations", "Short menu fades", "animation" },
             { "Reduced motion", "Turn off menu animation", "reducedMotion" },
             { "High contrast", "Darker Studio background", "highContrast" },
-            { "On-screen launcher", "A movable button for your modes", "launcher" },
+            { "Floating launcher", "Replaces the minimap button", "launcher" },
         }
         for index, choice in ipairs(choices) do
             local key = choice[3]

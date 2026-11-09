@@ -29,7 +29,7 @@ function C.Defaults()
             cinematic = mode(42, 1, 0.72, 0.46, 0.025, 0.06), lantern = mode(65, 1, 0.61, 0.20, 0.045, 0.035),
             clarity = mode(70, 1, 1, 1, 0, 0), moonlight = mode(55, 0.35, 0.55, 1, 0.045, 0.04) },
         effects = true, screenshot = false, highContrast = false, scale = 1,
-        launcher = { visible = true, x = 80, y = -160 }, audioLevel = "soft",
+        launcher = { visible = false, x = 80, y = -160 }, audioLevel = "soft",
         presets = {}, nextPreset = 1 }
     defaults.modes.clarity.brightnessMode, defaults.modes.clarity.styling = "inherit", "clear"
     return defaults

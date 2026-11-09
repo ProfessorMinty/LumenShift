@@ -1,14 +1,15 @@
 # Beta acceptance and eventual distribution
 
-> Current beta.6 adds [explicit addon-only reset and fresh setup](50-RESET-AND-RESTART-SETUP.md), and includes the [returned-original fix](49-RETURNED-ORIGINAL-AND-CLEAN-SETUP.md) and the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md) to completed Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
+> Current beta.7 adds [single-launcher and wheel/Camera navigation fixes](51-LAUNCHER-AND-WHEEL.md), preserving [explicit addon-only reset and fresh setup](50-RESET-AND-RESTART-SETUP.md), and includes the [returned-original fix](49-RETURNED-ORIGINAL-AND-CLEAN-SETUP.md) and the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md) to completed Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
 
-## Current beta.6 acceptance record
+## Current beta.7 acceptance record
 
-Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.6**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
+Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.7**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
 
 | Area | Acceptance check |
 |---|---|
 | Startup / upgrade | Whole-folder install; preferences, presets, exact originals and completion survive; no startup write or repeated wizard |
+| Navigation | Exactly one launcher before/after changing the option and reload; wheel labels/hints fit; mouse/7 reaches Camera and its visible exit; 8 opens Studio; chat focus and combat remain respected |
 | Reset | Cancel changes nothing; confirm reloads into fresh setup; current graphics/other addons remain unchanged; old recovery is intentionally forgotten; next saved setup stays complete |
 | Setup | Original/Game Defaults reads; optional optics; both normal/raid selectors scroll; Save & Close does not apply; deliberate Apply & Reload verifies and reloads; failed apply retains saved choices |
 | Every mode | Original/Game Defaults, Night Vision, Cinematic, Lantern, Clarity, Moonlight; starting looks, intensity, optional Contrast, sharpening/bloom, effects off; exact pre-change recovery differs correctly from Game Defaults |

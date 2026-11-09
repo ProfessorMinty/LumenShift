@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.7 — One launcher and a clearer wheel (2026-11-09)
+
+- Show either the minimap button or the floating launcher, never both. Fresh setup defaults to minimap; existing floating choices and positions are preserved. Setup/Accessibility now explain the choice; failed Studio initialization retains a fallback button.
+- Make Studio, Setup and the wheel close one another when opened. Rework wheel spacing with larger single-line labels, separate shortcut badges and active indicators, non-overlapping pointer targets, and a dedicated hint strip. Fit the entire wheel and hints to the screen at different UI scales.
+- Put a labeled Camera icon/button directly in the wheel center beside the Studio action. Keys 7/8 and arrow/Tab navigation reach Camera/Studio; mode keys 1–6 remain unchanged. Camera uses its existing controller and visible exit.
+- Add launcher, geometry, Camera navigation, focus/combat and display-fit regressions. Keep schema 12, saved preferences, mode/graphics behavior, assets and the single writer unchanged. No settings reset, game installation, merge or publication.
+
 ## 0.2.0-beta.6 — Reset and restart setup (2026-11-09)
 
 - Add **Reset LumenShift & Restart Setup** in Studio > Accessibility and WoW Settings > AddOns > LumenShift, with a fallback in the diagnostic export window.

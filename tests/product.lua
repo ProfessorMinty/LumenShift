@@ -408,12 +408,14 @@ return function(fixture, native, eq, test)
         f.ui.Wheel()
         for i, button in ipairs(f.ui.radial.buttons) do
             eq(button.label.SetWordWrapArgs[1], false); eq(button.label.SetNonSpaceWrapArgs[1], false)
-            eq(button.label.width, 120); eq(button.label.fontSize, 12)
+            eq(button.label.width, 128); eq(button.label.fontSize, 13)
             eq(button.label.text:find("*", 1, true), nil); assert(button.activeMark)
-            local point = button.points[1]; local x, y = point[4] + 60 - 176, point[5] - 32 + 176
-            assert(math.abs(math.sqrt(x * x + y * y) - 123) < .001)
+            eq(button.shortcut.text, tostring(i))
+            local point = button.points[1]
+            assert(point[4] >= 0 and point[4] + button.width <= 420)
+            assert(-point[5] >= 0 and -point[5] + button.height <= 420)
         end
-        eq(f.ui.radial.buttons[1].label.text, "1 Game Defaults"); eq(#f.calls, 0); f.zero()
+        eq(f.ui.radial.buttons[1].label.text, "Game Defaults"); eq(#f.calls, 0); f.zero()
     end)
     test("P24 reload failures pending records and external drift cannot be mistaken for completed ownership", function()
         local first = studio(nil, "045.00"); first.enable(); first.select("cinematic")

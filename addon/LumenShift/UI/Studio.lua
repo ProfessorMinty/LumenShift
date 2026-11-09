@@ -270,13 +270,14 @@ function S.New(runtime)
                 function(value) update(function(copy) copy.preferences.animation = value end); W.Fade(window, db.config.preferences) end)
             toggle("High-contrast panel", 0, -90, 398, function() return cfg().highContrast end,
                 function(value) update(function(copy) copy.studio.highContrast = value end); ui.Size() end)
-            toggle("Show draggable launcher", 438, -90, 398, function() return cfg().launcher.visible end,
-                function(value) update(function(copy) copy.studio.launcher.visible = value end) end)
+            toggle("Floating launcher instead of minimap", 438, -90, 398, function() return cfg().launcher.visible end,
+                function(value) update(function(copy) copy.studio.launcher.visible = value end) end,
+                "Off: minimap button. On: one movable launcher. Only one is shown.")
             W.Slider(env, parent, "Studio scale", 0, -148, 0.75, 1.5, 0.05, function() return cfg().scale end,
                 function(value) local ok = update(function(copy) copy.studio.scale = value end); ui.Size(); return ok end, nil, 398)
             button("Reset launcher position", 438, -157, 260, function() update(function(copy) copy.studio.launcher.x = 80; copy.studio.launcher.y = -160 end) end)
             section("SHORTCUTS & SETUP", -237)
-            text("Assign shortcuts in Key Bindings > LumenShift.\nMode wheel: 1–6, arrows or Tab; Enter to apply; Escape to close.\nStudio/setup: Tab or Shift+Tab to focus; Enter/Space to activate. Text fields use Enter to save.", 0, -278, 820, 14, W.colors.muted)
+            text("Assign shortcuts in Key Bindings > LumenShift.\nWheel: 1–6 modes, 7 Camera, 8 Studio; arrows/Tab to select; Enter to open.\nStudio/setup: Tab or Shift+Tab to focus; Enter/Space to activate. Text fields use Enter to save.", 0, -278, 820, 14, W.colors.muted)
             button("Setup wizard", 0, -370, 184, function() if runtime.setup then runtime.setup.Open() end end)
             button("Disable controls (restore originals first)", 206, -370, 360, function() product.Disable() end, "quiet")
             button("Reset LumenShift & Restart Setup", 0, -414, 398, function() runtime.reset.Open() end)
@@ -356,6 +357,8 @@ function S.New(runtime)
     end
     function ui.Open(page)
         if product.IsCombat() then emit("Studio is unavailable during combat. Nothing queued."); return end
+        if ui.radial then ui.radial.Close() end
+        if runtime.setup and runtime.setup.window then runtime.setup.window:Hide() end
         product.Observe(); if page then ui.page = page end
         ui.Size(); ui.BuildPage(); window:Show(); W.Fade(window, db.config.preferences)
         ns.Log.Record(runtime.reader, "studio", "open", "INFO", "PASS", { count = ui.page })
@@ -378,7 +381,11 @@ function S.New(runtime)
     if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftStudio") end
     ui.radial = ns.Radial.New(runtime, function() ui.Open() end)
     function ui.CloseWheel() if ui.radial.Close then ui.radial.Close() end; window:Hide() end
-    function ui.Wheel() if ui.radial.Toggle then ui.radial.Toggle() end end
+    function ui.Wheel()
+        window:Hide()
+        if runtime.setup and runtime.setup.window then runtime.setup.window:Hide() end
+        if ui.radial.Toggle then ui.radial.Toggle() end
+    end
     product.Refresh = ui.Refresh
     ns.Log.Record(runtime.reader, "studio", "initialize", "INFO", "PASS")
     window:Hide(); return ui

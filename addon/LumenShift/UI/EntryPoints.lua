@@ -32,7 +32,15 @@ function E.New(runtime)
     end
     W.Script(button, "OnClick", function(_, mouse) entry.Open(mouse) end)
     W.Tip(env, button, "LumenShift\nClick: setup or mode wheel\nRight-click: Studio\nDiagnostics and recovery are in Studio.")
-    button:Show()
+    function entry.Refresh()
+        local radial = runtime.ui and runtime.ui.radial
+        local floating = radial and radial.launcher
+        local useFloating = floating and runtime.db and runtime.db.config.studio.launcher.visible
+        -- Exactly one entry button. Keep a fallback even when Studio failed.
+        if useFloating then button:Hide(); floating:Show()
+        else button:Show(); if floating then floating:Hide() end end
+    end
+    entry.Refresh()
     -- Independent of Studio initialization: a failed Studio still has a clickable report path.
     if type(env.Settings) == "table" and type(env.Settings.RegisterCanvasLayoutCategory) == "function"
         and type(env.Settings.RegisterAddOnCategory) == "function" then

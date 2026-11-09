@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.6 — install and explore
+# LumenShift 0.2.0-beta.7 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+Beta.7 shows only one launcher: minimap by default, or the floating button if previously selected. Change this in **Studio > Accessibility > Floating launcher instead of minimap**. The wheel now has separate **Camera** and **Studio** icon buttons. Use **1–6** for modes, **7** for Camera, **8** for Studio, or arrows/Tab then Enter. **Exit Camera Mode** returns the interface. No settings reset is needed. [Layout and acceptance checks](51-LAUNCHER-AND-WHEEL.md).
 
 Beta.6 adds **Reset LumenShift & Restart Setup**. Right-click the LumenShift logo, open **Accessibility**, click the reset button, then confirm **Reset & Restart Setup**. WoW reloads into fresh setup. This deletes only LumenShift preferences, presets, saved originals and recovery history for this WoW account; current graphics settings and other addons' saved data stay unchanged. It does not restore old graphics values. Also available in WoW Settings > AddOns > LumenShift, or **Reset LumenShift...** in the diagnostic report. [Details and test steps](50-RESET-AND-RESTART-SETUP.md).
 
@@ -12,7 +14,7 @@ Beta.4 includes the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md): Ef
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. A routine update does not need a reset. Use the explicit reset button only when you want to start fresh. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-beta.6-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-beta.7-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 
@@ -24,7 +26,7 @@ In **Personal Presets**, Save variation stores a copy of the selected mode's edi
 
 Rename a card with Enter. Export copies a complete data-only LSMODE code into the transfer field for Ctrl+C; import saves it without applying. Delete has **Undo last deletion** for this session. Names/transfer drafts survive page rebuilding. Presets keep visual settings only; graphics quality remains independent. Up to 24 looks are supported. Original/Game Defaults remains the setup reference rather than a personal variation.
 
-Studio and Setup support **Tab / Shift+Tab** focus, **Enter / Space** buttons and native text entry; Enter commits a numeric/name edit. Focused controls scroll into view. Existing chat/text focus wins. **Escape** clears a keyboard selection or closes the window through the game's window handling. Mode wheel: 1–6 or arrows/Tab to select; Enter to apply; Escape to cancel. Use title bars to move windows. Accessibility includes Studio scale, high contrast, reduced motion, effects and launcher visibility. No commands are required.
+Studio and Setup support **Tab / Shift+Tab** focus, **Enter / Space** buttons and native text entry; Enter commits a numeric/name edit. Focused controls scroll into view. Existing chat/text focus wins. **Escape** clears a keyboard selection or closes the window through the game's window handling. Wheel: 1–6 for modes, 7 for Camera, 8 for Studio; arrows/Tab to select, Enter to activate, Escape to close. Use title bars to move windows. Accessibility includes Studio scale, high contrast, reduced motion, effects and minimap/floating launcher choice. No commands are required.
 
 Setup's expanded Graphics page scrolls while Save & Close and Finish/Apply & Reload remain fixed. Only an in-progress Apply temporarily prevents setup edits. Successful preference saving survives an apply failure; recovery originals stay available. Completed setup is not reopened merely because the addon version changed.
 
@@ -79,7 +81,7 @@ Only available known parent/leaf originals are captured. Missing leaves are disc
 
 **Retest this fix:** login should leave graphics unchanged. From the reported Cinematic 42 state, click Night Vision (75), then Original (captured 45). Reopen setup through native Settings → AddOns → LumenShift → Setup wizard, choose Next: Graphics, keep both banks unchanged, click Finish & Reload UI, and check that it reloads and stays completed. Drag setup/Studio/report by the title bar and check the wheel's longer Game Defaults label. Recovery records no longer block reload or a new mode click when a completed record still matches. A pending/failed write or actual external change retains its original and needs explicit recovery. These are requested native checks, not already verified results.
 
-- **Left-click** the launcher/minimap icon for the six-mode wheel. **Right-click** for Studio.
+- **Left-click** the launcher/minimap icon for the mode wheel, including its Camera and Studio buttons. **Right-click** for Studio.
 - Select **Night Vision**, then **Original** or **Game Defaults** to apply your chosen return look. Other modes have editable Brightness, optional Contrast, tint and effects.
 - **Visual Modes**: select a mode card, edit its sliders/toggles, then click the teal **Apply** button at bottom right. Selecting a card alone does not change the scene. The return mode uses the saved visual baseline and leaves quality alone. Diagnostic recovery restores the separate pre-change originals.
 - **Colors & Effects**, **Audio**, **Personal Presets** and **Accessibility** contain optional presentation, sounds, saved variations, reduced motion and scale controls.
@@ -105,8 +107,8 @@ A missing default is displayed as unavailable, never guessed. If Contrast is mis
 ## Camera Mode and names
 
 1. Open **Studio → Camera**. Leave **Hide friendly player and pet names in Camera Mode** checked to hide those names with the interface; uncheck it for HUD-only behavior.
-2. Click **Enter Camera Mode — hide interface**. It uses the same native visibility API as Alt+Z. Your visual mode and graphics profile stay active.
-3. Return using your optional **Enter / exit Camera Mode** keybind. Alternatively, press **Alt+Z**, then click **Exit Camera Mode** in Studio. Alt+Z itself reveals the HUD; it does not restore names.
+2. Click **Camera** on the wheel, or **Enter Camera Mode — hide interface** in Studio. It uses the same native visibility API as Alt+Z. Your visual mode and graphics profile stay active.
+3. Click the visible **Exit Camera Mode** button to return, or use the optional **Enter / exit Camera Mode** keybind. If needed, **Alt+Z** reveals the HUD so you can reach Studio or the wheel; Alt+Z alone does not restore names.
 4. **Toggle friendly player and pet names** works independently of HUD visibility. Toggling back restores the individual original settings, including a mixed on/off pair.
 5. **Restore original name settings** explicitly recovers saved originals after an interruption or conflict. Enemy names, nameplates, camera zoom and camera movement are unchanged.
 
