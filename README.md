@@ -6,6 +6,8 @@
 
 Beta.11 makes native photo lighting and FOV sliders **preview while dragging**, with paced verified updates and the latest endpoint retained. Capture and Hide controls finish the pending edit first; Escape cancels unissued edits and uses normal restoration. [Details and owner test](docs/55-LIVE-PHOTO-SLIDERS.md). No settings reset is needed.
 
+The [Narcissus source investigation and photo expansion plan](docs/56-NARCISSUS-PHOTO-ARCHITECTURE.md) explains the overlapping toolbar, world-photo versus model-stage techniques, and the remaining posing, capture and composition work. **LumenShift is standalone and must work with Narcissus uninstalled.** The investigation adds no runtime features or new dependency; Portrait Stage remains later work.
+
 Beta.10 adds a complete **in-scene Photo Studio**: live filters, soft vignette, draggable glow, grain, native lighting sliders, comparison, framing and saved photo looks. Camera keeps Hide controls/H and Escape. [Implementation and testing](docs/54-IN-SCENE-PHOTO-EDITOR.md). The optional 3D model stage remains deferred; native visual acceptance is pending.
 
 Beta.8 corrects Camera Mode rejecting server-stored friendly-name preferences as if they were write-protected. The existing camera controls now use the corrected policy through activation and restoration; diagnostic exports include the full flags and precise preflight result. No settings reset is needed. [Failure evidence, fix and checks](docs/52-CAMERA-NAME-STORAGE-FIX.md).
