@@ -73,12 +73,14 @@ function C.New(runtime)
         local shown, why = visibility(true)
         if not shown then return report(nil, why) end
         if runtime.composition then runtime.composition.CancelCapture() end
-        if camera.busy or names.busy or runtime.framing.busy or runtime.photo.busy then
+        if runtime.photoEditor then runtime.photoEditor.Hide() end
+        if camera.busy or names.busy or runtime.framing.busy or runtime.photo.busy or runtime.photoEditor and runtime.photoEditor.busy then
             camera.interrupted = true; return report(nil, "BUSY")
         end
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         camera.active, camera.busy = false, true
         local tasks, firstError = {}, nil
+        if db.camera.editor.session then tasks[#tasks + 1] = runtime.photoEditor.Restore end
         if db.camera.nameReturn then tasks[#tasks + 1] = function(done)
             return names.Apply("camera", ns.Value.Copy(db.camera.nameReturn.targets), function(ok, code)
                 if ok then db.camera.nameReturn = nil; db.camera.sideEffects = {} end
@@ -94,6 +96,7 @@ function C.New(runtime)
             if not tasks[index] then
                 camera.busy = false
                 if not firstError then camera.changedNames = false end
+                runtime.product.RefreshPresentation(true)
                 report(not firstError, firstError); return
             end
             local called = false
@@ -113,6 +116,7 @@ function C.New(runtime)
     end
     function camera.Combat()
         camera.interrupted = true
+        if runtime.photoEditor then runtime.photoEditor.Hide() end
         if runtime.composition then runtime.composition.CancelCapture() end
         -- Restore access to combat cues only; never queue graphics restoration.
         if camera.active or camera.busy then visibility(true) end
@@ -132,6 +136,7 @@ function C.New(runtime)
             if camera.interrupted or runtime.product.IsCombat() or camera.Visible() ~= true then return report(nil, "CAMERA_ENTRY_INTERRUPTED") end
             local ok, reason = visibility(false)
             camera.active = ok == true
+            if ok and runtime.photoEditor then runtime.photoEditor.Enter() end
             if ok and runtime.composition then runtime.composition.Show() end
             return report(ok, reason)
         end

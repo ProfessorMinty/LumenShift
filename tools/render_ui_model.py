@@ -73,7 +73,7 @@ def render(model, output):
                       f'color:{rgba}', 'overflow-wrap:break-word']
             content = html.escape(n['text']).replace('\\n', '<br>')
             if n['kind'] == 'EditBox':
-                style += ['padding:4px 6px', 'z-index:1']
+                style += ['padding:4px 6px', 'z-index:1', 'white-space:pre', 'overflow:hidden']
                 content = '<span style="position:relative;z-index:2">' + content + '</span>'
         children = [child for child, node in nodes.items() if node['parent'] == index]
         layers = {'BACKGROUND': 0, 'BORDER': 1, 'ARTWORK': 2, 'OVERLAY': 3}
@@ -81,6 +81,8 @@ def render(model, output):
         return '<div style="' + ';'.join(style) + '">' + ''.join(emit(child) for child in children) + content + '</div>'
     document = '<!doctype html><meta charset="utf-8"><meta name="darkreader-lock"><meta name="color-scheme" content="dark"><title>LumenShift off-client UI model</title>'
     document += '<body style="margin:0;background:#172331;overflow:hidden">' + emit(root_id)
+    # Camera effects/controls intentionally have no UIParent so they survive Alt+Z.
+    document += ''.join(emit(i) for i, n in nodes.items() if i != root_id and n['parent'] == 0)
     document += '<div style="position:absolute;bottom:7px;left:15px;color:#a9baca;font:12px Segoe UI">OFF-CLIENT LUA UI MODEL — layout review only, not a native game screenshot</div></body>'
     output.write_text(document, encoding='utf-8')
     print(output)

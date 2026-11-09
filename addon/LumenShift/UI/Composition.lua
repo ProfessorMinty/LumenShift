@@ -17,6 +17,7 @@ function C.New(runtime)
         local width, height = env.UIParent:GetWidth(), env.UIParent:GetHeight()
         root:SetScale(env.UIParent:GetEffectiveScale())
         self.bar:SetScale(math.min(1, math.max(0.1, (width - 24) / 720)))
+        if self.editor then self.editor.Layout() end
         local ratio = ({ wide = 16 / 9, cinema = 2.39, square = 1 })[prefs.aspect]
         local w, h = width, height
         if ratio then if width / height > ratio then w = height * ratio else h = width / ratio end end
@@ -74,6 +75,7 @@ function C.New(runtime)
             sync()
         end
         if not self.keyboard.enabled then self.keyboard.OnFailure(self.keyboard.error) end
+        self.editor = ns.PhotoEditorUI.New(runtime, self)
         root:RegisterEvent("SCREENSHOT_SUCCEEDED"); root:RegisterEvent("SCREENSHOT_FAILED")
         root:RegisterEvent("UI_SCALE_CHANGED"); root:RegisterEvent("DISPLAY_SIZE_CHANGED")
         root:SetScript("OnEvent", function(_, event)

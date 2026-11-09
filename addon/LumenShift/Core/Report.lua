@@ -186,6 +186,19 @@ function D.Build(runtime)
             .. " controlsHidden=" .. bool(runtime.composition and runtime.composition.controlsHidden)
             .. " keyboard=" .. bool(runtime.composition and runtime.composition.keyboard and runtime.composition.keyboard.enabled)
             .. " photoRequested=" .. bool(db.camera.photoEnabled) .. " photoLevel=" .. D.Number(db.camera.photoLevel)
+        local photoSession = db.camera.editor.session
+        lines[#lines + 1] = "Photo editor: active=" .. bool(runtime.photoEditor and runtime.photoEditor.active)
+            .. " before=" .. bool(runtime.photoEditor and runtime.photoEditor.before)
+            .. " session=" .. safe(photoSession and photoSession.state or "none")
+            .. " effects=" .. bool(runtime.photoEffects and runtime.photoEffects.root and runtime.photoEffects.root:IsShown())
+        for _, key in ipairs(ns.PhotoConfig.Order) do
+            lines[#lines + 1] = "photo look " .. key .. "=" .. D.Number(db.camera.editor.look[key])
+        end
+        for _, key in ipairs(ns.Value.Keys(photoSession and photoSession.before or {})) do
+            lines[#lines + 1] = "photo lighting " .. key .. " return=" .. D.Number(photoSession.before[key])
+                .. " edited=" .. D.Number(photoSession.after[key]) .. " expected=" .. D.Number(photoSession.expected[key])
+                .. " current=" .. D.Number(ns.ReadOnly.Read(runtime.reader, key).raw)
+        end
         for _, bank in ipairs(ns.NativeGraphics.Banks) do
             local record = db.camera.photo.records[bank]
             lines[#lines + 1] = "photo graphics " .. bank .. " state=" .. safe(record and record.state or "unowned")

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.10 — In-scene photo editor (2026-11-09)
+
+- Add live photo filters, vignette, draggable glow, grain, letterbox and saved looks in Camera Mode.
+- Add native lighting sliders, comparison and pre-photo restoration through the canonical writer.
+- Preserve clean capture, H and Escape; schema 13 migrates existing preferences without startup writes.
+- Add 26 photo-editor regressions, numeric recovery export, original compact textures and the owner test guide in docs/54-IN-SCENE-PHOTO-EDITOR.md. All 477 Lua 5.1 mocks and 10 packaging tests pass; actual in-game visuals/input remain unverified.
+
 ## 0.2.0-beta.9 — Clean photo capture and Escape (2026-11-09)
 
 - Add Hide controls/H for a clean external screenshot or recording view; retain the selected scene effects while hiding guides, toolbar and tooltip. H reveals controls again.

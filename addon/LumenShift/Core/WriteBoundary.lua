@@ -48,7 +48,7 @@ function B.NewVisual(runtime)
         for _, key in ipairs(ns.Catalog.WatchKeys()) do seen[key] = ns.ReadOnly.Read(reader, key) end
         return seen
     end
-    local function journal(opticalKeys)
+    local function journal(opticalKeys, subset)
         local result = V.Copy(db.journal)
         for key in pairs(result.entries) do if key ~= "Brightness" then return nil end end
         result.entries.Contrast = V.Copy(db.experiments.journal.entries.Contrast)
@@ -57,11 +57,12 @@ function B.NewVisual(runtime)
             if entry and (not opticalKeys or opticalKeys[key]) then entry.layer = "visual"; result.entries[key] = entry end
         end
         result.nextEpoch = math.max(result.nextEpoch, db.experiments.journal.nextEpoch)
+        if subset then for key in pairs(result.entries) do if not subset[key] then result.entries[key] = nil end end end
         return result
     end
-    local function persist(value, opticalKeys)
-        db.journal.entries.Brightness = V.Copy(value.entries.Brightness)
-        db.experiments.journal.entries.Contrast = V.Copy(value.entries.Contrast)
+    local function persist(value, opticalKeys, subset)
+        if not subset or subset.Brightness then db.journal.entries.Brightness = V.Copy(value.entries.Brightness) end
+        if not subset or subset.Contrast then db.experiments.journal.entries.Contrast = V.Copy(value.entries.Contrast) end
         for _, key in ipairs(ns.Optics.Keys) do
             local entry = V.Copy(value.entries[key])
             if entry then entry.layer = "quality" end
@@ -92,14 +93,16 @@ function B.NewVisual(runtime)
         end
         if not ns.Optics.Validate(db.optics) then return nil, "INVALID_OPTICAL_STATE" end
         if db.optics.comparison and not options.comparison and not restoring then return nil, "FINISH_COMPARISON" end
+        if db.camera.editor.session and not options.photo and not restoring then return nil, "FINISH_PHOTO_EDIT" end
         local visualIntent, opticalKeys = ns.Optics.Extract(targets), {}
         local reference = restoring and {} or ns.Modes.Reference(runtime)
         for _, key in ipairs(ns.Optics.Keys) do
-            if options.comparison then opticalKeys[key] = targets[key] ~= nil or nil
+            if options.photo then opticalKeys[key] = options.subset[key] or nil
+            elseif options.comparison then opticalKeys[key] = targets[key] ~= nil or nil
             elseif restoring or targets[key] ~= nil or db.optics.visual[key] ~= nil
                 or reference[key] ~= nil or db.optics.reference[key] ~= nil then opticalKeys[key] = true end
         end
-        if not restoring and not options.comparison then
+        if not restoring and not options.comparison and not options.photo then
             local effective, reason = ns.Optics.Resolve(visualIntent, db.optics.quality, reference)
             if not effective then return nil, reason end
             targets = V.Copy(targets)
@@ -110,7 +113,7 @@ function B.NewVisual(runtime)
                     and V.Number(entry.originalRaw) == reference[key] then targets[key] = nil end
             end
         end
-        local prior, before = journal(opticalKeys), observe()
+        local prior, before = journal(opticalKeys, options.subset), observe()
         if not prior then return nil, "OTHER_RECOVERY_RECORDS_PRESENT" end
         for key, raw in pairs(options.expected or {}) do
             if not ns.Planner.SafeObservation(before[key]) or before[key].raw ~= raw then return nil, "COMPARISON_CHANGED_EXTERNALLY" end
@@ -124,7 +127,7 @@ function B.NewVisual(runtime)
                 entry.lastVerifiedRaw, entry.state, entry.failure = before[key].raw, "owned", nil
             end
         end
-        local keys = { Brightness = true }
+        local keys = options.subset and V.Copy(options.subset) or { Brightness = true }
         if targets.Contrast ~= nil or prior.entries.Contrast then
             keys.Contrast = true
             local bounds, reason = ns.ExperimentPolicy.Bounds("Contrast", prior.entries.Contrast and prior.entries.Contrast.originalRaw or before.Contrast.raw)
@@ -160,25 +163,25 @@ function B.NewVisual(runtime)
             for _, op in ipairs(plan.operations) do
                 local raw = options.rawTargets[op.key]
                 if raw then
-                    if V.Number(raw) ~= targets[op.key] then return nil, "INVALID_COMPARISON" end
+                    if V.Number(raw) ~= (targets[op.key] or V.Number(op.targetRaw)) then return nil, "INVALID_COMPARISON" end
                     op.targetRaw = raw
                 end
             end
         end
-        if not ns.Planner.SafeObservation(before.Brightness) then return nil, "BRIGHTNESS_UNAVAILABLE_OR_RESTRICTED" end
+        if keys.Brightness and not ns.Planner.SafeObservation(before.Brightness) then return nil, "BRIGHTNESS_UNAVAILABLE_OR_RESTRICTED" end
         self.serial = self.serial + 1
         local tx, code = R.Begin(prior, plan, self.serial, next(prior.entries) and "ACTIVE" or "BASELINE")
         if not tx then return nil, code end
         self.busy, self.state, self.error = true, "APPLYING", nil
         local held, expected = V.Copy(tx.journal), V.Copy(before)
-        persist(held, opticalKeys) -- all originals exist before any setter
+        persist(held, opticalKeys, options.subset) -- all originals exist before any setter
         local finished = false
         local function finish(ok, errorCode, restored)
             if finished then return end
             finished, cancel = true, nil
             self.busy, self.state, self.error = false, ok and "VERIFIED" or restored and "COMPENSATED" or "PARTIAL", errorCode
             ns.Log.Record(reader, "visual", "transaction", ok and "INFO" or "WARN", errorCode or "PASS", { state = self.state, tx = self.serial })
-            if ok and not options.comparison then
+            if ok and not options.comparison and not options.photo then
                 db.optics.visual = restoring and {} or V.Copy(visualIntent)
                 db.optics.reference = V.Copy(reference)
                 if restoring then db.optics.quality, db.optics.comparison = {}, nil end
@@ -187,7 +190,7 @@ function B.NewVisual(runtime)
         end
         local function fail(errorCode)
             for _, entry in pairs(held.entries) do entry.state, entry.failure = "failed", errorCode end
-            persist(held, opticalKeys); finish(false, errorCode)
+            persist(held, opticalKeys, options.subset); finish(false, errorCode)
         end
         cancel = fail
         local function write(key, raw, current)
@@ -244,7 +247,7 @@ function B.NewVisual(runtime)
         local function verify()
             if finished then return end
             -- Do not overwrite a journal changed by recovery or another operation.
-            local currentJournal = journal(opticalKeys)
+            local currentJournal = journal(opticalKeys, options.subset)
             for key in pairs(keys) do
                 local a, b = held.entries[key], currentJournal and currentJournal.entries[key]
                 if (a == nil) ~= (b == nil) then finish(false, "RECOVERY_DATA_CHANGED"); return end
@@ -258,7 +261,7 @@ function B.NewVisual(runtime)
                 if verified.state ~= "VERIFIED" then fail("LATE_DRIFT_OR_RESTRICTION"); return end
                 finalJournal = verified.journal
             end
-            persist(finalJournal, opticalKeys); finish(not failure, failure, failure ~= nil)
+            persist(finalJournal, opticalKeys, options.subset); finish(not failure, failure, failure ~= nil)
         end
         local scheduled = pcall(reader.env.C_Timer.After, 0.15, function()
             executing = true
@@ -282,6 +285,21 @@ function B.NewVisual(runtime)
         return result, why
     end
     function self.Apply(targets, callback) return request(targets, callback, false) end
+    -- Temporary photo intent uses the same journals/planner/rollback, with only
+    -- explicitly edited keys participating. Other mode/quality intent is untouched.
+    function self.Photo(rawTargets, expected, returning, callback)
+        if not ns.Optics.RawMap(rawTargets) or not ns.Optics.RawMap(expected) then return nil, "INVALID_PHOTO_REQUEST" end
+        local targets, subset = {}, {}
+        for key, raw in pairs(rawTargets) do
+            if not expected[key] then return nil, "INVALID_PHOTO_REQUEST" end
+            subset[key], targets[key] = true, V.Number(raw)
+            local entry = key == "Brightness" and db.journal.entries[key] or db.experiments.journal.entries[key]
+            if returning and entry and raw == entry.originalRaw then targets[key] = nil end
+        end
+        for key in pairs(expected) do if not subset[key] then return nil, "INVALID_PHOTO_REQUEST" end end
+        return request(targets, callback, false, { photo = true, subset = subset, rawTargets = rawTargets,
+            expected = expected, comparison = returning == true })
+    end
     function self.Restore(callback) return request({}, callback, true) end
     function self.Cancel()
         if executing then return nil, "BUSY" end

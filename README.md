@@ -2,9 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.9** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.10** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
 
-Beta.9 adds **Hide controls** for external screenshots/recording, **H** to show the Camera controls again, and **Escape** to exit through normal restoration. [Photo-tool research, proposed editor and implemented fixes](docs/53-PHOTO-MODE-RESEARCH-AND-CONTROLS.md). The larger photo editor and new filters are proposed, not included in this build.
+Beta.10 adds a complete **in-scene Photo Studio**: live filters, soft vignette, draggable glow, grain, native lighting sliders, comparison, framing and saved photo looks. Camera keeps Hide controls/H and Escape. [Implementation and testing](docs/54-IN-SCENE-PHOTO-EDITOR.md). The optional 3D model stage remains deferred; native visual acceptance is pending.
 
 Beta.8 corrects Camera Mode rejecting server-stored friendly-name preferences as if they were write-protected. The existing camera controls now use the corrected policy through activation and restoration; diagnostic exports include the full flags and precise preflight result. No settings reset is needed. [Failure evidence, fix and checks](docs/52-CAMERA-NAME-STORAGE-FIX.md).
 

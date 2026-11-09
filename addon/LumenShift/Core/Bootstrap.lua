@@ -11,6 +11,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         if runtime.names then runtime.names.Observe() end
         if runtime.graphics then runtime.graphics.Observe() end
         if runtime.photo then runtime.photo.Observe() end
+        if runtime.photoEditor then runtime.photoEditor.Observe() end
         if runtime.framing then runtime.framing.Observe() end
         if runtime.product then runtime.product.Observe() end
         return
@@ -60,6 +61,8 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.visual = ns.WriteBoundary.NewVisual(runtime)
     runtime.product = ns.Product.New(runtime)
     runtime.camera = ns.Camera.New(runtime)
+    runtime.photoEditor = ns.PhotoEditor.New(runtime)
+    runtime.photoEffects = ns.PhotoEffects.New(runtime)
     runtime.performance = ns.Performance.New(runtime)
     runtime.composition = ns.Composition.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)

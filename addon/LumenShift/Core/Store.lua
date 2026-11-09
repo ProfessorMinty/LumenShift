@@ -53,6 +53,8 @@ function S.Open(raw)
         ns.NamePolicy.Upgrade(data.camera)
     end
     local migrated = false
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 12
+        and type(data.camera) == "table" and data.camera.editor == nil then data.camera.editor = ns.PhotoConfig.Defaults() end
     if data.schemaVersion == 1 then
         if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
             or not V.Raw(data.addonVersion) or not ns.Profiles.ValidateLegacy(data.config)
@@ -116,6 +118,9 @@ function S.Open(raw)
     if data.schemaVersion == 11 then
         -- No Camera-session intent can be inferred from older manual name records.
         data.schemaVersion, migrated = 12, migrated and migrated:gsub("_TO_11$", "_TO_12") or "MIGRATED_11_TO_12"
+    end
+    if data.schemaVersion == 12 then
+        data.schemaVersion, migrated = 13, migrated and migrated:gsub("_TO_12$", "_TO_13") or "MIGRATED_12_TO_13"
     end
     if data.schemaVersion ~= ns.schemaVersion then
         -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.

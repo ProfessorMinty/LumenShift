@@ -137,6 +137,7 @@ function P.New(runtime)
         return true
     end
     function product.Select(id)
+        if db and db.camera.editor.session then return report("FINISH_PHOTO_EDIT", "Exit Camera Mode or restore photo lighting before switching modes.") end
         if not db then return report("SAVED_DATA_QUARANTINED", "Preferences could not be loaded. Open Diagnostics for details.") end
         if not config().enabled then
             local enabled, code, message = product.Enable()
@@ -256,6 +257,7 @@ function P.New(runtime)
     end
     function product.Observe(resumeCosmetics)
         if product.busy then return end
+        if db and db.camera.editor.session then return end -- photo session observes its own temporary intent
         if runtime.visual.ObserveComparison() == "recovery" then clear(); product.state = "RECOVERY" end
         if db and next(db.optics.visual) and not db.optics.comparison then
             for key, target in pairs(db.optics.visual) do
@@ -312,7 +314,8 @@ function P.New(runtime)
         if runtime.exportUI then runtime.exportUI.window:Hide() end
         if runtime.setup and runtime.setup.window then runtime.setup.window:Hide() end
     end
-    function product.RefreshPresentation(resume)
+    function product.RefreshPresentation(resume, photoReturn)
+        if not photoReturn and runtime.photoEditor and runtime.photoEditor.active then runtime.photoEditor.Render(); return true end
         if runtime.presentation and db then
             if product.state ~= "ACTIVE" or product.IsCombat()
                 or db.optics.comparison and db.optics.comparison.state ~= "after" then runtime.presentation.Clear(); return true end
