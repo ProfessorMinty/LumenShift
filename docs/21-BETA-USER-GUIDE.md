@@ -1,8 +1,10 @@
-# LumenShift 0.2.0-beta.10 — install and explore
+# LumenShift 0.2.0-beta.11 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
 
-Beta.10 adds **Photo Studio directly inside Camera Mode**. Open the launcher → Camera. Look contains filters, vignette, draggable glow and grain; Light contains native brightness/contrast/sharpness/bloom sliders; Frame contains guides/FOV/letterbox; Saved stores and shares photo styles. Drag a native slider and release to apply once. Show Before/After compares the scene; Exit/Escape returns temporary native edits. Hide controls/H gives a clean external screenshot. Keep SavedVariables: schema 13 migrates without repeating setup. [Full controls and campfire test](54-IN-SCENE-PHOTO-EDITOR.md). The optional 3D model stage is deferred.
+Beta.11: native lighting and FOV now **preview as you drag**, with paced updates and the last pointer value retained. Capture/Hide controls/Before-After finish the pending edit first. Escape cancels queued input and restores through the existing Camera path. No reset is needed. [Live-slider test](55-LIVE-PHOTO-SLIDERS.md).
+
+Beta.10 adds **Photo Studio directly inside Camera Mode**. Open the launcher → Camera. Look contains filters, vignette, draggable glow and grain; Light contains native brightness/contrast/sharpness/bloom sliders; Frame contains guides/FOV/letterbox; Saved stores and shares photo styles. Native sliders now preview during dragging; typing a number and pressing Enter also applies. Show Before/After compares the scene; Exit/Escape returns temporary native edits. Hide controls/H gives a clean external screenshot. Keep SavedVariables: schema 13 migrates without repeating setup. [Full controls and campfire test](54-IN-SCENE-PHOTO-EDITOR.md). The optional 3D model stage is deferred.
 
 Beta.9: in Camera Mode, click **Hide controls** (or press **H**) before using Snagit, Alt+Print Screen or another capture tool. This hides the toolbar and guides, retaining selected effects. **H** shows the controls again. **Escape** exits Camera and uses its normal restoration. [Details and photo-editor research](53-PHOTO-MODE-RESEARCH-AND-CONTROLS.md). Keep SavedVariables; no setup reset is needed.
 
@@ -20,7 +22,7 @@ Beta.4 includes the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md): Ef
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. A routine update does not need a reset. Use the explicit reset button only when you want to start fresh. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-beta.10-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-beta.11-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 

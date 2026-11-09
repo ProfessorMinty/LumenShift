@@ -2,7 +2,7 @@ local _, ns = ...
 local U, W = {}, ns.Widgets
 ns.PhotoEditorUI = U
 function U.New(runtime, composition)
-    local env, editor, db = runtime.reader.env, runtime.photoEditor, runtime.db
+    local env, editor, db, preview = runtime.reader.env, runtime.photoEditor, runtime.db, runtime.photoPreview
     local self = { tab = "Look", sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
@@ -31,7 +31,7 @@ function U.New(runtime, composition)
     local footer = env.CreateFrame("Frame", nil, panel); self.footer = footer
     footer:SetSize(332, 94); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 14, 12)
     W.Rule(footer, 0, 0, 332)
-    self.compare = W.Button(env, footer, "Before / After", 0, -12, 160, function() editor.Compare() end)
+    self.compare = W.Button(env, footer, "Before / After", 0, -12, 160, function() preview.Finish(editor.Compare) end)
     W.Button(env, footer, "Reset photo look", 172, -12, 160, function() editor.Recipe("neutral"); self.Build() end)
     self.status = W.Text(footer, "", 0, -53, 332, 12, W.colors.muted)
     local marker = env.CreateFrame("Button", nil, composition.root); self.marker = marker
@@ -78,18 +78,18 @@ function U.New(runtime, composition)
                 function(n) local ok = editor.Set(key, n); positionMarker(); return ok end, nil, 310)
             y = y - 68
         end
-        local function commitSlider(key, label, minimum, maximum, step, current, callback)
+        local function liveSlider(key, label, minimum, maximum, step, current)
             local draft = math.max(minimum, math.min(maximum, current))
             local slider = W.Slider(penv, content, label, 0, y, minimum, maximum, step, function() return draft end,
-                function(n) draft = n; return true end, "Drag to choose. Release to apply once; typing a value and pressing Enter also applies.", 310)
-            local function commit()
-                if editor.active and runtime.camera.active and not runtime.product.IsCombat()
-                    and not composition.controlsHidden and not composition.capturing then callback(draft) end
-            end
-            W.Script(slider, "OnMouseUp", commit)
+                function(n)
+                    local ok = preview.Queue(key, n)
+                    if ok then draft = n end
+                    return ok
+                end, "Live preview while dragging. Changes are paced and verified; the latest value wins. You can also type a value and press Enter.", 310)
+            W.Script(slider, "OnMouseDown", function() self.dragging = slider; preview.Begin() end)
+            W.Script(slider, "OnMouseUp", function() self.dragging = nil; self.Refresh() end)
             local entered = slider.edit:GetScript("OnEnterPressed")
-            W.Script(slider.edit, "OnEnterPressed", function(s) local n = tonumber(s:GetText()); entered(s)
-                if ns.Value.Finite(n) and n >= minimum and n <= maximum then commit() end end)
+            W.Script(slider.edit, "OnEnterPressed", function(s) preview.Begin(); entered(s) end)
             self.sliders[key] = slider; y = y - 68
         end
         if self.tab == "Look" then
@@ -116,7 +116,7 @@ function U.New(runtime, composition)
             lookSlider("glowX", "Glow - horizontal"); lookSlider("glowY", "Glow - vertical")
             section("TEXTURE"); lookSlider("grain", "Film grain"); lookSlider("grainScale", "Grain size", .1)
         elseif self.tab == "Light" then
-            text("Native scene settings. Release a slider to apply. Exit returns the captured pre-photo values.", 56)
+            text("Live preview as you drag. Updates are paced; Exit returns your pre-photo values.", 56)
             for _, item in ipairs({ { "Brightness", "Brightness", 0, 100, 1 }, { "Contrast", "Contrast", 0, 100, 1 },
                 { "ResampleSharpness", "Sharpness", 0, 100, 5 }, { "bloomUserMult", "Native bloom", 0, 1, .2 } }) do
                 local key = item[1]; local value, why = editor.Read(key)
@@ -125,14 +125,11 @@ function U.New(runtime, composition)
                 end
                 if value then
                     if key == "ResampleSharpness" then value = 100 - value * 50 end
-                    commitSlider(key, item[2], item[3], item[4], item[5], value, function(n)
-                        if key == "ResampleSharpness" then editor.Native({ ResampleAlwaysSharpen = 1, ResampleSharpness = (100 - n) / 50 })
-                        else editor.Native({ [key] = n }) end
-                    end)
+                    liveSlider(key, item[2], item[3], item[4], item[5], value)
                 else text(item[2] .. ": " .. (why or "Unavailable"), 64) end
             end
             text("Bloom is renderer-dependent and affects the scene globally. Glow accent on Look is a separate screen effect.", 62)
-            W.Button(penv, content, "Restore photo lighting", 0, y, 310, function() editor.Restore(); self.Refresh() end); y = y - 48
+            W.Button(penv, content, "Restore photo lighting", 0, y, 310, function() preview.Finish(editor.Restore) end); y = y - 48
             local s = db.camera.editor.session
             if s then
                 section("PRE-PHOTO VALUES")
@@ -152,9 +149,9 @@ function U.New(runtime, composition)
             y = y - 88; lookSlider("letterbox", "Letterbox height")
             local range = ns.Framing.Range(runtime.reader); local seen = ns.ReadOnly.Read(runtime.reader, "cameraFov")
             if range and ns.Planner.SafeObservation(seen) and ns.Value.Number(seen.raw) then
-                commitSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw), runtime.camera.ApplyFOV)
+                liveSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw))
             else text("Field of view unavailable; framing guides remain available.", 52) end
-            W.Button(penv, content, "Restore field of view", 0, y, 310, function() runtime.camera.RestoreFOV() end); y = y - 48
+            W.Button(penv, content, "Restore field of view", 0, y, 310, function() preview.Finish(runtime.camera.RestoreFOV) end); y = y - 48
             section("NEXT CAMERA ENTRY")
             W.Toggle(penv, content, "Hide friendly names", 0, y, 310, function() return db.camera.hideWithUI end,
                 function(v) db.camera.hideWithUI = v end); y = y - 46
@@ -188,13 +185,16 @@ function U.New(runtime, composition)
         self.Layout(); self.Refresh(); self.building = false
     end
     function self.Refresh()
-        if self.tab == "Light" and not self.building then self.Build(); return end
-        self.status:SetText(editor.status)
+        if (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
+            and not preview.Pending() and self.panel:IsVisible() then self.Build(); return end
+        self.status:SetText(preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
         self.compare.label:SetText(editor.before and "Show After" or "Show Before")
-        if editor.busy then self.compare:Disable() else self.compare:Enable() end
+        if editor.busy and not preview.busy then self.compare:Disable() else self.compare:Enable() end
         positionMarker()
     end
     editor.Refresh = self.Refresh
+    preview.Refresh = self.Refresh
+    composition.root:HookScript("OnHide", function() self.dragging = nil end)
     self.Build(true)
     return self
 end

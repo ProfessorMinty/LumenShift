@@ -36,6 +36,9 @@ function C.New(runtime)
     end
     function self.ToggleControls()
         if not runtime.camera.active or runtime.product.IsCombat() or not self.keyboard or not self.keyboard.enabled then return nil end
+        if not self.controlsHidden and runtime.photoPreview and runtime.photoPreview.Pending() then
+            return runtime.photoPreview.Finish(self.ToggleControls)
+        end
         self.controlsHidden = not self.controlsHidden
         if env.GameTooltip then env.GameTooltip:Hide() end
         sync(); return true
@@ -91,9 +94,11 @@ function C.New(runtime)
     function self.Show()
         if not db or runtime.product.IsCombat() then return end
         build(); layout(); sync()
+        if self.editor then self.editor.Refresh() end
     end
     function self.Capture()
         if self.capturing or not runtime.camera.active or runtime.product.IsCombat() then return nil, "CAMERA_NOT_READY" end
+        if runtime.photoPreview and runtime.photoPreview.Pending() then return runtime.photoPreview.Finish(self.Capture) end
         if type(env.Screenshot) ~= "function" or type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then
             self.status = "SCREENSHOT_UNAVAILABLE"; return nil, self.status
         end

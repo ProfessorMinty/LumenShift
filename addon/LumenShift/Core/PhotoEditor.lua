@@ -31,6 +31,7 @@ function P.New(runtime)
         end
     end
     function self.Enter()
+        if runtime.photoPreview then runtime.photoPreview.Begin() end
         self.active, self.before = true, false
         self.Render(); refresh(data().session and "PHOTO_RECOVERY_RETAINED" or nil)
     end
@@ -99,7 +100,7 @@ function P.New(runtime)
         if not ok and not completed then self.busy = false; s.state = previousState; refresh(ns.Product.Message(why)) end
         return ok, why
     end
-    function self.Native(values)
+    function self.Native(values, onComplete)
         local allowed, why = gate(); if not allowed then refresh(ns.Product.Message(why)); return nil, why end
         if not self.active or self.before then return nil, "SHOW_AFTER_FIRST" end
         local raw = {}; for key, value in pairs(values) do
@@ -117,10 +118,11 @@ function P.New(runtime)
         local requested = V.Copy(s.after); for key, value in pairs(raw) do requested[key] = value end
         data().session = s -- pre-photo return intent is retained before the single writer runs
         local called = false
-        local ok, code = operation(requested, V.Copy(s.expected), false, "after", function(success, _, compensated)
+        local ok, code = operation(requested, V.Copy(s.expected), false, "after", function(success, reason, compensated)
             called = true
             if success then s.after = V.Copy(s.expected)
             elseif compensated then data().session = next(previous.before) and previous or nil end
+            if onComplete then onComplete(success, reason, compensated) end
         end)
         if not ok and not called then data().session = next(previous.before) and previous or nil end
         return ok, code

@@ -53,6 +53,7 @@ local messages = {
     USE_MODE_DETAIL_CONTROLS = "Use Visual Modes detail controls or finish the current comparison first.",
     MODE_PARTIAL = "The mode did not finish applying. Your original values are retained; open Recovery.",
     BASELINE_VALUE_UNAVAILABLE = "This baseline value was unavailable during setup. Open Setup and capture it again, or choose another mode.",
+    SHOW_AFTER_FIRST = "Showing Before. Choose Show After to adjust native lighting.",
 }
 function P.Message(code)
     if not code then return nil end

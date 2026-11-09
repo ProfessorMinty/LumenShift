@@ -187,6 +187,10 @@ function D.Build(runtime)
             .. " keyboard=" .. bool(runtime.composition and runtime.composition.keyboard and runtime.composition.keyboard.enabled)
             .. " photoRequested=" .. bool(db.camera.photoEnabled) .. " photoLevel=" .. D.Number(db.camera.photoLevel)
         local photoSession = db.camera.editor.session
+        local preview = runtime.photoPreview
+        lines[#lines + 1] = "Photo live preview: state=" .. safe(preview and preview.status or "unavailable")
+            .. " pendingControls=" .. D.Number(preview and #preview.order) .. " busy=" .. bool(preview and preview.busy)
+            .. " error=" .. safe(preview and preview.error or "none")
         lines[#lines + 1] = "Photo editor: active=" .. bool(runtime.photoEditor and runtime.photoEditor.active)
             .. " before=" .. bool(runtime.photoEditor and runtime.photoEditor.before)
             .. " session=" .. safe(photoSession and photoSession.state or "none")

@@ -62,6 +62,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.product = ns.Product.New(runtime)
     runtime.camera = ns.Camera.New(runtime)
     runtime.photoEditor = ns.PhotoEditor.New(runtime)
+    runtime.photoPreview = ns.PhotoPreview.New(runtime)
     runtime.photoEffects = ns.PhotoEffects.New(runtime)
     runtime.performance = ns.Performance.New(runtime)
     runtime.composition = ns.Composition.New(runtime)

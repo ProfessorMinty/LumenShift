@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.11 — Live photo slider preview (2026-11-09)
+
+- Preview native Brightness, Contrast, Sharpness, Bloom and FOV while dragging. Coalesce input, verify one transaction at a time and preserve the final requested value.
+- Keep the grabbed slider stable during verification. Capture, clean view and comparison finish the latest preview first; Exit/combat cancel unissued work. Failures halt the current gesture without automatic retries.
+- Preserve schema 13, exact originals, existing restoration and the single native write boundary. Filters/vignette/glow/grain remain immediate visual previews.
+
 ## 0.2.0-beta.10 — In-scene photo editor (2026-11-09)
 
 - Add live photo filters, vignette, draggable glow, grain, letterbox and saved looks in Camera Mode.

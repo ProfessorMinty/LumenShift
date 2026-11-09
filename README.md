@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.10** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.11** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.11 makes native photo lighting and FOV sliders **preview while dragging**, with paced verified updates and the latest endpoint retained. Capture and Hide controls finish the pending edit first; Escape cancels unissued edits and uses normal restoration. [Details and owner test](docs/55-LIVE-PHOTO-SLIDERS.md). No settings reset is needed.
 
 Beta.10 adds a complete **in-scene Photo Studio**: live filters, soft vignette, draggable glow, grain, native lighting sliders, comparison, framing and saved photo looks. Camera keeps Hide controls/H and Escape. [Implementation and testing](docs/54-IN-SCENE-PHOTO-EDITOR.md). The optional 3D model stage remains deferred; native visual acceptance is pending.
 

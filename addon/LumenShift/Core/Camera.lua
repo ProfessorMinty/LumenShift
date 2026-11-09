@@ -52,9 +52,14 @@ function C.New(runtime)
         if not ok then return report(ok, why) end
         return true
     end
-    function camera.ApplyFOV(value)
+    function camera.ApplyFOV(value, onComplete)
         if camera.busy then return report(nil, "BUSY") end
-        local ok, why = runtime.framing.Apply("camera", { cameraFov = value }, function(done, code) report(done, code) end)
+        local ok, why = runtime.framing.Apply("camera", { cameraFov = value }, function(done, code)
+            report(done, code); if onComplete then onComplete(done, code) end
+            if camera.interrupted and camera.active and not runtime.product.IsCombat() then
+                ns.ReadOnly.Call(reader, reader.env.C_Timer and reader.env.C_Timer.After, 0, camera.Exit)
+            end
+        end)
         if not ok then return report(nil, why) end
         return true
     end
@@ -69,6 +74,7 @@ function C.New(runtime)
         return true
     end
     function camera.Exit()
+        if runtime.photoPreview then runtime.photoPreview.Cancel("EXIT") end
         -- Showing the HUD is always the first attempt, even if name restoration fails.
         local shown, why = visibility(true)
         if not shown then return report(nil, why) end
@@ -116,6 +122,7 @@ function C.New(runtime)
     end
     function camera.Combat()
         camera.interrupted = true
+        if runtime.photoPreview then runtime.photoPreview.Cancel("COMBAT") end
         if runtime.photoEditor then runtime.photoEditor.Hide() end
         if runtime.composition then runtime.composition.CancelCapture() end
         -- Restore access to combat cues only; never queue graphics restoration.
