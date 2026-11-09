@@ -242,7 +242,7 @@ function S.New(runtime)
                 function(value) update(function(copy) copy.studio.screenshot = value end); product.RefreshPresentation() end)
             W.Slider(env, parent, "Letterbox height", 438, -407, 0, 0.12, 0.01, function() return cfg().modes[ui.edited].letterbox end,
                 function(value) return editMode("letterbox", value) end, nil, 398)
-            ui.Primary("Apply effects to active mode", product.RefreshPresentation, "Screen overlays; letterbox hides automatically in combat.")
+            ui.Primary("Apply effects to active mode", function() product.RefreshPresentation() end, "Screen overlays; letterbox hides automatically in combat.")
         elseif ui.page == 4 then
             section("PLAYBACK", 0)
             toggle("Night Vision on / off sounds", 0, -43, 406, function() return db.config.preferences.sound end,

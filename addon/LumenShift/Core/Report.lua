@@ -175,6 +175,7 @@ function D.Build(runtime)
         for _, bank in ipairs(ns.NativeGraphics.Banks) do
             local record = db.camera.photo.records[bank]
             lines[#lines + 1] = "photo graphics " .. bank .. " state=" .. safe(record and record.state or "unowned")
+                .. " source-client=" .. safe(record and record.signature) .. " error=" .. safe(record and record.error or "none")
             if record then
                 for _, key in ipairs(ns.Value.Keys(record.original)) do
                     lines[#lines + 1] = "photo " .. key .. " original=" .. D.Number(record.original[key])
@@ -246,7 +247,8 @@ function D.Build(runtime)
         end
     else lines[#lines + 1] = "BLOCKED: quarantined saved data preserved, not exported" end
     lines[#lines + 1] = "5. TRANSACTIONS AND RECOVERY"
-    for label, engine in pairs({ Brightness = runtime.engine, Experiments = runtime.lab, QualityTrial = runtime.tierTrial, Names = runtime.names, NativeGraphics = runtime.graphics }) do
+    for label, engine in pairs({ Brightness = runtime.engine, Experiments = runtime.lab, QualityTrial = runtime.tierTrial,
+        Names = runtime.names, Framing = runtime.framing, NativeGraphics = runtime.graphics, PhotoGraphics = runtime.photo }) do
         local status = engine.Status()
         lines[#lines + 1] = label .. ": state=" .. safe(status.state) .. " operation=" .. safe(status.operation) .. " error=" .. safe(status.error or "none")
             .. " original=" .. D.Number(status.original) .. " preview=" .. safe(status.token or "none")
@@ -254,7 +256,7 @@ function D.Build(runtime)
             .. " snapshot=" .. D.Number(status.preview.current) .. " target=" .. D.Number(status.preview.target) end
     end
     if db then
-        for _, journal in ipairs({ db.journal, db.experiments.journal, db.camera.journal }) do
+        for _, journal in ipairs({ db.journal, db.experiments.journal, db.camera.journal, db.camera.framing.journal }) do
             for _, key in ipairs(V.Keys(journal.entries)) do
                 local item = journal.entries[key]
                 lines[#lines + 1] = "recovery " .. (ns.Catalog.Get(key) and key or "UNKNOWN_KEY_REDACTED") .. " original=" .. D.Number(item.originalRaw)
@@ -279,6 +281,10 @@ function D.Build(runtime)
         for _, key in ipairs(V.Keys(db.graphics.sideEffects)) do
             local pair = db.graphics.sideEffects[key]
             lines[#lines + 1] = "native-graphics watched change " .. key .. " before=" .. D.Number(pair.before) .. " after=" .. D.Number(pair.after)
+        end
+        for _, key in ipairs(V.Keys(db.camera.photo.sideEffects)) do
+            local pair = db.camera.photo.sideEffects[key]
+            lines[#lines + 1] = "photo-graphics watched change " .. key .. " before=" .. D.Number(pair.before) .. " after=" .. D.Number(pair.after)
         end
         for _, key in ipairs(V.Keys(db.experiments.sideEffects)) do
             local item = db.experiments.sideEffects[key]

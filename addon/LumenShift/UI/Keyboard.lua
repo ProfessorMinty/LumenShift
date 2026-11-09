@@ -18,7 +18,7 @@ function K.Control(env, control, edit)
     end
 end
 
-function K.Attach(env, window, viewport)
+function K.Attach(env, window, viewport, shortcuts)
     local nav = { controls = {}, known = {}, viewport = viewport, enabled = false, consumed = {} }
     window.lumenKeyboard = nav
     local function ring(control, show)
@@ -117,13 +117,18 @@ function K.Attach(env, window, viewport)
             disable("KEYBOARD_FOCUS_UNAVAILABLE"); return
         end
         if focused then return end
-        if value == "TAB" then nav.Tab(); return end
         local action
-        if (value == "ENTER" or value == "SPACE") and nav.current and nav.current:IsVisible() and not nav.current.lumenEdit then
+        if shortcuts then
+            local success, handler = pcall(shortcuts, value)
+            if not success then disable("KEYBOARD_ACTION_FAILED"); return end
+            action = handler
+        end
+        if not action and value == "TAB" then nav.Tab(); return end
+        if not action and (value == "ENTER" or value == "SPACE") and nav.current and nav.current:IsVisible() and not nav.current.lumenEdit then
             local control = nav.current
             local click = control:GetScript("OnClick")
             if click and control:IsEnabled() then action = function() click(control, "LeftButton") end end
-        elseif value == "ESCAPE" and nav.current then action = nav.Clear end
+        elseif not action and value == "ESCAPE" and nav.current then action = nav.Clear end
         -- Consume before invoking a button, so failure to capture cannot also
         -- activate it and pass the same key into the game.
         if action and propagate(false) then

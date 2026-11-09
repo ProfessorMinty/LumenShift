@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0-beta.4 — Whole-addon forensic audit (2026-11-08)
+
+- Reject cross-controller operations during preflight and synchronous setter callbacks; retain the single native write boundary and existing exact-original recovery.
+- Apply edited cosmetic settings from the Effects button; prevent native click arguments from selecting the previous appearance snapshot. No graphics write is added.
+- Give the wheel focus-aware keyboard shortcuts, paired key releases and ordinary key pass-through, with the existing Studio fallback when propagation is unavailable.
+- Skip native recipes that already match without acquiring new bank ownership; preserve earlier originals and complete multi-bank/setup callbacks.
+- Export framing recovery, photo controller state, bank failure/source and watched side effects even after session history is lost on reload.
+- Add ten forensic regressions, including a 112-case controller matrix, full-library recovery reload, no-change chaining and input failures. Schema 12 and all assets remain unchanged. Audit, evidence and exact validation results: docs/48-FORENSIC-AUDIT.md.
+- No game installation, live test, merge or publication.
+
 ## 0.2.0-beta.3 — Phase 5 audit fixes (2026-11-08)
 
 - Release keyboard capture when focus, modifier or propagation APIs fail; consume activation before running its action, preserve unrelated held-key releases, and retain mouse controls. Redact native exception details in diagnostic logging.

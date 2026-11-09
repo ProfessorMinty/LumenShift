@@ -81,17 +81,22 @@ function R.New(runtime, openStudio)
         local selected = R.Hit(position[1] / scale - cx, position[2] / scale - cy)
         if selected then selectMode(selected) end
     end)
-    ns.Widgets.Script(frame, "OnKeyDown", function(_, key)
-        if key == "ESCAPE" then self.Close()
-        elseif key == "ENTER" or key == "SPACE" then selectMode(self.selection)
-        elseif tonumber(key) and tonumber(key) >= 1 and tonumber(key) <= 6 then selectMode(tonumber(key))
-        elseif key == "RIGHT" or key == "DOWN" or key == "TAB" then self.selection = self.selection % 6 + 1; highlight()
-        elseif key == "LEFT" or key == "UP" then self.selection = (self.selection + 4) % 6 + 1; highlight() end
+    -- Use the same focus-aware, paired-key handling as Studio. Movement key-up
+    -- and text entry must keep reaching the game while this menu is visible.
+    self.keyboard = ns.Keyboard.Attach(env, frame, nil, function(key)
+        if key == "ESCAPE" then return self.Close
+        elseif key == "ENTER" or key == "SPACE" then return function() selectMode(self.selection) end
+        elseif key:match("^[1-6]$") then return function() selectMode(tonumber(key)) end
+        elseif key == "RIGHT" or key == "DOWN" or key == "TAB" then
+            return function() self.selection = self.selection % 6 + 1; highlight() end
+        elseif key == "LEFT" or key == "UP" then
+            return function() self.selection = (self.selection + 4) % 6 + 1; highlight() end
+        end
     end)
     function self.Toggle()
         if frame:IsShown() then self.Close(); return end
         if product.IsCombat() then ns.Diagnostics.Emit(runtime, "LumenShift: wheel unavailable during combat; nothing queued."); return end
-        if type(frame.SetPropagateKeyboardInput) ~= "function" then
+        if not pcall(frame.SetPropagateKeyboardInput, frame, true) then
             ns.Diagnostics.Emit(runtime, "LumenShift: wheel keyboard API unavailable; opening Studio."); openStudio(); return
         end
         local scale = env.UIParent:GetEffectiveScale()
@@ -102,8 +107,6 @@ function R.New(runtime, openStudio)
         local x, y = position[1], position[2]
         x, y = R.Clamp(x / scale, y / scale, env.UIParent:GetWidth(), env.UIParent:GetHeight(), 180)
         frame:ClearAllPoints(); frame:SetPoint("CENTER", env.UIParent, "BOTTOMLEFT", x, y)
-        local ok = pcall(function() frame:EnableKeyboard(true); frame:SetPropagateKeyboardInput(false) end)
-        if not ok then self.Close(); ns.Diagnostics.Emit(runtime, "LumenShift: keyboard capture restricted; opening Studio."); openStudio(); return end
         highlight(); frame:Show(); frame:Raise(); W.Fade(frame, db.config.preferences)
         ns.Log.Record(runtime.reader, "radial", "open", "INFO", "PASS_INPUT_NOT_CERTIFIED")
     end

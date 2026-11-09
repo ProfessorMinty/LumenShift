@@ -776,6 +776,9 @@ function B.NewExperiments(runtime, cameraMode)
         return not result or result.n ~= 1 or result[1] ~= false
     end
     local function gate()
+        if reader.brightnessExecuting and reader.brightnessExecuting() then return nil, "OTHER_OPERATION_ACTIVE" end
+        if cameraMode and reader.experimentBusy and reader.experimentBusy()
+            or not cameraMode and reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if cameraMode == "framing" and reader.namesOnlyBusy and reader.namesOnlyBusy()
             or cameraMode ~= "framing" and reader.framingBusy and reader.framingBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if not cameraMode and db and next(db.camera.photo.records) then return nil, "RESTORE_PHOTO_FIRST" end
@@ -1230,6 +1233,9 @@ function B.NewTierTrials(runtime)
     end
     local function gate()
         if not data or not ns.ExperimentPolicy.Validate(data) then return nil, "EXPERIMENT_DATA_QUARANTINED" end
+        if reader.brightnessBusy and reader.brightnessBusy()
+            or reader.experimentBusy and reader.experimentBusy()
+            or reader.nameBusy and reader.nameBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if reader.graphicsBusy and reader.graphicsBusy() then return nil, "OTHER_OPERATION_ACTIVE" end
         if db and (db.graphics.records.normal or next(db.camera.photo.records)) then return nil, "RESTORE_GRAPHICS_BANK_FIRST" end
         if ns.Compatibility.Inspect(reader).signature ~= signature then return nil, "SESSION_BUILD_CHANGED" end
@@ -1528,6 +1534,16 @@ function B.NewNativeGraphics(runtime, photo)
         local before, omitted = G.Snapshot(reader, bank)
         if not next(targets) then return true, "NO_CHANGE" end
         for key in pairs(targets) do if before[key] == nil then return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:" .. key end end
+        if not restoring then
+            local matches = true
+            for key, raw in pairs(targets) do
+                if V.Number(before[key]) ~= V.Number(tostring(raw)) then matches = false; break end
+            end
+            -- A recipe that changes nothing must not acquire a bank or capture
+            -- new originals. Preserve earlier ownership and finish the chain,
+            -- including the other bank and the setup completion callback.
+            if matches then return finish(true, nil, callback) end
+        end
         local record = previous or { signature = signature, state = "pending", original = V.Copy(before), expected = V.Copy(before) }
         if not V.Copy(record) then return nil, "GRAPHICS_SNAPSHOT_LIMIT" end
         for key in pairs(targets) do if not record.original[key] then return nil, "GRAPHICS_CAPTURE_UNAVAILABLE:" .. key end end
