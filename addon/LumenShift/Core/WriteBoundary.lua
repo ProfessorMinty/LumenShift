@@ -522,7 +522,8 @@ function B.New(reader, db, emit)
         if not ns.Planner.SafeObservation(current) then return nil, "UNSAFE_OBSERVATION" end
         local journal = V.Copy(db.journal)
         local record = journal.entries.Brightness
-        local continuing = ordinary and state == "RECOVERY" and not transaction
+        local returned = ordinary and not transaction and ns.Planner.ReturnedOriginal(record, current, context.signature)
+        local continuing = ordinary and (state == "RECOVERY" or returned) and not transaction
             and R.CanContinue(record, current, context.signature)
         local recoveryAction = action == "restore" and (not sessionOwned or transaction ~= nil or state ~= "ACTIVE"
             or record and (record.state ~= "owned" or record.lastVerifiedRaw ~= current.raw))
@@ -537,7 +538,7 @@ function B.New(reader, db, emit)
             if action == "restore" then
                 -- Explicit restore previews a reconciliation. Never silently replace originalRaw.
                 record.lastVerifiedRaw, record.state, record.failure = current.raw, "owned", nil
-            elseif record.state ~= "owned" or record.lastVerifiedRaw ~= current.raw then
+            elseif not returned and (record.state ~= "owned" or record.lastVerifiedRaw ~= current.raw) then
                 mark("EXTERNAL_CONFLICT", true); return nil, "EXTERNAL_CONFLICT"
             end
         end
@@ -694,7 +695,7 @@ function B.New(reader, db, emit)
     function engine.Prepare(action) return guarded(prepare, false, action) end
     function engine.CanContinue()
         local catalog, context = eligible()
-        if not catalog or state ~= "RECOVERY" or transaction then return false end
+        if not catalog or (state ~= "RECOVERY" and state ~= "CONFLICT") or transaction then return false end
         local entry = db.journal.entries.Brightness
         return entry and entry.descriptorVersion == 1 and entry.layer == "visual"
             and R.CanContinue(entry, read(), context.signature) or false

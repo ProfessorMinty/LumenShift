@@ -6,7 +6,8 @@ ns.Recovery = R
 -- This is not startup ownership, proof of uninterrupted ownership, or permission
 -- to replay an interrupted write. Planner validation and fresh preflight still run.
 function R.CanContinue(record, current, signature)
-    return type(record) == "table" and record.state == "owned" and record.failure == nil
+    return ns.Planner.ReturnedOriginal(record, current, signature)
+        or type(record) == "table" and record.state == "owned" and record.failure == nil
         and record.signature == signature and ns.Planner.SafeObservation(current)
         and current.raw == record.lastVerifiedRaw
 end

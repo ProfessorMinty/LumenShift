@@ -1056,5 +1056,6 @@ local cameraFixture = assert(loadfile("tests/composition.lua"))()(nativeGraphics
 assert(loadfile("tests/polish.lua"))()(cameraFixture, eq, test)
 assert(loadfile("tests/phase5_audit.lua"))()(cameraFixture, eq, test)
 assert(loadfile("tests/forensic.lua"))()(cameraFixture, eq, test)
+assert(loadfile("tests/returned_original.lua"))()(cameraFixture, eq, test)
 print(string.format("SIMULATED: %d passed, %d failed (%s); no native game tests", passed, failed, _VERSION))
 assert(failed == 0, "Mock test failures")

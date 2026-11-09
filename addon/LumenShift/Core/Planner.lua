@@ -11,6 +11,16 @@ local function safeObservation(item)
 end
 P.SafeObservation = safeObservation
 
+-- A new explicit request may continue after a completed change has returned to
+-- its exact original (for example through the owner's fallback macro). This
+-- predicate does not mutate data, accept a different value or replay a write.
+function P.ReturnedOriginal(record, current, signature)
+    return type(record) == "table" and record.signature == signature
+        and (record.state == "owned" and record.failure == nil
+            or record.state == "conflict" and record.failure == "EXTERNAL_CONFLICT")
+        and safeObservation(current) and current.raw == record.originalRaw
+end
+
 function P.Build(catalog, context, observed, journal, layer, targets)
     local input = V.Copy({ catalog = catalog, context = context, observed = observed,
         journal = journal, targets = targets })
@@ -54,17 +64,18 @@ function P.Build(catalog, context, observed, journal, layer, targets)
         if not ns.Catalog.Admitted(descriptor, context) then return nil, "UNADMITTED_KEY:" .. key end
         if descriptor.layer ~= layer or (record and record.layer ~= layer) then return nil, "LAYER_CONFLICT:" .. key end
         if not safeObservation(current) then return nil, "UNSAFE_OBSERVATION:" .. key end
-        if record and (record.state ~= "owned" or (record.signature ~= context.signature
+        local returned = P.ReturnedOriginal(record, current, context.signature)
+        if record and ((record.state ~= "owned" or record.failure ~= nil) and not returned or (record.signature ~= context.signature
             and not (context.explicitRecovery and ns.Compatibility.Experimental(record.signature)))
             or record.descriptorVersion ~= descriptor.version
-            or current.raw ~= record.lastVerifiedRaw) then return nil, "OWNERSHIP_CONFLICT:" .. key end
+            or current.raw ~= record.lastVerifiedRaw and not returned) then return nil, "OWNERSHIP_CONFLICT:" .. key end
         -- A new capture or retained original must be restorable in the admitted domain.
         local originalRaw = record and record.originalRaw or current.raw
         local originalNumber = V.Number(originalRaw)
         if not originalNumber or originalNumber < descriptor.min or originalNumber > descriptor.max then
             return nil, "UNSAFE_BASELINE:" .. key
         end
-        local release = targets[key] == nil
+        local release = targets[key] == nil or returned and V.Finite(targets[key]) and targets[key] == originalNumber
         local targetRaw
         if release then
             targetRaw = originalRaw

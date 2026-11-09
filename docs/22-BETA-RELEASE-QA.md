@@ -1,10 +1,10 @@
 # Beta acceptance and eventual distribution
 
-> Current beta.4 adds the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md) to completed Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
+> Current beta.5 includes the [returned-original fix](49-RETURNED-ORIGINAL-AND-CLEAN-SETUP.md) and the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md) to completed Delivery 5 and the Delivery 4 audit: [implementation, support matrix and verification](46-BETA2-POLISH-AND-AUDIT.md). Use the [current installation guide](21-BETA-USER-GUIDE.md). No repeated unlock/approval ritual is required for ordinary controls. The owner tests the actual game; development tools do not operate it. Public distribution still requires final approval.
 
-## Current beta.4 acceptance record
+## Current beta.5 acceptance record
 
-Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.4**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
+Record the ZIP/source identity from BUILD.json or the diagnostic report. All rows below are **NOT RUN IN-CLIENT for beta.5**. Earlier owner-confirmed Brightness evidence remains valid only for its recorded scope. No launcher-version reconfirmation is needed.
 
 | Area | Acceptance check |
 |---|---|
@@ -17,6 +17,7 @@ Record the ZIP/source identity from BUILD.json or the diagnostic report. All row
 | Comfort / combat | Effects, letterbox, optional Night Vision audio, mute, reduced motion; HUD accessible on Camera combat; no queued graphics changes |
 | Camera | Independent manual names preserved on exit; mixed names restored; pending capture cancelled on exit/reentry; native screenshot has no guides/bar; FOV/photo exact return and external camera-addon conflict behavior |
 | Performance | Deliberate finite same-scene observations, elapsed time and combat counts; no settings writes/background loop; actual CPU/memory observations recorded separately |
+| Fallback macro | After a completed mode returns to the exact captured original, the next mode click succeeds; selecting Original releases it without a setter. Other external values and uncertain failures remain preserved |
 | Recovery / reload | Explicit owner-operated interrupted/conflict testing; no startup replay, exact originals retained, no repeated overwrite; export gives actionable state |
 | Audit regressions | Effects Apply reflects the edited opacity without graphics writes; wheel respects chat/held movement releases; already-matching native recipes finish without a new recovery record; Camera recovery export includes framing and photo failure details |
 | Distribution | Single install root, deterministic commit/manifest/hash, split licenses and asset attribution; installation/update/uninstall and moderation requirements reviewed before publication |

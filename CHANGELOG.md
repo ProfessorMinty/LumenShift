@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.5 — Fallback macro recovery (2026-11-09)
+
+- Fix the owner-reported refusal after a fallback macro returned Brightness from a completed mode to its exact captured original. A new explicit mode click may continue; choosing Original releases the old record without a setter.
+- Preserve originals and fresh preflight checks across Brightness-only and composite visual paths. Pending/failed records, different external values, changed signatures/descriptors and restricted observations remain intact. No startup reapply or new unlock step.
+- Add eight regressions for the reported 45/42/45 sequence, fresh/completed setup, no-setter release, multi-setting fallback, same-session conflict, unsafe records and preflight drift. Schema 12 and artwork remain unchanged.
+- Document verified installed-file identity, the distinction between launcher and wheel, and the owner-requested backed-up clean setup in docs/49-RETURNED-ORIGINAL-AND-CLEAN-SETUP.md. No live graphics tests, merge or publication.
+
 ## 0.2.0-beta.4 — Whole-addon forensic audit (2026-11-08)
 
 - Reject cross-controller operations during preflight and synchronous setter callbacks; retain the single native write boundary and existing exact-original recovery.
