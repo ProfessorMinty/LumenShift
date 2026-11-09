@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0-beta.6 — Reset and restart setup (2026-11-09)
+
+- Add **Reset LumenShift & Restart Setup** in Studio > Accessibility and WoW Settings > AddOns > LumenShift, with a fallback in the diagnostic export window.
+- One confirmation clears only LumenShift's account-wide preferences, presets, baseline choices and recovery history, then requests a UI reload into fresh setup. It forgets old originals without restoring or changing current graphics, names, camera CVars or another addon's data.
+- Cancellation preserves everything. Missing/failed reload keeps the previous save target; an active operation or combat defers reset without clearing anything. Historical conflicts, failed journals and quarantined data do not require a restore before intentionally resetting.
+- Keep old controllers separate from the fresh save target until reload, and fence owned handlers and the single writer during reload. Ordinary upgrades still preserve saved settings; schema 12 and all assets remain unchanged.
+- Add focused reset/lifecycle regressions and a native acceptance procedure in docs/50-RESET-AND-RESTART-SETUP.md. No installed-game operation, merge or publication.
+
 ## 0.2.0-beta.5 — Fallback macro recovery (2026-11-09)
 
 - Fix the owner-reported refusal after a fallback macro returned Brightness from a completed mode to its exact captured original. A new explicit mode click may continue; choosing Original releases the old record without a setter.

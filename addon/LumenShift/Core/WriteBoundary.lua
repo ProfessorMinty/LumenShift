@@ -7,6 +7,7 @@ end
 -- The only native CVar call site: graphics, bounded trials and the two camera-name toggles.
 -- Private callers use narrow policies, planner, fresh observations and combat checks.
 local function nativeSet(reader, key, target)
+    if reader.resetPending then return nil, "RESET_PENDING" end
     local result, code = ns.ReadOnly.Call(reader, reader.env.C_CVar.SetCVar, key, target)
     local accepted = result and result.n == 1 and result[1] == true
     ns.Log.Record(reader, "graphics", "setter", accepted and "INFO" or "ERROR", accepted and "ACCEPTED" or code or "SETTER_REJECTED",

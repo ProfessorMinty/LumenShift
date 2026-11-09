@@ -74,6 +74,7 @@ function L.New(reader)
     end
     function log.Guard(subsystem, operation, fn, onError)
         return function(...)
+            if reader.resetPending then return nil, "RESET_PENDING" end
             local function pack(...) return { n = select("#", ...), ... } end
             local result = pack(pcall(fn, ...))
             if result[1] then return unpack(result, 2, result.n) end

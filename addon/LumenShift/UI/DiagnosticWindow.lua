@@ -38,6 +38,7 @@ function D.Open(runtime)
         function ui.SelectAll() box:SetFocus(); box:HighlightText(0, -1) end
         W.Button(env, window, "Select All", 18, -91, 160, ui.SelectAll, nil, "primary")
         W.Button(env, window, "Refresh report", 190, -91, 170, function() D.Open(runtime) end)
+        W.Button(env, window, "Reset LumenShift...", 372, -91, 288, function() runtime.reset.Open() end)
         W.Button(env, window, "Close", 676, -91, 105, function() window:Hide() end)
         if type(env.UISpecialFrames) == "table" then table.insert(env.UISpecialFrames, "LumenShiftDiagnosticReport") end
         runtime.exportUI = ui -- publish only a fully initialized export interface

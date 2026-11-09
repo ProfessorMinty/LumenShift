@@ -44,6 +44,11 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.log.Add("store", "load", db and "INFO" or "ERROR", status)
     if db then LumenShiftDB = db end
     runtime.identity = ns.Compatibility.Inspect(runtime.reader)
+    runtime.reset = ns.Reset.New(runtime, function(replacement)
+        local previous = LumenShiftDB
+        LumenShiftDB = replacement
+        return previous
+    end)
     runtime.controller = ns.Controller.New(db and not next(db.journal.entries) and "BASELINE" or "RECOVERY")
     runtime.engine = ns.WriteBoundary.New(runtime.reader, db, function(line) return ns.Diagnostics.Emit(runtime, line) end)
     runtime.lab = ns.WriteBoundary.NewExperiments(runtime)
