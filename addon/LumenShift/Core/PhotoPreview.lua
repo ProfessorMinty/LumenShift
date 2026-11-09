@@ -7,7 +7,10 @@ function P.New(runtime)
     local self = { pending = {}, order = {}, generation = 0, busy = false, scheduled = false, status = "IDLE" }
     local known = { Brightness = true, Contrast = true, ResampleSharpness = true, bloomUserMult = true, cameraFov = true }
     local pump, schedule
-    local function refresh() if self.Refresh then self.Refresh() end end
+    local function refresh()
+        if runtime.captureSequence then runtime.captureSequence.ObservePreview() end
+        if self.Refresh then self.Refresh() end
+    end
     local function ready()
         local c = runtime.composition
         return editor.active and runtime.camera.active and not runtime.product.IsCombat() and not runtime.reader.resetPending
@@ -77,7 +80,7 @@ function P.New(runtime)
     end
     function self.Queue(key, value)
         if not known[key] or not ns.Value.Finite(value) then return nil, "INVALID_PHOTO_REQUEST" end
-        if not ready() then return nil, "CAMERA_NOT_READY" end
+        if not ready() or runtime.captureSequence and runtime.captureSequence.active then return nil, "CAMERA_NOT_READY" end
         if self.halted then return nil, self.error end
         if self.action then return nil, "PHOTO_ACTION_WAITING" end
         if editor.before and key ~= "cameraFov" then fail("SHOW_AFTER_FIRST"); return nil, self.error end

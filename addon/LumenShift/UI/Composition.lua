@@ -41,15 +41,24 @@ function C.New(runtime)
         end
         self.controlsHidden = not self.controlsHidden
         if env.GameTooltip then env.GameTooltip:Hide() end
+        if runtime.photoCompatibility then runtime.photoCompatibility.Clean() end
         sync(); return true
+    end
+    local function complete(ok, code)
+        self.capturing, self.requested, self.status = false, false, code
+        local callback = self.captureCallback; self.captureCallback = nil
+        sync()
+        if callback then callback(ok, code) end
+    end
+    function self.CancelPendingCapture()
+        if self.capturing and not self.requested then
+            self.generation = self.generation + 1; complete(false, "CAPTURE_CANCELLED")
+        end
     end
     function self.CancelCapture()
         -- A scheduled capture belongs to this Camera entry only. An already
         -- issued native request drains until its event/timeout; it cannot be undone.
-        if self.capturing and not self.requested then
-            self.generation = self.generation + 1
-            self.capturing, self.status = false, "CAPTURE_CANCELLED"
-        end
+        self.CancelPendingCapture()
         self.controlsHidden = false; self.Hide()
     end
     local function build()
@@ -71,7 +80,23 @@ function C.New(runtime)
         self.hideButton = W.Button(env, bar, "Hide controls", 248, -9, 224, self.ToggleControls,
             "Clean view for external screenshots or recording. H shows controls again; Escape exits Camera Mode.")
         W.Button(env, bar, "Exit Camera Mode", 486, -9, 224, function() runtime.camera.Exit() end)
-        local hint = W.Text(bar, "H: hide / show controls   |   Esc: exit Camera Mode", 14, -56, 692, 12, W.colors.muted)
+        local hint = W.Text(bar, "H: hide / show controls   |   Esc: exit Camera Mode", 14, -56, 500, 12, W.colors.muted)
+        self.cancelButton = W.Button(env, bar, "Cancel timer / burst", 510, -46, 200, function() runtime.captureSequence.Cancel() end)
+        self.cancelButton:Hide()
+        local function sequenceStatus()
+            local seq = runtime.captureSequence
+            if seq.active then
+                hint:SetText(seq.state == "WAITING_FOR_PREVIEW" and "Finishing slider changes..." or
+                    "Shot " .. math.min(seq.total, seq.completed + 1) .. " / " .. seq.total .. "  |  " .. seq.state ..
+                    (seq.remaining > 0 and " " .. seq.remaining .. "s" or ""))
+                self.cancelButton:Show()
+            else
+                hint:SetText("H: hide / show controls   |   Esc: exit Camera Mode")
+                self.cancelButton:Hide()
+            end
+            if self.editor then self.editor.Refresh() end
+        end
+        runtime.captureSequence.Refresh = sequenceStatus
         self.keyboard.OnFailure = function(code)
             self.controlsHidden, self.status = false, code; self.hideButton:Disable()
             hint:SetText("Keyboard unavailable. Use Exit Camera Mode or your Camera keybinding.")
@@ -84,8 +109,7 @@ function C.New(runtime)
         root:SetScript("OnEvent", function(_, event)
             if event == "SCREENSHOT_SUCCEEDED" or event == "SCREENSHOT_FAILED" then
                 if self.capturing and self.requested then
-                    self.capturing, self.requested, self.status = false, false, event
-                    sync()
+                    complete(event == "SCREENSHOT_SUCCEEDED", event)
                 end
             elseif not runtime.product.IsCombat() then layout() end
         end)
@@ -96,38 +120,43 @@ function C.New(runtime)
         build(); layout(); sync()
         if self.editor then self.editor.Refresh() end
     end
-    function self.Capture()
+    function self.Capture(callback)
         if self.capturing or not runtime.camera.active or runtime.product.IsCombat() then return nil, "CAMERA_NOT_READY" end
-        if runtime.photoPreview and runtime.photoPreview.Pending() then return runtime.photoPreview.Finish(self.Capture) end
+        if type(callback) ~= "function" then callback = nil end
+        if runtime.captureSequence and runtime.captureSequence.active and not callback then return nil, "CAPTURE_SEQUENCE_ACTIVE" end
+        if runtime.photoPreview and runtime.photoPreview.Pending() then return runtime.photoPreview.Finish(function() return self.Capture(callback) end) end
+        if runtime.camera.busy or runtime.names.busy or runtime.framing.busy or runtime.photo.busy
+            or runtime.photoEditor.busy or runtime.product.busy or runtime.visual.busy then return nil, "BUSY" end
+        if runtime.photoCompatibility then local ok, why = runtime.photoCompatibility.Clean(); if not ok then self.status = why; return nil, why end end
         if type(env.Screenshot) ~= "function" or type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then
             self.status = "SCREENSHOT_UNAVAILABLE"; return nil, self.status
         end
         self.generation = self.generation + 1
         local id = self.generation
-        self.capturing, self.status = true, "CAPTURING"
+        self.capturing, self.status, self.captureCallback = true, "CAPTURING", callback
         if env.GameTooltip then env.GameTooltip:Hide() end
         sync()
         -- Let the hidden guides render before requesting the native screenshot.
         local scheduled = pcall(env.C_Timer.After, 0.1, function()
             if id ~= self.generation then return end
             if not runtime.camera.active or runtime.product.IsCombat() then
-                self.capturing, self.status = false, "CAPTURE_CANCELLED"; sync(); return
+                complete(false, "CAPTURE_CANCELLED"); return
             end
             self.requested = true
             local result = ns.ReadOnly.Call(runtime.reader, env.Screenshot)
-            if not result then self.capturing, self.requested, self.status = false, false, "SCREENSHOT_UNAVAILABLE"; sync(); return end
+            if not result then complete(false, "SCREENSHOT_UNAVAILABLE"); return end
             -- Start the timeout after the request, so a long frame before this
             -- callback cannot expire it in the same frame as the screenshot.
             local timeout = pcall(env.C_Timer.After, 5, function()
                 if id == self.generation and self.capturing then
-                    self.capturing, self.requested, self.status = false, false, "CAPTURE_RESULT_UNOBSERVED"; sync()
+                    complete(false, "CAPTURE_RESULT_UNOBSERVED")
                 end
             end)
             if not timeout then
-                self.capturing, self.requested, self.status = false, false, "CAPTURE_TIMER_FAILED"; sync()
+                complete(false, "CAPTURE_TIMER_FAILED")
             end
         end)
-        if not scheduled then self.capturing, self.status = false, "CAPTURE_TIMER_FAILED"; self.generation = id + 1; sync(); return nil, self.status end
+        if not scheduled then self.generation = id + 1; complete(false, "CAPTURE_TIMER_FAILED"); return nil, self.status end
         return true
     end
     return self

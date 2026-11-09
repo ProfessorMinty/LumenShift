@@ -79,7 +79,7 @@ function D.Run(runtime, reason)
         end
     end
     local native = runtime.log and runtime.log.native
-    for _, key in ipairs(ns.NamePolicy.Keys) do
+    for _, key in ipairs(ns.NamePolicy.AllKeys) do
         local item = ns.ReadOnly.Read(runtime.reader, key)
         add("read-" .. key, item.code == "OK" and "PASS" or "BLOCKED", item.code)
         local code = nameCheck(item, key)
@@ -160,7 +160,7 @@ function D.Build(runtime)
     lines[#lines + 1] = "4. ACTIVE CONFIGURATION (preset names excluded)"
     local db = runtime.db
     if db then
-        for _, key in ipairs(ns.NamePolicy.Keys) do
+        for _, key in ipairs(ns.NamePolicy.AllKeys) do
             local item, original = ns.ReadOnly.Read(runtime.reader, key), db.camera.journal.entries[key]
             lines[#lines + 1] = key .. " current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] original=" .. D.Number(original and original.originalRaw)
                 .. " secure=" .. bool(item.flags and item.flags.secure) .. " readOnly=" .. bool(item.flags and item.flags.readOnly)
@@ -186,6 +186,14 @@ function D.Build(runtime)
             .. " controlsHidden=" .. bool(runtime.composition and runtime.composition.controlsHidden)
             .. " keyboard=" .. bool(runtime.composition and runtime.composition.keyboard and runtime.composition.keyboard.enabled)
             .. " photoRequested=" .. bool(db.camera.photoEnabled) .. " photoLevel=" .. D.Number(db.camera.photoLevel)
+        local seq, pose, compat = runtime.captureSequence, runtime.photoTools, runtime.photoCompatibility
+        lines[#lines + 1] = "Photo tools: emoteAPI=" .. bool(pose and pose.Available()) .. " pose=" .. safe(pose and pose.status)
+            .. " sequence=" .. safe(seq and seq.state) .. " active=" .. bool(seq and seq.active)
+            .. " completed=" .. D.Number(seq and seq.completed) .. " total=" .. D.Number(seq and seq.total)
+            .. " coexistence=" .. safe(compat and compat.state)
+        for _, group in ipairs(ns.NamePolicy.Groups) do
+            lines[#lines + 1] = "photo hide group " .. group.id .. "=" .. bool(db.camera.nameGroups[group.id])
+        end
         local photoSession = db.camera.editor.session
         local preview = runtime.photoPreview
         lines[#lines + 1] = "Photo live preview: state=" .. safe(preview and preview.status or "unavailable")

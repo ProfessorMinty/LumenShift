@@ -22,6 +22,8 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         return
     end
     if event == "PLAYER_LEAVING_WORLD" then
+        if runtime.captureSequence then runtime.captureSequence.Cancel() end
+        if runtime.composition then runtime.composition.CancelCapture() end
         if runtime.performance and runtime.performance.active then runtime.performance.Cancel("SAMPLE_SCENE_CHANGED") end
         return
     end
@@ -66,6 +68,9 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
     runtime.photoEffects = ns.PhotoEffects.New(runtime)
     runtime.performance = ns.Performance.New(runtime)
     runtime.composition = ns.Composition.New(runtime)
+    runtime.captureSequence = ns.CaptureSequence.New(runtime)
+    runtime.photoTools = ns.PhotoTools.New(runtime)
+    runtime.photoCompatibility = ns.PhotoCompatibility.New(runtime)
     runtime.presentation = ns.Presentation.New(runtime.reader.env)
     runtime.audio = ns.Audio.New(runtime.reader)
     if db and UIParent then

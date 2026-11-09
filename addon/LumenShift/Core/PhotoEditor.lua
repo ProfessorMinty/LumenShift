@@ -3,7 +3,7 @@ local P, V = {}, ns.Value
 ns.PhotoEditor = P
 function P.New(runtime)
     local reader, db = runtime.reader, runtime.db
-    local self = { busy = false, before = false, status = "READY", active = false }
+    local self = { busy = false, before = false, status = "READY", active = false, undo = {}, redo = {} }
     local function data() return db and db.camera.editor end
     local function refresh(code)
         self.status = code or self.renderError or "READY"
@@ -14,6 +14,8 @@ function P.New(runtime)
         if runtime.resetPending or reader.resetPending then return nil, "RESET_PENDING" end
         if runtime.product.IsCombat() then return nil, "COMBAT_OR_RESTRICTION" end
         if self.busy or runtime.camera.busy or runtime.product.busy or runtime.visual.busy then return nil, "BUSY" end
+        if runtime.captureSequence and runtime.captureSequence.active and runtime.captureSequence.state ~= "WAITING_FOR_PREVIEW"
+            or runtime.composition and runtime.composition.capturing then return nil, "BUSY" end
         if db.optics.comparison then return nil, "FINISH_COMPARISON" end
         return true
     end
@@ -36,18 +38,49 @@ function P.New(runtime)
         self.Render(); refresh(data().session and "PHOTO_RECOVERY_RETAINED" or nil)
     end
     function self.Hide()
+        if self.EndLookEdit then self.EndLookEdit() end
         self.active = false
         if runtime.photoEffects then runtime.photoEffects.Hide() end
     end
+    local function editable()
+        return self.active and not runtime.product.IsCombat() and not reader.resetPending
+            and not (runtime.captureSequence and runtime.captureSequence.active)
+            and not (runtime.composition and runtime.composition.capturing)
+    end
+    local function remember(before, after)
+        if ns.PhotoConfig.Export(before) == ns.PhotoConfig.Export(after) then return end
+        self.undo[#self.undo + 1] = V.Copy(before); self.redo = {}
+        if #self.undo > 32 then table.remove(self.undo, 1) end
+    end
+    function self.BeginLookEdit()
+        if editable() and not self.gesture then self.gesture = V.Copy(data().look) end
+    end
+    function self.EndLookEdit()
+        if self.gesture then remember(self.gesture, data().look); self.gesture = nil end
+    end
+    local function replaceLook(look)
+        if not editable() or not ns.PhotoConfig.ValidLook(look) then return nil end
+        if not self.gesture then remember(data().look, look) end
+        data().look = V.Copy(look); self.Render(); return true
+    end
+    function self.Undo(redo)
+        if not editable() then return nil end
+        self.EndLookEdit()
+        local from, to = redo and self.redo or self.undo, redo and self.undo or self.redo
+        local look = table.remove(from); if not look then return nil end
+        to[#to + 1] = V.Copy(data().look); data().look = look; self.Render(); refresh(redo and "Look redone." or "Look undone."); return true
+    end
+    function self.SetMany(values)
+        local look = V.Copy(data().look)
+        for key, value in pairs(values) do look[key] = value end
+        return replaceLook(look)
+    end
     function self.Set(key, value)
-        if not self.active or runtime.product.IsCombat() or reader.resetPending then return nil end
-        local look = V.Copy(data().look); look[key] = value
-        if not ns.PhotoConfig.ValidLook(look) then return nil end
-        data().look = look; self.Render(); return true
+        return self.SetMany({ [key] = value })
     end
     function self.Recipe(id)
         local look = ns.PhotoConfig.Recipe(id); if not look or not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
-        data().look = look; self.Render(); refresh(); return true
+        if not replaceLook(look) then return nil end; refresh(); return true
     end
     function self.Save(name)
         if not self.active or reader.resetPending then return nil end
@@ -59,13 +92,13 @@ function P.New(runtime)
     function self.Load(name)
         if not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
         local look = data().saved[name]; if not look then return nil end
-        data().look = V.Copy(look); self.Render(); refresh("Photo look loaded."); return true
+        if not replaceLook(look) then return nil end; refresh("Photo look loaded."); return true
     end
     function self.Delete(name) if not self.active or reader.resetPending then return nil end; data().saved[name] = nil; refresh("Photo look deleted.") end
     function self.Import(text)
         if not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
         local look = ns.PhotoConfig.Import(text); if not look then refresh("Invalid LSPHOTO1 look."); return nil end
-        data().look = look; self.Render(); refresh("Photo look imported."); return true
+        if not replaceLook(look) then return nil end; refresh("Photo look imported."); return true
     end
     function self.Read(key)
         local item = ns.ReadOnly.Read(reader, key)
@@ -138,6 +171,8 @@ function P.New(runtime)
         end)
     end
     function self.Restore(done)
+        if runtime.camera.active and (runtime.captureSequence and runtime.captureSequence.active
+            or runtime.composition and runtime.composition.capturing) then return nil, "BUSY" end
         local s = data() and data().session
         if not s then if done then done(true) end; return true end
         if self.busy then return nil, "BUSY" end

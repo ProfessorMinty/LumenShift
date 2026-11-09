@@ -2,11 +2,13 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.11** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.12** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.12 adds **Pose and Capture** tabs: twelve world emotes, favorites, Stop pose, optional pose capture, countdowns and short bursts with Cancel. Frame gains separate player/pet/NPC/bubble controls; Look gains Undo/Redo. **Every photo tool works without Narcissus.** Optional coexistence handles its known passive toolbar without borrowing its features. Keep your saved settings. [Controls, architecture and test steps](docs/57-STANDALONE-PHOTO-WORKFLOW.md).
 
 Beta.11 makes native photo lighting and FOV sliders **preview while dragging**, with paced verified updates and the latest endpoint retained. Capture and Hide controls finish the pending edit first; Escape cancels unissued edits and uses normal restoration. [Details and owner test](docs/55-LIVE-PHOTO-SLIDERS.md). No settings reset is needed.
 
-The [Narcissus source investigation and photo expansion plan](docs/56-NARCISSUS-PHOTO-ARCHITECTURE.md) explains the overlapping toolbar, world-photo versus model-stage techniques, and the remaining posing, capture and composition work. **LumenShift is standalone and must work with Narcissus uninstalled.** The investigation adds no runtime features or new dependency; Portrait Stage remains later work.
+The [Narcissus source investigation and photo expansion plan](docs/56-NARCISSUS-PHOTO-ARCHITECTURE.md) explains the overlapping toolbar, world-photo versus model-stage techniques, and the phased posing, capture and composition work. Delivery A is implemented in beta.12; later camera/output tools and Portrait Stage remain planned. **LumenShift is standalone and must work with Narcissus uninstalled.** The research itself added no dependency or copied source/artwork.
 
 Beta.10 adds a complete **in-scene Photo Studio**: live filters, soft vignette, draggable glow, grain, native lighting sliders, comparison, framing and saved photo looks. Camera keeps Hide controls/H and Escape. [Implementation and testing](docs/54-IN-SCENE-PHOTO-EDITOR.md). The optional 3D model stage remains deferred; native visual acceptance is pending.
 

@@ -18,10 +18,14 @@ function C.New(runtime)
         return result[1]
     end
     local function visibility(shown)
+        if shown and runtime.photoCompatibility then runtime.photoCompatibility.BeforeShow() end
         local result, why = ns.ReadOnly.Call(reader, reader.env.SetUIVisibility, shown)
         if not result then return nil, why or "UI_VISIBILITY_UNAVAILABLE" end
         local current = camera.Visible()
         if current ~= shown then return nil, "UI_VISIBILITY_NOT_CHANGED" end
+        if runtime.photoCompatibility then
+            if shown then runtime.photoCompatibility.AfterShow() else runtime.photoCompatibility.AfterHide() end
+        end
         return true
     end
     function camera.RestoreNames(callback, reconcile)
@@ -52,8 +56,37 @@ function C.New(runtime)
         if not ok then return report(ok, why) end
         return true
     end
+    function camera.ApplyNames(onComplete)
+        if not db or camera.busy or runtime.product.IsCombat() or reader.resetPending then return report(nil, "CAMERA_NOT_READY") end
+        if not camera.active and type(onComplete) ~= "function" then return report(nil, "CAMERA_NOT_READY") end
+        if runtime.composition and runtime.composition.capturing then return report(nil, "BUSY") end
+        if runtime.captureSequence and runtime.captureSequence.active or runtime.photoPreview and runtime.photoPreview.Pending() then return report(nil, "BUSY") end
+        local targets, unavailable = ns.NamePolicy.Targets(reader, db.camera)
+        camera.unavailableNames = unavailable
+        -- Keep pre-session manual intent until the whole Camera session returns.
+        local prior = db.camera.nameReturn and db.camera.nameReturn.targets or {}
+        if not db.camera.nameReturn then
+            for key, entry in pairs(db.camera.journal.entries) do prior[key] = ns.Value.Number(entry.lastVerifiedRaw) end
+        end
+        for key, value in pairs(prior) do if targets[key] == nil then targets[key] = value end end
+        local proposal, code = names.CanApply("camera", targets)
+        if not proposal then return report(nil, code) end
+        db.camera.nameReturn = db.camera.nameReturn or { targets = ns.Value.Copy(prior) }
+        local ok, why = names.Apply("camera", targets, function(done, reason)
+            if done then camera.changedNames = next(db.camera.journal.entries) ~= nil end
+            report(done, reason)
+            if done and onComplete then onComplete() end
+            if camera.interrupted and camera.active and not runtime.product.IsCombat() then
+                ns.ReadOnly.Call(reader, reader.env.C_Timer and reader.env.C_Timer.After, 0, camera.Exit)
+            end
+        end)
+        if not ok then return report(nil, why) end
+        return true
+    end
     function camera.ApplyFOV(value, onComplete)
         if camera.busy then return report(nil, "BUSY") end
+        if runtime.captureSequence and runtime.captureSequence.active and runtime.captureSequence.state ~= "WAITING_FOR_PREVIEW"
+            or runtime.composition and runtime.composition.capturing then return report(nil, "BUSY") end
         local ok, why = runtime.framing.Apply("camera", { cameraFov = value }, function(done, code)
             report(done, code); if onComplete then onComplete(done, code) end
             if camera.interrupted and camera.active and not runtime.product.IsCombat() then
@@ -65,6 +98,7 @@ function C.New(runtime)
     end
     function camera.RestoreFOV(callback)
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
+        if camera.active and (runtime.captureSequence and runtime.captureSequence.active or runtime.composition and runtime.composition.capturing) then return report(nil, "BUSY") end
         if not next(db.camera.framing.journal.entries) then if callback then callback(true) end; return true end
         -- An exit never authorizes overwriting another camera addon's adjustment.
         local ok, why = runtime.framing.Apply("camera", {}, function(done, code)
@@ -74,6 +108,7 @@ function C.New(runtime)
         return true
     end
     function camera.Exit()
+        if runtime.captureSequence then runtime.captureSequence.Cancel() end
         if runtime.photoPreview then runtime.photoPreview.Cancel("EXIT") end
         -- Showing the HUD is always the first attempt, even if name restoration fails.
         local shown, why = visibility(true)
@@ -121,6 +156,7 @@ function C.New(runtime)
         return not firstError or nil, firstError
     end
     function camera.Combat()
+        if runtime.captureSequence then runtime.captureSequence.Cancel() end
         camera.interrupted = true
         if runtime.photoPreview then runtime.photoPreview.Cancel("COMBAT") end
         if runtime.photoEditor then runtime.photoEditor.Hide() end
@@ -137,6 +173,9 @@ function C.New(runtime)
         if runtime.product.IsCombat() then return report(nil, "COMBAT_OR_RESTRICTION") end
         if type(reader.env.SetUIVisibility) ~= "function" then return report(nil, "UI_VISIBILITY_UNAVAILABLE") end
         if db.camera.nameReturn then return report(nil, "RESTORE_CAMERA_NAMES_FIRST") end
+        if runtime.photoCompatibility then
+            local ready, reason = runtime.photoCompatibility.Prepare(); if not ready then return report(nil, reason) end
+        end
         camera.interrupted = false
         local function hide()
             -- Combat or an external UI change during name verification is not a new hide request.
@@ -149,25 +188,9 @@ function C.New(runtime)
         end
         local function enter()
             if camera.interrupted or runtime.product.IsCombat() then return report(nil, "CAMERA_ENTRY_INTERRUPTED") end
-            if db.camera.hideWithUI then
-                local targets = {}; for _, key in ipairs(ns.NamePolicy.Keys) do targets[key] = 0 end
-                local proposal, code = names.CanApply("camera", targets)
-                if not proposal then return report(nil, code) end
-                -- Keep the manual names intent separate from the exact-original
-                -- journal. Save it before the first Camera name write, including
-                -- a no-op entry when names were already hidden manually.
-                local prior = {}
-                for key, entry in pairs(db.camera.journal.entries) do
-                    prior[key] = ns.Value.Number(entry.lastVerifiedRaw)
-                end
-                db.camera.nameReturn = { targets = prior }
-                local ok, reason = names.Apply("camera", targets, function(done, errorCode)
-                    if done then camera.changedNames = next(db.camera.journal.entries) ~= nil; hide()
-                    else report(nil, errorCode) end
-                end)
-                if not ok then return report(nil, reason) end
-                return true
-            end
+            local targets, unavailable = ns.NamePolicy.Targets(reader, db.camera)
+            camera.unavailableNames = unavailable
+            if next(targets) then return camera.ApplyNames(hide) end
             return hide()
         end
         if db.camera.photoEnabled then

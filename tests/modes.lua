@@ -141,7 +141,7 @@ return function(fixture, eq, test)
         local f = make(); f.variant("lantern", 1); f.select("lantern"); f.r.db.onboarding.completed = true
         local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.optics.reference, old.baseline.includeOptics = 9, nil, nil
         for _, m in pairs(old.config.studio.modes) do m.intensity = nil end
-        local g = make(old, f.values); eq(#g.calls, 0); eq(g.r.storeStatus, "MIGRATED_9_TO_13")
+        local g = make(old, f.values); eq(#g.calls, 0); eq(g.r.storeStatus, "MIGRATED_9_TO_14")
         eq(g.r.db.config.studio.modes.lantern.intensity, 100); eq(g.r.db.onboarding.completed, true)
         eq(g.r.db.baseline.includeOptics, false); eq(g.r.db.experiments.journal.entries.ResampleSharpness.originalRaw, "1.7700")
     end)

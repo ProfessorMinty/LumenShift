@@ -219,7 +219,7 @@ return function(fixture, eq, test)
     test("N17 saved graphics data is strict, schema-6 migration preserves prior preferences", function()
         local f = make(); local old = f.ns.Value.Copy(f.r.db); old.schemaVersion, old.graphics, old.optics = 6, nil, nil
         old.onboarding.completed = true; old.config.preferences.sound = true
-        local migrated, why = f.ns.Store.Open(old); eq(why, "MIGRATED_6_TO_13"); eq(migrated.schemaVersion, 13)
+        local migrated, why = f.ns.Store.Open(old); eq(why, "MIGRATED_6_TO_14"); eq(migrated.schemaVersion, 14)
         eq(migrated.onboarding.completed, true); eq(migrated.config.preferences.sound, true); eq(old.graphics, nil)
         f.apply("normal", 6); f.apply("raid", 4); assert(f.ns.Store.Open(f.r.db))
         for _, mutate in ipairs({

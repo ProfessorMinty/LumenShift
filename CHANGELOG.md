@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.12 — standalone photo workflow
+
+- Add native pose buttons/favorites, timed captures and bounded bursts, expanded name/bubble choices and look undo/redo.
+- Keep photo tools standalone; optional Narcissus toolbar coordination does not provide functionality.
+- Preserve saved looks and originals with schema 14. Validation: 519 Lua 5.1 mocks, 10 packaging tests, syntax/structural checks and off-client layout review pass. Native owner testing remains pending.
+
+
 ## 0.2.0-beta.11 — Live photo slider preview (2026-11-09)
 
 - Preview native Brightness, Contrast, Sharpness, Bloom and FOV while dragging. Coalesce input, verify one transaction at a time and preserve the final requested value.

@@ -1,5 +1,6 @@
 # Narcissus photo architecture and LumenShift expansion
 
+> Follow-up: Delivery A is implemented in [beta.12](57-STANDALONE-PHOTO-WORKFLOW.md). The research snapshot and proposed later deliveries below remain historical evidence.
 2026-11-09 · Northern Lights Labs · Source investigation; runtime remains **0.2.0-beta.11**.
 
 The owner asks how Narcissus implements photography so LumenShift can become a complete photo toolkit. This investigation follows its installed source, current upstream source and Forever API declarations. It extends [53](53-PHOTO-MODE-RESEARCH-AND-CONTROLS.md), compares the implemented [Photo Studio](54-IN-SCENE-PHOTO-EDITOR.md) and [live sliders](55-LIVE-PHOTO-SLIDERS.md), and defines the remaining deliveries. **The additions below are proposed, not shipped.** The earlier instruction to do 3D model work later remains respected.

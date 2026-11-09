@@ -10,20 +10,20 @@ function U.New(runtime, composition)
     W.Text(panel, "Photo Studio", 16, -15, 300, 22)
     W.Text(panel, "Compose in the world", 16, -47, 300, 12, W.colors.muted)
     local tabs = {}
-    for i, label in ipairs({ "Look", "Light", "Frame", "Saved" }) do
-        local button = W.Button(env, panel, label, 12 + (i - 1) * 86, -75, 78, function() self.tab = label; self.Build(true) end)
+    for i, label in ipairs({ "Look", "Light", "Frame", "Pose", "Capture", "Saved" }) do
+        local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -75 - math.floor((i - 1) / 3) * 40, 104, function() self.tab = label; self.Build(true) end)
         tabs[label] = button
     end
     local scroll = env.CreateFrame("ScrollFrame", nil, panel); self.scroll = scroll
-    scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -120); scroll:SetSize(310, 402); scroll:EnableMouseWheel(true)
+    scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -160); scroll:SetSize(310, 402); scroll:EnableMouseWheel(true)
     local content = env.CreateFrame("Frame", nil, scroll); content:SetSize(310, 1); scroll:SetScrollChild(content)
     local pool = W.CreatePool(env, content); local penv = pool.env
     function self.ClearFocus()
         for _, field in ipairs(pool.frames.EditBox or {}) do field:ClearFocus() end
     end
-    composition.root:HookScript("OnHide", self.ClearFocus)
+    composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit() end)
     local scrollbar = env.CreateFrame("Slider", nil, panel); self.scrollbar = scrollbar
-    scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -120); scrollbar:SetSize(8, 402)
+    scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -160); scrollbar:SetSize(8, 402)
     scrollbar:SetOrientation("VERTICAL"); scrollbar:SetValueStep(20); W.Fill(scrollbar, W.colors.sidebar)
     local thumb = scrollbar:CreateTexture(nil, "OVERLAY"); thumb:SetSize(6, 32); thumb:SetColorTexture(unpack(W.colors.accent)); scrollbar:SetThumbTexture(thumb)
     scrollbar:SetScript("OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
@@ -42,8 +42,8 @@ function U.New(runtime, composition)
     marker:SetScript("OnDragStop", function()
         marker:StopMovingOrSizing()
         local x, y = marker:GetCenter(); local scale = marker:GetEffectiveScale() / composition.root:GetEffectiveScale()
-        editor.Set("glowX", math.max(0, math.min(1, x * scale / env.UIParent:GetWidth())))
-        editor.Set("glowY", math.max(0, math.min(1, 1 - y * scale / env.UIParent:GetHeight())))
+        editor.SetMany({ glowX = math.max(0, math.min(1, x * scale / env.UIParent:GetWidth())),
+            glowY = math.max(0, math.min(1, 1 - y * scale / env.UIParent:GetHeight())) })
         self.Build()
     end)
     marker:SetScript("OnHide", function() marker:StopMovingOrSizing() end)
@@ -56,7 +56,7 @@ function U.New(runtime, composition)
         local h = math.min(640, env.UIParent:GetHeight() - 154)
         local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 360), math.max(.4, h / 480))
         panel:SetScale(scale); h = math.max(480, h / scale); panel:SetHeight(h)
-        scroll:SetHeight(h - 236); scrollbar:SetHeight(h - 236)
+        scroll:SetHeight(h - 276); scrollbar:SetHeight(h - 276)
         scrollbar:SetMinMaxValues(0, math.max(0, (self.contentHeight or 1) - scroll:GetHeight()))
         scrollbar:SetValue(math.min(scroll:GetVerticalScroll(), math.max(0, (self.contentHeight or 1) - scroll:GetHeight())))
         positionMarker()
@@ -76,6 +76,8 @@ function U.New(runtime, composition)
             self.sliders[key] = W.Slider(penv, content, label, 0, y, range[1], range[2], step or .01,
                 function() return db.camera.editor.look[key] end,
                 function(n) local ok = editor.Set(key, n); positionMarker(); return ok end, nil, 310)
+            W.Script(self.sliders[key], "OnMouseDown", editor.BeginLookEdit)
+            W.Script(self.sliders[key], "OnMouseUp", function() editor.EndLookEdit(); self.Refresh() end)
             y = y - 68
         end
         local function liveSlider(key, label, minimum, maximum, step, current)
@@ -97,7 +99,9 @@ function U.New(runtime, composition)
                 local id = recipe[1]
                 W.Button(penv, content, recipe[2], (i - 1) % 2 * 160, -math.floor((i - 1) / 2) * 40, 150, function() editor.Recipe(id); self.Build() end)
             end
-            y = -88; text("Live screen treatments. Your visual modes stay unchanged.", 40)
+            W.Button(penv, content, "Undo look", 0, -88, 150, function() editor.Undo(); self.Build() end)
+            W.Button(penv, content, "Redo look", 160, -88, 150, function() editor.Undo(true); self.Build() end)
+            y = -132; text("Live screen treatments. Your visual modes stay unchanged.", 40)
             lookSlider("strength", "Look strength"); lookSlider("warmth", "Warm / cool"); lookSlider("tint", "Green / rose tint")
             section("VIGNETTE")
             lookSlider("vignette", "Edge darkness"); lookSlider("size", "Clear center size"); lookSlider("feather", "Soft edge", .1)
@@ -108,7 +112,7 @@ function U.New(runtime, composition)
             for _, color in ipairs({ { "Amber", 1, .58, .2 }, { "Ice", .3, .65, 1 }, { "White", 1, 1, 1 } }) do
                 local c = color; local x = c[1] == "Amber" and 0 or c[1] == "Ice" and 106 or 212
                 W.Button(penv, content, c[1], x, y, 98, function()
-                    editor.Set("glowR", c[2]); editor.Set("glowG", c[3]); editor.Set("glowB", c[4]); self.Build()
+                    editor.SetMany({ glowR = c[2], glowG = c[3], glowB = c[4] }); self.Build()
                 end)
             end
             y = y - 42
@@ -152,14 +156,15 @@ function U.New(runtime, composition)
                 liveSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw))
             else text("Field of view unavailable; framing guides remain available.", 52) end
             W.Button(penv, content, "Restore field of view", 0, y, 310, function() preview.Finish(runtime.camera.RestoreFOV) end); y = y - 48
+            y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
             section("NEXT CAMERA ENTRY")
-            W.Toggle(penv, content, "Hide friendly names", 0, y, 310, function() return db.camera.hideWithUI end,
-                function(v) db.camera.hideWithUI = v end); y = y - 46
             W.Toggle(penv, content, "Temporary photo quality", 0, y, 310, function() return db.camera.photoEnabled end,
                 function(v) db.camera.photoEnabled = v end); y = y - 46
             W.Slider(penv, content, "Photo quality level", 0, y, 1, 10, 1, function() return db.camera.photoLevel end,
                 function(v) db.camera.photoLevel = v; return true end, nil, 310); y = y - 70
-            text("Names and photo quality take effect on your next entry. Exit restores them. Your regular quality choices stay unchanged.", 70)
+            text("Photo quality takes effect on your next entry. Exit restores it. Your regular quality choices stay unchanged.", 70)
+        elseif self.tab == "Pose" or self.tab == "Capture" then
+            y = ns.PhotoToolsUI.Build(runtime, penv, content, self.tab, self)
         else
             text("Save styling without native graphics values. Native lighting always starts from your current scene.", 54)
             self.name = self.name or "My photo look"
@@ -187,13 +192,17 @@ function U.New(runtime, composition)
     function self.Refresh()
         if (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
             and not preview.Pending() and self.panel:IsVisible() then self.Build(); return end
-        self.status:SetText(preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
+        local seq, pose = runtime.captureSequence, runtime.photoTools
+        local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
+            or self.tab == "Pose" and ns.PhotoToolsUI.Status(pose.status)
+        self.status:SetText(extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
         self.compare.label:SetText(editor.before and "Show After" or "Show Before")
         if editor.busy and not preview.busy then self.compare:Disable() else self.compare:Enable() end
         positionMarker()
     end
     editor.Refresh = self.Refresh
     preview.Refresh = self.Refresh
+    runtime.photoTools.Refresh = self.Refresh
     composition.root:HookScript("OnHide", function() self.dragging = nil end)
     self.Build(true)
     return self

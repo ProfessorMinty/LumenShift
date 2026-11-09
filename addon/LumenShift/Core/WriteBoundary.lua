@@ -778,7 +778,7 @@ function B.NewExperiments(runtime, cameraMode)
     local sessionSignature = ns.Compatibility.Inspect(reader).signature
     local data = db and (cameraMode == "framing" and db.camera.framing or cameraMode and db.camera or db.experiments)
     local policy = cameraMode == "framing" and ns.Framing or cameraMode and ns.NamePolicy or ns.ExperimentPolicy
-    local function watchKeys() return cameraMode and policy.Keys or ns.Catalog.WatchKeys() end
+    local function watchKeys() return cameraMode and (policy.AllKeys or policy.Keys) or ns.Catalog.WatchKeys() end
     local lab = { state = data and not next(data.journal.entries) and "BASELINE" or "RECOVERY",
         busy = false, certificates = {}, preview = nil, serial = 0, lastError = nil, activeProfile = "currentBaseline" }
     local pending, pendingCompletion, executing, owned = nil, nil, false, {}
