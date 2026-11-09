@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.7 — install and explore
+# LumenShift 0.2.0-beta.8 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+Beta.8 fixes a Camera name-preflight refusal caused by treating server-storage metadata as a restriction. Keep your saved settings. Open the wheel, click **Camera**, then use **Exit Camera Mode** to return the HUD and prior friendly names. No reset or command is needed. [Evidence and focused check](52-CAMERA-NAME-STORAGE-FIX.md).
 
 Beta.7 shows only one launcher: minimap by default, or the floating button if previously selected. Change this in **Studio > Accessibility > Floating launcher instead of minimap**. The wheel now has separate **Camera** and **Studio** icon buttons. Use **1–6** for modes, **7** for Camera, **8** for Studio, or arrows/Tab then Enter. **Exit Camera Mode** returns the interface. No settings reset is needed. [Layout and acceptance checks](51-LAUNCHER-AND-WHEEL.md).
 
@@ -14,7 +16,7 @@ Beta.4 includes the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md): Ef
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. A routine update does not need a reset. Use the explicit reset button only when you want to start fresh. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-beta.7-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-beta.8-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 

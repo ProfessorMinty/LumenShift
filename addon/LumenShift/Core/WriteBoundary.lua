@@ -856,9 +856,9 @@ function B.NewExperiments(runtime, cameraMode)
         for key, entry in pairs(journal.entries) do
             if entry.layer == layer then
                 if reconciliation then
-                    if not ns.Planner.SafeObservation(seen[key]) then return nil, "UNSAFE_RECOVERY_OBSERVATION" end
+                    if not ns.Planner.SafeObservation(seen[key], key) then return nil, "UNSAFE_RECOVERY_OBSERVATION" end
                     entry.lastVerifiedRaw, entry.state, entry.failure = seen[key].raw, "owned", nil
-                elseif not owned[key] and not R.CanContinue(entry, seen[key], sessionSignature) then
+                elseif not owned[key] and not R.CanContinue(entry, seen[key], sessionSignature, key) then
                     return nil, "EXPLICIT_RECOVERY_REQUIRED"
                 end
             end
@@ -882,7 +882,7 @@ function B.NewExperiments(runtime, cameraMode)
             local bounds = ns.Framing.Range(reader)
             if not bounds or not number or number < bounds.min or number > bounds.max then return false, current.raw, "FOV_OUTSIDE_NATIVE_BOUNDS" end
         end
-        if not ns.Planner.SafeObservation(current) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
+        if not ns.Planner.SafeObservation(current, key) or current.raw ~= expected then return false, current, "EXTERNAL_CONFLICT" end
         if not ns.Catalog.Admitted(descriptor, policy.Context(sessionSignature))
             or not number or number < descriptor.min or number > descriptor.max then return false, current, "INVALID_EXPERIMENT_TARGET" end
         if combat() then return false, current, "COMBAT_OR_RESTRICTION" end
@@ -891,7 +891,7 @@ function B.NewExperiments(runtime, cameraMode)
         local result, code = nativeSet(reader, key, target)
         local after = ns.ReadOnly.Read(reader, key)
         record("immediate", "INFO", after.code, { key = key, immediate = after.raw })
-        return result and result.n == 1 and result[1] == true and ns.Planner.SafeObservation(after), after, code or "SETTER_OR_READBACK_FAILED"
+        return result and result.n == 1 and result[1] == true and ns.Planner.SafeObservation(after, key), after, code or "SETTER_OR_READBACK_FAILED"
     end
     local function hold(tx)
         local held = V.Copy(tx.journal)
@@ -970,7 +970,7 @@ function B.NewExperiments(runtime, cameraMode)
             if watch(fresh.seen, seen, allowed) then mark("DEPENDENCY_OR_EXTERNAL_CHANGE"); if callback then callback(false, lab.lastError) end; return end
             if finalJournal then
                 for key, raw in pairs(expected) do
-                    if not ns.Planner.SafeObservation(seen[key]) or seen[key].raw ~= raw then
+                    if not ns.Planner.SafeObservation(seen[key], key) or seen[key].raw ~= raw then
                         mark("COMPENSATION_LATE_DRIFT"); if callback then callback(false, lab.lastError) end; return
                     end
                 end
@@ -984,7 +984,7 @@ function B.NewExperiments(runtime, cameraMode)
             if not failure and proposal.referenceIntent then db.optics.reference = V.Copy(proposal.referenceIntent) end
             for key in pairs(allowed) do owned[key] = data.journal.entries[key] ~= nil end
             for key, entry in pairs(data.journal.entries) do
-                if entry.layer == proposal.layer and R.CanContinue(entry, seen[key], sessionSignature) then owned[key] = true end
+                if entry.layer == proposal.layer and R.CanContinue(entry, seen[key], sessionSignature, key) then owned[key] = true end
             end
             lab.busy, pending, pendingCompletion, lab.lastError = false, nil, nil, failure
             lab.state = next(data.journal.entries) and "ACTIVE" or "BASELINE"
@@ -1084,7 +1084,7 @@ function B.NewExperiments(runtime, cameraMode)
             if not data or next(data.sideEffects) then return nil, "EXPLICIT_RECOVERY_REQUIRED" end
             -- Read-only preflight; ownership is established only by the new Apply.
             for key, entry in pairs(data.journal.entries) do
-                if not R.CanContinue(entry, ns.ReadOnly.Read(reader, key), sessionSignature) then
+                if not R.CanContinue(entry, ns.ReadOnly.Read(reader, key), sessionSignature, key) then
                     return nil, "EXPLICIT_RECOVERY_REQUIRED"
                 end
             end
@@ -1159,7 +1159,7 @@ function B.NewExperiments(runtime, cameraMode)
         for key, item in pairs(data.journal.entries) do
             if owned[key] then
                 local current = ns.ReadOnly.Read(reader, key)
-                if not ns.Planner.SafeObservation(current) or current.raw ~= item.lastVerifiedRaw then
+                if not ns.Planner.SafeObservation(current, key) or current.raw ~= item.lastVerifiedRaw then
                     mark("EXTERNAL_CONFLICT"); lab.state = "CONFLICT"; return
                 end
             end

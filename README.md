@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.7** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.8** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.8 corrects Camera Mode rejecting server-stored friendly-name preferences as if they were write-protected. The existing camera controls now use the corrected policy through activation and restoration; diagnostic exports include the full flags and precise preflight result. No settings reset is needed. [Failure evidence, fix and checks](docs/52-CAMERA-NAME-STORAGE-FIX.md).
 
 Beta.7 shows **one launcher at a time**, cleans up wheel spacing and puts **Camera** directly on the wheel. Minimap and floating are alternative entry points; existing preferences are preserved. [Changes and checks](docs/51-LAUNCHER-AND-WHEEL.md).
 

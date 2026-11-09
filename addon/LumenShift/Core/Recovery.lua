@@ -5,10 +5,10 @@ ns.Recovery = R
 -- A matching completed record may participate in a NEW explicit user request.
 -- This is not startup ownership, proof of uninterrupted ownership, or permission
 -- to replay an interrupted write. Planner validation and fresh preflight still run.
-function R.CanContinue(record, current, signature)
-    return ns.Planner.ReturnedOriginal(record, current, signature)
+function R.CanContinue(record, current, signature, key)
+    return ns.Planner.ReturnedOriginal(record, current, signature, key)
         or type(record) == "table" and record.state == "owned" and record.failure == nil
-        and record.signature == signature and ns.Planner.SafeObservation(current)
+        and record.signature == signature and ns.Planner.SafeObservation(current, key)
         and current.raw == record.lastVerifiedRaw
 end
 
@@ -61,7 +61,7 @@ local function prepare(tx, id, index, current, combat)
     if combat ~= false then
         nextTx.state = #tx.attempts == 0 and "DEFERRED" or "ROLLING_BACK"
         nextTx.reason = "COMBAT_OR_RESTRICTION"
-    elseif not ns.Planner.SafeObservation(current) or current.raw ~= op.beforeRaw then
+    elseif not ns.Planner.SafeObservation(current, op.key) or current.raw ~= op.beforeRaw then
         nextTx.state, nextTx.reason = "ROLLING_BACK", "EXTERNAL_CONFLICT"
         nextTx.journal.entries[op.key].state = "conflict"
     else nextTx.pendingIndex = index end
@@ -125,7 +125,7 @@ function R.Verify(tx, id, observed)
         for _, item in ipairs(observations) do
             local op = tx.plan.operations[item.index]
             local current = observed[op.key]
-            if not ns.Planner.SafeObservation(current) or current.raw ~= item.raw then
+            if not ns.Planner.SafeObservation(current, op.key) or current.raw ~= item.raw then
                 nextTx.state, nextTx.reason = "ROLLING_BACK", "LATE_DRIFT_OR_RESTRICTION"
                 if op.write == false then nextTx.journal.entries[op.key] = V.Copy(tx.prior.entries[op.key]) end
                 if nextTx.journal.entries[op.key] then nextTx.journal.entries[op.key].state = "conflict" end
@@ -147,9 +147,9 @@ function R.RollbackPlan(tx, observed)
         local attempt = tx.attempts[i]
         local op, current = tx.plan.operations[attempt.index], observed[tx.plan.operations[attempt.index].key]
         processed[op.key] = true
-        if ns.Planner.SafeObservation(current) and current.raw == op.beforeRaw then
+        if ns.Planner.SafeObservation(current, op.key) and current.raw == op.beforeRaw then
             nextTx.journal.entries[op.key] = V.Copy(tx.prior.entries[op.key])
-        elseif ns.Planner.SafeObservation(current) and attempt.raw and current.raw == attempt.raw then
+        elseif ns.Planner.SafeObservation(current, op.key) and attempt.raw and current.raw == attempt.raw then
             nextTx.rollback[#nextTx.rollback + 1] = { key = op.key, targetRaw = op.beforeRaw, expectedRaw = current.raw }
             nextTx.unresolved[op.key] = "PENDING_COMPENSATION"
         else nextTx.unresolved[op.key] = "CONFLICT_OR_UNREADABLE" end
@@ -169,7 +169,7 @@ function R.RollbackPlan(tx, observed)
         local current = observed[op.key]
         processed[op.key] = true
         nextTx.journal.entries[op.key] = V.Copy(tx.prior.entries[op.key])
-        if not ns.Planner.SafeObservation(current) or current.raw ~= op.beforeRaw then
+        if not ns.Planner.SafeObservation(current, op.key) or current.raw ~= op.beforeRaw then
             nextTx.unresolved[op.key] = "RELEASE_CONFLICT_OR_UNREADABLE"
             nextTx.journal.entries[op.key].state = "conflict"
             nextTx.journal.entries[op.key].failure = nextTx.unresolved[op.key]
@@ -201,7 +201,7 @@ function R.BeforeRollback(tx, id, key, current, combat)
             break
         end
     end
-    if combat ~= false or not ns.Planner.SafeObservation(current) or current.raw ~= expected then
+    if combat ~= false or not ns.Planner.SafeObservation(current, key) or current.raw ~= expected then
         nextTx.unresolved[key] = "CONFLICT_OR_RESTRICTED"
         nextTx.journal.entries[key].state = "conflict"
         nextTx.journal.entries[key].failure = nextTx.unresolved[key]

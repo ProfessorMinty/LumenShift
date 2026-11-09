@@ -8,6 +8,12 @@ function D.Number(value)
 end
 local function bool(v) return v == true and "yes" or v == false and "no" or "unknown" end
 local function safe(value) return ns.Log.Code(value or "UNKNOWN") end
+local function nameCheck(item, key)
+    local reason = ns.Planner.ObservationError(item, key)
+    if reason then return reason end
+    local bounds, code = ns.NamePolicy.Bounds(key, item.raw)
+    return bounds and "OK" or code
+end
 local function call(reader, fn, ...)
     local result, code = ns.ReadOnly.Call(reader, fn, ...)
     if not result then return nil, code end
@@ -76,6 +82,8 @@ function D.Run(runtime, reason)
     for _, key in ipairs(ns.NamePolicy.Keys) do
         local item = ns.ReadOnly.Read(runtime.reader, key)
         add("read-" .. key, item.code == "OK" and "PASS" or "BLOCKED", item.code)
+        local code = nameCheck(item, key)
+        add("name-preflight-" .. key, code == "OK" and "PASS" or "BLOCKED", code)
     end
     add("native-writes", native and native.rejected > 0 and "WARN" or native and native.accepted > 0 and "PASS" or "NOT TESTED",
         native and native.attempts > 0 and ("Session setter calls=" .. native.attempts .. "; accepted=" .. native.accepted
@@ -157,11 +165,15 @@ function D.Build(runtime)
             lines[#lines + 1] = key .. " current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] original=" .. D.Number(original and original.originalRaw)
                 .. " secure=" .. bool(item.flags and item.flags.secure) .. " readOnly=" .. bool(item.flags and item.flags.readOnly)
                 .. " locked=" .. bool(item.flags and item.flags.locked)
+                .. " serverAccount=" .. bool(item.flags and item.flags.serverAccount)
+                .. " serverCharacter=" .. bool(item.flags and item.flags.serverCharacter)
+                .. " flags=" .. safe(item.flagsCode) .. " nameCheck=" .. safe(nameCheck(item, key))
                 .. " cameraReturn=" .. D.Number(db.camera.nameReturn and db.camera.nameReturn.targets[key])
         end
         lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
             .. " namesReturnPending=" .. bool(db.camera.nameReturn ~= nil)
             .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
+            .. " lastError=" .. safe(runtime.camera and runtime.camera.error or "none")
         local fov = ns.ReadOnly.Read(runtime.reader, "cameraFov")
         local framing = db.camera.framing.journal.entries.cameraFov
         local bounds = ns.Framing.Range(runtime.reader)

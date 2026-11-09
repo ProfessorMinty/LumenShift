@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.8 — Camera name eligibility (2026-11-09)
+
+- Correct a reproducible Camera refusal: server-account/character storage flags describe persistence, not a write restriction. Allow those flags only for the existing friendly-player/pet-name controls, including planning, readback, conflict observation, compensation and explicit recovery.
+- Preserve actual secure/read-only/locked checks, readable numeric values, exact originals, independent manual names and visual modes. No new CVar, startup write, migration or settings reset.
+- Export the previously omitted name storage flags, flag-read result, precise name-preflight check and last Camera error. Diagnostic scans remain read-only.
+- Add eleven Lua 5.1 regressions for the storage variants, entry/exit, recovery, failures, conflicts and scope isolation. The supplied beta.7 report confirms name preflight refused before HUD hiding; its missing storage flags mean this explanation still requires a native retry. See docs/52-CAMERA-NAME-STORAGE-FIX.md.
+
 ## 0.2.0-beta.7 — One launcher and a clearer wheel (2026-11-09)
 
 - Show either the minimap button or the floating launcher, never both. Fresh setup defaults to minimap; existing floating choices and positions are preserved. Setup/Accessibility now explain the choice; failed Studio initialization retains a fallback button.

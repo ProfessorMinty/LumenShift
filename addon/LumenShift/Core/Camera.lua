@@ -44,7 +44,7 @@ function C.New(runtime)
         local target = 1
         for _, key in ipairs(ns.NamePolicy.Keys) do
             local item = ns.ReadOnly.Read(reader, key)
-            if not ns.Planner.SafeObservation(item) then return report(nil, "NAME_CONTROLS_UNAVAILABLE") end
+            if not ns.Planner.SafeObservation(item, key) then return report(nil, "NAME_CONTROLS_UNAVAILABLE") end
             if ns.Value.Number(item.raw) == 1 then target = 0 end
         end
         local targets = {}; for _, key in ipairs(ns.NamePolicy.Keys) do targets[key] = target end

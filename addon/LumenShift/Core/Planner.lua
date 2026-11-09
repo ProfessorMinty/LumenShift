@@ -2,23 +2,35 @@ local _, ns = ...
 local P, V = {}, ns.Value
 ns.Planner = P
 
-local function safeObservation(item)
-    return type(item) == "table" and item.code == "OK" and V.Number(item.raw) ~= nil
-        and item.flagsCode == "OK" and type(item.flags) == "table"
-        and item.flags.secure == false and item.flags.readOnly == false
-        and item.flags.locked == false
-        and item.flags.serverAccount == false and item.flags.serverCharacter == false
+function P.ObservationError(item, key)
+    if type(item) ~= "table" or item.code ~= "OK" then return "READ_UNAVAILABLE_OR_UNSTABLE" end
+    if V.Number(item.raw) == nil then return "INVALID_NUMERIC_VALUE" end
+    if item.flagsCode ~= "OK" or type(item.flags) ~= "table" then return "FLAGS_UNAVAILABLE" end
+    local flags = item.flags
+    if flags.secure ~= false then return "SECURE_CVAR" end
+    if flags.readOnly ~= false then return "READ_ONLY_CVAR" end
+    if flags.locked ~= false then return "LOCKED_CVAR" end
+    if type(flags.serverAccount) ~= "boolean" or type(flags.serverCharacter) ~= "boolean" then return "UNKNOWN_STORAGE_FLAGS" end
+    -- GetCVarInfo reports storage separately from restrictions. The two admitted
+    -- friendly-name preferences may be server-stored; graphics remain local-only.
+    -- Callers must supply their actual operation key at every verification stage.
+    if (flags.serverAccount or flags.serverCharacter) and not (ns.NamePolicy and ns.NamePolicy.Known(key)) then
+        return "NONLOCAL_STORAGE"
+    end
+end
+local function safeObservation(item, key)
+    return P.ObservationError(item, key) == nil
 end
 P.SafeObservation = safeObservation
 
 -- A new explicit request may continue after a completed change has returned to
 -- its exact original (for example through the owner's fallback macro). This
 -- predicate does not mutate data, accept a different value or replay a write.
-function P.ReturnedOriginal(record, current, signature)
+function P.ReturnedOriginal(record, current, signature, key)
     return type(record) == "table" and record.signature == signature
         and (record.state == "owned" and record.failure == nil
             or record.state == "conflict" and record.failure == "EXTERNAL_CONFLICT")
-        and safeObservation(current) and current.raw == record.originalRaw
+        and safeObservation(current, key) and current.raw == record.originalRaw
 end
 
 function P.Build(catalog, context, observed, journal, layer, targets)
@@ -63,8 +75,8 @@ function P.Build(catalog, context, observed, journal, layer, targets)
         local descriptor, current, record = catalog[key], observed[key], journal.entries[key]
         if not ns.Catalog.Admitted(descriptor, context) then return nil, "UNADMITTED_KEY:" .. key end
         if descriptor.layer ~= layer or (record and record.layer ~= layer) then return nil, "LAYER_CONFLICT:" .. key end
-        if not safeObservation(current) then return nil, "UNSAFE_OBSERVATION:" .. key end
-        local returned = P.ReturnedOriginal(record, current, context.signature)
+        if not safeObservation(current, key) then return nil, "UNSAFE_OBSERVATION:" .. key end
+        local returned = P.ReturnedOriginal(record, current, context.signature, key)
         if record and ((record.state ~= "owned" or record.failure ~= nil) and not returned or (record.signature ~= context.signature
             and not (context.explicitRecovery and ns.Compatibility.Experimental(record.signature)))
             or record.descriptorVersion ~= descriptor.version
