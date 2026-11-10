@@ -24,8 +24,7 @@ function B.New(runtime)
         self.root = root
         self.background = root:CreateTexture(nil, "BACKGROUND"); self.background:SetAllPoints(root)
         local scene = create("ModelScene", root)
-        local sceneMethods = { "CreateActor", "SetCameraPosition", "SetCameraOrientationByYawPitchRoll", "SetCameraFieldOfView",
-            "SetLightType", "SetLightVisible", "SetLightDirection", "SetLightAmbientColor", "SetLightDiffuseColor" }
+        local sceneMethods = { "CreateActor", "SetCameraPosition", "SetCameraOrientationByYawPitchRoll", "SetCameraFieldOfView" }
         if methods(scene, sceneMethods) then
             scene:SetAllPoints(root); scene:SetFrameLevel(2); scene:EnableMouse(false)
             self.scene, self.kind = scene, "ModelScene"
@@ -98,12 +97,24 @@ function B.New(runtime)
         if self.kind == "ModelScene" then if type(r[1]) == "boolean" then return r[1] end
         elseif ns.Value.Finite(r[1]) and r[1] >= 0 then return r[1] > 0 end
     end
+    function self.Supports(model, key)
+        if key == "time" or key == "speed" then return self.kind == "ModelScene" end
+        if key == "sheathed" or key == "hideWeapons" then
+            return self.kind == "ModelScene" or type(model.SetSheathed) == "function"
+        end
+        local method = ({ transmog = "SetUseTransmogSkin", hideHead = "UndressSlot", hideCloak = "UndressSlot",
+            pitch = "SetPitch", roll = "SetRoll" })[key]
+        return not method or type(model[method]) == "function"
+    end
     function self.Transform(model, spec)
         local ok = call(model, "SetPosition", spec.depth, -spec.x, spec.y)
         local yaw = call(model, self.kind == "ModelScene" and "SetYaw" or "SetFacing", math.rad(spec.yaw))
         local scale = call(model, self.kind == "ModelScene" and "SetScale" or "SetModelScale", spec.scale)
         if self.kind == "ModelScene" and type(model.SetRequestedScale) == "function" then scale = call(model, "SetRequestedScale", spec.scale) and scale end
-        local pitch, roll = call(model, "SetPitch", math.rad(spec.pitch)), call(model, "SetRoll", math.rad(spec.roll))
+        -- Missing optional methods do not reject an otherwise usable model.
+        -- Their saved values remain intact; the UI identifies unavailable controls.
+        local pitch = not self.Supports(model, "pitch") or call(model, "SetPitch", math.rad(spec.pitch))
+        local roll = not self.Supports(model, "roll") or call(model, "SetRoll", math.rad(spec.roll))
         return ok and yaw and scale and pitch and roll, "Model transform unavailable."
     end
     function self.Pose(model, spec)
@@ -111,7 +122,6 @@ function B.New(runtime)
             local r = ns.ReadOnly.Call(reader, model.HasAnimation, model, spec.animation)
             if not r or r.n ~= 1 or r[1] ~= true then return nil, "This model does not support that pose." end
         end
-        if self.kind ~= "ModelScene" and (spec.time ~= 0 or spec.speed ~= 1) then return nil, "Timeline and speed need the ModelScene backend." end
         local ok
         if self.kind == "ModelScene" then ok = call(model, "SetAnimation", spec.animation, 0, spec.speed, spec.time)
         else ok = call(model, "SetAnimation", spec.animation, 0) end
@@ -119,10 +129,10 @@ function B.New(runtime)
         return ok and paused, "Model animation unavailable."
     end
     function self.Appearance(model, spec)
-        if not call(model, "SetSheathed", spec.sheathed, spec.hideWeapons) then return nil, "Model weapon preview unavailable." end
-        if not call(model, "SetUseTransmogSkin", spec.transmog) then return nil, "Model appearance preview unavailable." end
+        if type(model.SetSheathed) == "function" and not call(model, "SetSheathed", spec.sheathed, spec.hideWeapons) then return nil, "Model weapon preview unavailable." end
+        if self.Supports(model, "transmog") and not call(model, "SetUseTransmogSkin", spec.transmog) then return nil, "Model appearance preview unavailable." end
         for _, part in ipairs({ { spec.hideHead, 1 }, { spec.hideCloak, 15 } }) do
-            if part[1] and not call(model, "UndressSlot", part[2]) then return nil, "Model clothing preview unavailable." end
+            if part[1] and type(model.UndressSlot) == "function" and not call(model, "UndressSlot", part[2]) then return nil, "Model clothing preview unavailable." end
         end
         return true
     end
@@ -130,7 +140,14 @@ function B.New(runtime)
         for _, fn in ipairs({ self.Transform, self.Pose, self.Appearance }) do local ok, why = fn(model, spec); if not ok then return nil, why end end
         return true
     end
+    function self.CanLight()
+        if self.scene then return methods(self.scene, { "SetLightType", "SetLightVisible", "SetLightDirection", "SetLightAmbientColor", "SetLightDiffuseColor" }) end
+        if type(env.CreateVector3D) ~= "function" or type(env.CreateColor) ~= "function" then return false end
+        for _, model in pairs(self.models) do if type(model.SetLight) ~= "function" then return false end end
+        return true
+    end
     function self.Light(light)
+        if not self.CanLight() then return nil, "Model lighting unavailable. Other portrait controls remain available." end
         local az, el = math.rad(light.azimuth), math.rad(light.elevation)
         local x, y, z = -math.cos(el) * math.cos(az), -math.cos(el) * math.sin(az), -math.sin(el)
         if self.scene then

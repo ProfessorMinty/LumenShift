@@ -2,6 +2,8 @@
 
 2026-11-09 · Northern Lights Labs. Implements Delivery C / Phase 3 of the [photo plan](56-NARCISSUS-PHOTO-ARCHITECTURE.md), after checking [Delivery B](58-PHOTO-COMPOSITION-AND-OUTPUT.md). Original LumenShift code; no Narcissus code, artwork, databases, API, library or TOC dependency. The optional coexistence adapter is separate.
 
+**Follow-up:** [Beta.15 Phase 3 audit](60-PHOTO-AUDIT-AND-COMPLETION.md) fixes target refresh and optional capability handling, and records the current completion checklist. The beta.14 results below remain historical. Install the latest beta.15 ZIP for the same native acceptance procedure.
+
 ## Phase 2 audit
 
 The unchanged beta.13 baseline passed all **547 Lua 5.1 mock tests**. Review found a specific interruption bug: Escape could wait for a pending zoom to finish, but combat/world departure discarded its completion callback. Camera could then remain busy. Cancellation now finishes that pending exit with an interruption result, retains the original zoom record and requests no automatic return. PC01 covers it; existing output, framing, collision, ownership and lifecycle tests remain intact.

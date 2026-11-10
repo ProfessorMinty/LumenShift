@@ -113,6 +113,7 @@ return function(cameraFixture, eq, test)
         local f=make(); f.start(); assert(f.p.Add("target")); f.flush(); local old=f.front()
         f.neverLoad=true; assert(f.p.SetActor("hideWeapons",true)); f.units.target="new-target"; f.flush()
         eq(f.front(),old); eq(old.shown,true); eq(f.p.busy,false)
+        f.units.target=f.p.slots[f.p.selected].identity -- select the original actor again for the timeout case
         assert(f.p.SetActor("hideWeapons",true)); f.flush(); eq(f.front(),old); eq(f.p.busy,false)
         assert(f.p.status:find("timed out",1,true)); eq(#f.calls,0)
     end)

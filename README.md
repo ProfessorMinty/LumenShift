@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.14** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.15** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.15 audits Phase 3: changing targets no longer swaps a staged actor during appearance edits; absent optional model APIs no longer prevent scene loading; fallback poses retain saved advanced choices; letterbox/capture-result behavior is corrected. **589 Lua 5.1 mocks and 10 package tests pass.** All three photo deliveries are implemented; native rendering, input and actual screenshot acceptance remain. [Audit, limits and remaining work](docs/60-PHOTO-AUDIT-AND-COMPLETION.md). No Narcissus or settings reset is needed.
 
 Beta.14 adds **Portrait Stage** beside World Photo: player/target/pet model copies, live transforms, curated pose playback/scrubbing, model lighting, neutral/chroma backgrounds, saved scenes/lights and a two-image compositing capture. Existing filters and capture controls remain available. Phase 2 audit fixes a pending zoom exit interrupted by combat/world leave. No Narcissus or settings reset is needed. [Architecture, source decisions and exact test](docs/59-PORTRAIT-STAGE.md).
 
@@ -77,7 +79,7 @@ Optional Contrast and named sharpening, foliage, distance, LOD, bloom and weathe
 
 The single native graphics call remains in WriteBoundary. Planner, per-key originals, ownership, conflict detection and readback remain internal requirements. An interrupted session or unresolved conflict needs an explicit recovery decision; startup never guesses a restore. SavedVariables is not immediately durable or crash-proof. Restore before updating or removing the addon.
 
-The owner supplied successful **dev.6 Brightness 45 → 75 → 45** native readbacks on **Forever 1.60.1:70862:16001**, with no report warnings/errors. [Evidence and compatibility policy](docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) distinguish that success from dev.7's new simulated paths. See the [quality feature/evidence matrix](docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera architecture](docs/30-CAMERA-MODE.md). **The current beta.7 is an integrated candidate awaiting owner acceptance.** New native graphics controls have mock coverage; full dependency restoration and owner in-game acceptance remain unverified.
+The owner supplied successful **dev.6 Brightness 45 → 75 → 45** native readbacks on **Forever 1.60.1:70862:16001**, with no report warnings/errors. [Evidence and compatibility policy](docs/28-DEV6-ACCEPTANCE-AND-WARNING-POLICY.md) distinguish that success from dev.7's new simulated paths. See the [quality feature/evidence matrix](docs/29-QUALITY-PROFILES-AND-NATIVE-TRIALS.md) and [Camera architecture](docs/30-CAMERA-MODE.md). **The current beta.15 is an integrated candidate awaiting owner acceptance.** New native graphics controls have mock coverage; full dependency restoration and owner in-game acceptance remain unverified.
 
 ## Diagnostics
 

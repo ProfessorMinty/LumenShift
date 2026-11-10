@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.15 — Portrait Stage audit
+
+- Preserve the staged actor when the live target changes; reject source-token edits outside model loading.
+- Keep scene loading and usable controls available when optional appearance, tilt, lighting or timeline APIs are absent. Preserve saved advanced values on the fallback renderer.
+- Match the shared letterbox range and report a refused compositing capture accurately. No new dependency, settings reset or schema change.
+- Validation: 589 Lua 5.1 mocks and 10 package tests pass. Native rendering acceptance remains separate. See [audit and photo completion checklist](docs/60-PHOTO-AUDIT-AND-COMPLETION.md).
+
 ## 0.2.0-beta.14 — Portrait Stage
 
 - Standalone staged models, poses, model lighting, backdrops, saved scenes and compositing capture.

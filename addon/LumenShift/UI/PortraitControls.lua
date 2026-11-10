@@ -35,7 +35,9 @@ function U.Build(runtime, env, parent, tab, ui)
             section("POSITION")
             for _, item in ipairs({ { "x", "Horizontal" }, { "y", "Vertical" }, { "depth", "Depth" }, { "scale", "Scale" }, { "yaw", "Turn" }, { "pitch", "Tilt" }, { "roll", "Roll" } }) do
                 local key, r = item[1], C.ActorRanges[item[1]]
-                slider(key, item[2], r[1], r[2], key == "yaw" and 1 or .01, function() return selected.spec[key] end, function(v) return stage.SetActor(key, v) end)
+                if stage.backend.Supports(stage.backend.models[selected.front], key) then
+                    slider(key, item[2], r[1], r[2], key == "yaw" and 1 or .01, function() return selected.spec[key] end, function(v) return stage.SetActor(key, v) end)
+                else text(item[2] .. " unavailable on this model. Saved value kept.", 48) end
             end
             section("POSE")
             text("Animation availability varies by race and form. Timeline is an offset into the selected pose, not a duration estimate.", 66)
@@ -54,12 +56,18 @@ function U.Build(runtime, env, parent, tab, ui)
             section("APPEARANCE PREVIEW")
             for _, item in ipairs({ { "sheathed", "Sheathe weapons" }, { "hideWeapons", "Hide weapons" }, { "transmog", "Use transmog appearance" }, { "hideHead", "Hide helmet" }, { "hideCloak", "Hide cloak" } }) do
                 local key = item[1]
-                W.Toggle(env, parent, item[2], 0, y, 310, function() return selected.spec[key] end,
-                    function(v) stage.SetActor(key, v); ui.Build() end); y = y - 46
+                if stage.backend.Supports(stage.backend.models[selected.front], key) then
+                    W.Toggle(env, parent, item[2], 0, y, 310, function() return selected.spec[key] end,
+                        function(v) stage.SetActor(key, v); ui.Build() end); y = y - 46
+                else text(item[2] .. " unavailable on this model. Saved choice kept.", 48) end
             end
         else text("Add a player, target or pet, then select its row to edit it.", 54) end
     elseif tab == "Light" then
         section("MODEL LIGHT")
+        if not stage.backend.CanLight() then
+            text("Model lighting is unavailable on this client. Actors, backgrounds, filters and capture remain available; your saved lights are kept.", 80)
+            return y
+        end
         text("Relight the staged cast. This light never changes the game world.", 48)
         for i, item in ipairs({ { "neutral", "Neutral" }, { "soft", "Softbox" }, { "ember", "Firelight" }, { "moon", "Moon rim" } }) do
             local id = item[1]
@@ -85,7 +93,8 @@ function U.Build(runtime, env, parent, tab, ui)
         section("FRAMING")
         W.Toggle(env, parent, "Rule of thirds", 0, y, 310, function() return runtime.db.camera.thirds end,
             function(v) runtime.db.camera.thirds = v; runtime.composition.Show() end); y = y - 46
-        slider("letterbox", "Letterbox height", 0, .25, .01, function() return runtime.db.camera.editor.look.letterbox end,
+        local range = ns.PhotoConfig.Ranges.letterbox
+        slider("letterbox", "Letterbox height", range[1], range[2], .01, function() return runtime.db.camera.editor.look.letterbox end,
             function(v) return runtime.photoEditor.Set("letterbox", v) end)
         text("H hides all controls and guides. Look filters and the staged cast remain in the image.", 60)
     elseif tab == "Saved" then

@@ -44,7 +44,7 @@ function P.New(runtime)
             self.failures[slotID] = not success and reason or nil
             if success then
                 backend.Clear(slot.front and backend.models[slot.front])
-                slot.front, slot.spec = index, V.Copy(spec); model:Show()
+                slot.front, slot.spec, slot.identity = index, V.Copy(spec), identity; model:Show()
                 db.camera.portrait.scene.actors[slotID] = V.Copy(spec)
             else backend.Clear(model) end
             report(success, reason)
@@ -105,11 +105,19 @@ function P.New(runtime)
     function self.SetActor(key, value)
         if not ready() then return report(nil, "Portrait not ready.") end
         local slot = self.slots[self.selected]; if not slot or not slot.front then return report(nil, "Select a loaded actor.") end
+        if not C.ActorRanges[key] and not ({ animation = true, paused = true, sheathed = true, hideWeapons = true,
+            transmog = true, hideHead = true, hideCloak = true })[key] then return report(nil, "Unknown actor control.") end
+        if not backend.Supports(backend.models[slot.front], key) then return report(nil, "This model control is unavailable; saved choices are kept.") end
         local spec = V.Copy(slot.spec); spec[key] = value
         if not C.ValidActor(spec) then return report(nil, "Invalid actor value.") end
         if key == "time" then spec.paused = true end
         if key == "animation" then spec.time = 0 end
-        if ({ sheathed = true, hideWeapons = true, transmog = true, hideHead = true, hideCloak = true })[key] then return load(self.selected, spec) end
+        if ({ sheathed = true, hideWeapons = true, transmog = true, hideHead = true, hideCloak = true })[key] then
+            if backend.Identity(slot.spec.unit) ~= slot.identity then
+                return report(nil, "Unit changed. Select the staged target again before refreshing its appearance.")
+            end
+            return load(self.selected, spec)
+        end
         local fn = ({ animation = true, time = true, speed = true, paused = true })[key] and backend.Pose or backend.Transform
         local ok, why
         if key == "paused" then ok = backend.Pause(backend.models[slot.front], spec.paused); why = "Model pause unavailable."
@@ -150,7 +158,9 @@ function P.New(runtime)
         local value = V.Copy((lighting and data.lights or data.saved)[name])
         if lighting then return self.SetLight(value) end
         if not C.ValidScene(value) then return report(nil, "Invalid saved scene.") end
-        local ok, why = self.SetLight(value.light); if not ok then return nil, why end
+        -- A missing optional light API must not prevent loading the cast/layout.
+        local ok, why = self.SetLight(value.light)
+        self.notice = not ok and why or nil
         if backend.kind == "ModelScene" then
             ok, why = backend.Camera(value); if not ok then return report(nil, why) end
             data.scene.distance, data.scene.height, data.scene.fov = value.distance, value.height, value.fov
@@ -219,8 +229,9 @@ function P.New(runtime)
                 layer(true, "green"); shoot(true)
             end)
             if not started and not called then finish(false, code) end
+            return started, code
         end
-        shoot(false); return true
+        return shoot(false)
     end
     return self
 end
