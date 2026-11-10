@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.18 — Native transmog collection browser
+
+- Browse native transmog appearances by category, class, name/ID, collection status, favorite and acquisition source; preview exact sources and native set variants on staged actors.
+- Save exact appearance sources in outfits and scenes. Schema 18 / portrait 3 migrates previous settings and numeric item outfits without a reset.
+- Keep all collection data transient, process category lists in cancellable batches, and change shared wardrobe filters only through explicit browser actions. No Narcissus dependency, real gear changes or new graphics writer. See [controls, sources and validation](docs/63-TRANSMOG-COLLECTION.md).
+- Validation: 662 Lua 5.1 mocks, 10 package tests, 98 Lua syntax files plus four bindings and 67 runtime modules pass. Native appearance rendering remains owner acceptance.
+
 ## 0.2.0-beta.17 — Portrait libraries and combat audit
 
 - Clear inherited visual-mode treatments immediately when combat filters are switched off in Photo Studio.

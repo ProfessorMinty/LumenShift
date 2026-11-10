@@ -13,7 +13,7 @@ return function(cameraFixture, eq, test)
             local m = frame or {}; f.models[#f.models + 1] = m
             function m.Show(s) s.shown = true end
             function m.Hide(s) s.shown = false end
-            function m.ClearModel(s) s.unit, s.loaded, s.items, s.undressed, s.kit = nil, false, {}, {}, 0 end
+            function m.ClearModel(s) s.unit, s.loaded, s.items, s.sources, s.undressed, s.kit = nil, false, {}, {}, {}, 0 end
             function m.SetModelByUnit(s, unit)
                 f.modelCalls[#f.modelCalls + 1] = { "load", unit }
                 if f.reject then return false end
@@ -39,18 +39,19 @@ return function(cameraFixture, eq, test)
             function m.SetRoll(s,v) s.roll=v end
             function m.SetSheathed(s,v,hidden) s.sheathed,s.hiddenWeapons=v,hidden end
             function m.SetUseTransmogSkin(s,v) s.transmog=v end
-            function m.UndressSlot(s,v) s.undressed = s.undressed or {}; s.undressed[v]=true; if s.items then s.items[v]=nil end end
+            function m.UndressSlot(s,v) s.undressed = s.undressed or {}; s.undressed[v]=true; if s.items then s.items[v]=nil end; if s.sources then s.sources[v]=nil end end
             function m.SetSpellVisualKit(s,id,oneShot)
                 eq(oneShot,false); if f.spellError then error("spell kit") end; s.kit=id
             end
             function m.GetSpellVisualKit(s) return s.kit end
             function m.TryOn(s,link,hand)
                 if f.tryOnError then return f.tryOnError end
-                local id=tonumber(link:match("item:(%d+)")); local item=f.items and f.items[id]
+                local sourceID=tonumber(link); local source=f.sources and f.sources[sourceID]
+                local id=source and source.itemID or tonumber(link:match("item:(%d+)")); local item=f.items and f.items[id]
                 if not item then return 3 end
                 local slots=f.ns.PortraitLibrary.EquipSlots[item.loc]
                 local slot=hand=="SECONDARYHANDSLOT" and 17 or slots[1]
-                s.items=s.items or {}; s.items[slot]=id; s.hand=hand; return 0
+                s.items=s.items or {}; s.sources=s.sources or {}; s.sources[slot]=sourceID; s.items[slot]=id; s.hand=hand; return 0
             end
             function m.SetLight(s,enabled,light) eq(enabled,true); s.light=light end
             return m
@@ -174,7 +175,7 @@ return function(cameraFixture, eq, test)
         for i=1,8 do assert(f.p.Save("Scene"..i)); assert(f.p.Save("Light"..i,true)) end
         eq(f.p.Save("Ninth"),nil); assert(f.p.Delete("Scene8")); assert(f.p.Save("Ninth"))
         assert(f.ns.Store.Open(f.r.db)); local old=f.ns.Value.Copy(f.r.db); old.schemaVersion=15; old.camera.portrait=nil
-        local updated,code=f.ns.Store.Open(old); eq(code,"MIGRATED_15_TO_17"); eq(updated.camera.portrait.version,2)
+        local updated,code=f.ns.Store.Open(old); eq(code,"MIGRATED_15_TO_18"); eq(updated.camera.portrait.version,3)
         eq(updated.config.preferences.reducedMotion,old.config.preferences.reducedMotion); eq(old.camera.portrait,nil)
     end)
     test("PC15 saved stage data never creates or starts models on reload", function()

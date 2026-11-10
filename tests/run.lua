@@ -1069,5 +1069,6 @@ local portraitFixture = assert(loadfile("tests/portrait.lua"))()(cameraFixture, 
 assert(loadfile("tests/portrait_audit.lua"))()(portraitFixture, eq, test)
 local wardrobeFixture = assert(loadfile("tests/portrait_extensions.lua"))()(portraitFixture, eq, test)
 assert(loadfile("tests/portrait_libraries_audit.lua"))()(wardrobeFixture, eq, test)
+assert(loadfile("tests/transmog_collection.lua"))()(wardrobeFixture, eq, test)
 print(string.format("SIMULATED: %d passed, %d failed (%s); no native game tests", passed, failed, _VERSION))
 assert(failed == 0, "Mock test failures")

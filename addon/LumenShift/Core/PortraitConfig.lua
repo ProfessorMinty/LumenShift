@@ -24,8 +24,8 @@ function P.LightPreset(id)
     elseif id ~= "neutral" then return nil end
     return l
 end
-function P.Scene() return { version = 2, actors = { P.Actor() }, light = P.Light(), background = "charcoal", distance = 6, height = 1.1, fov = 35 } end
-function P.Defaults() return { version = 2, scene = P.Scene(), saved = {}, lights = {}, outfits = {} } end
+function P.Scene() return { version = 3, actors = { P.Actor() }, light = P.Light(), background = "charcoal", distance = 6, height = 1.1, fov = 35 } end
+function P.Defaults() return { version = 3, scene = P.Scene(), saved = {}, lights = {}, outfits = {} } end
 function P.ValidActor(a)
     local fields = { unit = true, animation = true, variation = true, spellKit = true, outfit = true, paused = true, sheathed = true, hideWeapons = true, transmog = true, hideHead = true, hideCloak = true }
     for k in pairs(P.ActorRanges) do fields[k] = true end
@@ -39,7 +39,7 @@ end
 function P.ValidLight(l) return V.Fields(l, P.LightRanges) and ranges(l, P.LightRanges) end
 function P.ValidScene(s)
     if not V.Fields(s, { version = true, actors = true, light = true, background = true, distance = true, height = true, fov = true })
-        or s.version ~= 2 or not P.ValidLight(s.light) or type(s.actors) ~= "table"
+        or s.version ~= 3 or not P.ValidLight(s.light) or type(s.actors) ~= "table"
         or not ranges(s, { distance = { 3, 12 }, height = { -1, 4 }, fov = { 20, 70 } }) then return false end
     if s.background ~= "world" and not P.Colors[s.background] then return false end
     for slot, a in pairs(s.actors) do if not V.Finite(slot) or slot % 1 ~= 0 or slot < 1 or slot > 3 or not P.ValidActor(a) then return false end end
@@ -53,7 +53,7 @@ local function bank(data, validate)
     return true
 end
 function P.Validate(p)
-    return V.Fields(p, { version = true, scene = true, saved = true, lights = true, outfits = true }) and p.version == 2
+    return V.Fields(p, { version = true, scene = true, saved = true, lights = true, outfits = true }) and p.version == 3
         and P.ValidScene(p.scene) and bank(p.saved, P.ValidScene) and bank(p.lights, P.ValidLight) and bank(p.outfits, P.ValidOutfit)
 end
 function P.Save(bankValue, name, value, validator)
@@ -66,21 +66,25 @@ end
 function P.ValidOutfit(outfit)
     if type(outfit) ~= "table" then return false end
     for slot,id in pairs(outfit) do
-        if not ns.PortraitLibrary.Slot(slot) or not V.Finite(id) or id%1~=0 or id<0 or id>9999999 then return false end
+        if not ns.PortraitLibrary.Slot(slot) then return false end
+        if type(id)=="table" then
+            if not V.Fields(id,{sourceID=true}) or not V.Finite(id.sourceID) or id.sourceID%1~=0 or id.sourceID<=0 or id.sourceID>9999999 then return false end
+        elseif not V.Finite(id) or id%1~=0 or id<0 or id>9999999 then return false end
     end
     return true
 end
+function P.Worn(value) return type(value)=="table" or type(value)=="number" and value>0 end
 function P.Upgrade(data)
-    if type(data)~="table" or data.version~=1 then return end
+    if type(data)~="table" or data.version~=1 and data.version~=2 then return end
     local function scene(s)
-        if type(s)~="table" or s.version~=1 then return end
+        if type(s)~="table" or s.version~=1 and s.version~=2 then return end
         for _,a in pairs(type(s.actors)=="table" and s.actors or {}) do if type(a)=="table" then
             if a.variation==nil then a.variation=0 end
             if a.spellKit==nil then a.spellKit=0 end
             if a.outfit==nil then a.outfit={} end
         end end
-        s.version=2
+        s.version=3
     end
     scene(data.scene); for _,s in pairs(type(data.saved)=="table" and data.saved or {}) do scene(s) end
-    if data.outfits==nil then data.outfits={} end; data.version=2
+    if data.outfits==nil then data.outfits={} end; data.version=3
 end

@@ -4,6 +4,8 @@
 
 **Outcome:** three reproduced defects corrected. All three planned photo deliveries and the requested library extensions have implementations. The beta remains usable without Narcissus; no reset, new unlock, activation approval or prerequisite addon was added. Complete in-game rendering/input/output acceptance has not yet been established.
 
+**Follow-up:** [Beta.18](63-TRANSMOG-COLLECTION.md) implements the subsequently requested native transmog collection browser and exact selected appearance-source saving. The beta.17 evidence and completion scope below remain historical.
+
 ## Findings and corrections
 
 | Reproduced behavior | Correction and regression evidence |
@@ -59,7 +61,7 @@ These tasks do not lock the beta or require another version confirmation. Public
 
 ## Scope limits, not missing enablement steps
 
-- Outfit browsing covers equipped/bag items, native sets and saved base-item outfits. Full-game/transmog-collection browsing, exact enchant/bonus/transmog snapshots and richer item comparison are optional future extensions.
+- Outfit browsing covers equipped/bag items, native sets and saved base-item outfits. At beta.17, transmog-collection browsing was optional; it is now implemented in [beta.18](63-TRANSMOG-COLLECTION.md). Exact snapshots of every worn enchant/bonus/transmog component and richer item comparison remain separate extensions.
 - A model kit may not render on every model/client. Skeletal pause does not guarantee frozen particles. Saved scenes retain a chosen offset rather than a read-back instantaneous playhead.
 - Compositing pairs produce ordinary background/chroma screenshots. Transparent PNGs, true silhouette/depth masks and layered files are not implemented or promised.
 - UI filters/glow/vignette and native model lights do not provide world-buffer LUT grading, depth-aware bokeh, time freeze or real campfire relighting. Native graphics/name writes and native orbit remain subject to combat restrictions; cosmetic controls stay available under the Studio preference.

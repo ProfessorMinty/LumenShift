@@ -110,7 +110,7 @@ return function(fixture, eq, test)
     test("W10 schema-3 upgrade preserves preferences and originals; corrupt completion is quarantined", function()
         local f = make(); local old = f.ns.Value.Copy(f.env.LumenShiftDB)
         old.schemaVersion = 3; old.baseline = nil; old.camera = nil; old.onboarding = nil; old.config.studio.modes.lantern.brightness = 67; old.graphics = nil; old.optics = nil
-        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_3_TO_17")
+        local migrated, code = f.ns.Store.Open(old); eq(code, "MIGRATED_3_TO_18")
         eq(migrated.onboarding.completed, false); eq(migrated.config.studio.modes.lantern.brightness, 67)
         eq(old.schemaVersion, 3); eq(old.onboarding, nil)
         migrated.onboarding.completed = "yes"; eq(f.ns.Store.Open(migrated), nil)

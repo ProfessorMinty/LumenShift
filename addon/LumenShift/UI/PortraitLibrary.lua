@@ -51,12 +51,16 @@ function U.Build(runtime,env,parent,ui,y,selected)
         text("No effect clears this actor's kit. Model particles may continue while a pose is paused; capture does not freeze particle simulation.",80)
     elseif ui.actorTab=="Outfits" then
         local wardrobe=stage.wardrobe
-        text("Preview items on the staged copy. Your real equipment stays untouched. Saved outfits store base item IDs, not transmog unlocks.",76)
+        text("Preview gear and collection appearances on this actor. Your real equipment and transmog collection stay unchanged.",64)
         if not stage.backend.Supports(stage.backend.models[selected.front],"outfit") then text("Outfit preview is unavailable on this model.",50); return y end
-        for i,label in ipairs({"Items","Sets","Saved"}) do local category=label
-            local b=W.Button(env,parent,label,(i-1)*106,y,98,function() ui.wardrobeTab=category; ui.itemPage=1; wardrobe.Refresh(); ui.Build() end)
+        for i,label in ipairs({"Items","Collection","Sets","Saved"}) do local category=label
+            local b=W.Button(env,parent,({Sets="Equipment sets",Saved="Saved outfits"})[label] or label,(i-1)%2*160,y-math.floor((i-1)/2)*40,150,function()
+                ui.wardrobeTab=category; ui.itemPage=1; if category~="Collection" then wardrobe.Refresh() end; ui.Build()
+                if category=="Collection" and ui.collectionY then ui.scrollbar:SetValue(-ui.collectionY) end
+            end)
             b.SetSelected((ui.wardrobeTab or "Items")==label)
-        end; y=y-44
+        end; y=y-84
+        if ui.wardrobeTab=="Collection" then ui.collectionY=y; return ns.TransmogCollectionUI.Build(runtime,env,parent,ui,y) end
         action("Refresh equipped / bags / sets",function() wardrobe.Refresh() end)
         text(wardrobe.status,math.max(44,math.ceil(#wardrobe.status/44)*16+12))
         if (ui.wardrobeTab or "Items")=="Items" then

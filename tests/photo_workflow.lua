@@ -135,7 +135,7 @@ return function(cameraFixture, eq, test)
         local f = make(); local old = f.ns.Value.Copy(f.r.db); old.schemaVersion = 13
         old.camera.tools, old.camera.nameGroups = nil, nil; old.onboarding.completed = true
         old.camera.editor.look.warmth = .42
-        local copy, why = f.ns.Store.Open(old); eq(why, "MIGRATED_13_TO_17"); eq(copy.camera.editor.look.warmth, .42)
+        local copy, why = f.ns.Store.Open(old); eq(why, "MIGRATED_13_TO_18"); eq(copy.camera.editor.look.warmth, .42)
         eq(copy.onboarding.completed, true); eq(copy.camera.nameGroups.players, false); eq(old.camera.tools, nil)
         copy.camera.tools.shots = 100; eq(f.ns.Store.Open(copy), nil); eq(#f.calls, 0)
     end)

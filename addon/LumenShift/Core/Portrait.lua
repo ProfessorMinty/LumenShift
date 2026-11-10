@@ -5,6 +5,7 @@ function P.New(runtime)
     local self = { active = false, busy = false, selected = 1, generation = 0, slots = {}, failures = {}, status = "World Photo" }
     local backend = ns.PortraitBackend.New(runtime); self.backend = backend
     self.wardrobe = ns.PortraitWardrobe.New(runtime)
+    self.collection = ns.TransmogCollection.New(runtime)
     local function report(ok, why)
         self.status = why or "Portrait ready."
         if self.Refresh then self.Refresh() end
@@ -22,6 +23,7 @@ function P.New(runtime)
         self.busy = false; for _, slot in pairs(self.slots) do if slot.pending then self.busy = true end end
     end
     function self.Exit()
+        self.collection.Cancel()
         self.active, self.busy, self.layerCapture = false, false, nil
         self.generation = self.generation + 1; self.slots = {}; self.failures = {}; self.frozen = nil
         backend.Hide(); self.status = "World Photo"
@@ -136,10 +138,27 @@ function P.New(runtime)
         if not backend.Supports(backend.models[slot.front],"outfit") then return report(nil,"Outfit preview is unavailable on this model.") end
         if backend.Identity(slot.spec.unit)~=slot.identity then return report(nil,"Select the staged unit again before changing its outfit.") end
         local spec=V.Copy(slot.spec); spec.outfit=V.Copy(outfit)
-        if outfit[1] and outfit[1]>0 then spec.hideHead=false end
-        if outfit[15] and outfit[15]>0 then spec.hideCloak=false end
-        if outfit[16] and outfit[16]>0 or outfit[17] and outfit[17]>0 then spec.hideWeapons=false end
+        if C.Worn(outfit[1]) then spec.hideHead=false end
+        if C.Worn(outfit[15]) then spec.hideCloak=false end
+        if C.Worn(outfit[16]) or C.Worn(outfit[17]) or C.Worn(outfit[18]) then spec.hideWeapons=false end
         return load(self.selected,spec)
+    end
+    function self.TrySource(slotID,sourceID)
+        if not ready() then return report(nil,"Portrait not ready.") end
+        local selected=self.slots[self.selected]; if not selected or not selected.front then return report(nil,"Select an actor.") end
+        if #self.collection.categories==0 then self.collection.Discover() end
+        local source=self.collection.Source(sourceID)
+        if not source then return report(nil,"Appearance source is unavailable. Refresh the collection and try again.") end
+        local fits=false; for _,slot in ipairs(source.slots) do if slot==slotID then fits=true end end
+        if not fits then return report(nil,"That appearance does not fit the selected preview slot.") end
+        local outfit=V.Copy(selected.spec.outfit); outfit[slotID]={sourceID=sourceID}
+        return self.SetOutfit(outfit)
+    end
+    function self.TryCollectionSet(setID)
+        if not ready() then return report(nil,"Portrait not ready.") end
+        local outfit,why=self.collection.SetOutfit(setID)
+        if not outfit then return report(nil,why) end
+        return self.SetOutfit(outfit)
     end
     function self.TryItem(slotID,itemID)
         if not ns.PortraitLibrary.Slot(slotID) then return report(nil,"Choose an outfit slot.") end
@@ -167,7 +186,7 @@ function P.New(runtime)
         if slot.spec.hideHead then outfit[1]=0 end; if slot.spec.hideCloak then outfit[15]=0 end
         if slot.spec.hideWeapons then outfit[16],outfit[17],outfit[18]=0,0,0 end
         local ok,code=C.Save(db.camera.portrait.outfits,name,outfit,C.ValidOutfit)
-        return report(ok,code or "Outfit saved. Item appearances use their base items.")
+        return report(ok,code or "Outfit saved. Collection sources retain their exact appearance; ordinary items use their base items.")
     end
     function self.SetLight(light)
         if not ready() or not C.ValidLight(light) then return report(nil, "Portrait light not ready or invalid.") end

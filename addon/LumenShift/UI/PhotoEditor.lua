@@ -29,7 +29,7 @@ function U.New(runtime, composition)
     function self.ClearFocus()
         for _, field in ipairs(pool.frames.EditBox or {}) do field:ClearFocus() end
     end
-    composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit() end)
+    composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit(); runtime.portrait.collection.Cancel() end)
     local scrollbar = env.CreateFrame("Slider", nil, panel); self.scrollbar = scrollbar
     scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -198); scrollbar:SetSize(8, 402)
     scrollbar:SetOrientation("VERTICAL"); scrollbar:SetValueStep(20); W.Fill(scrollbar, W.colors.sidebar)
@@ -69,7 +69,11 @@ function U.New(runtime, composition)
         scrollbar:SetValue(math.min(scroll:GetVerticalScroll(), math.max(0, (self.contentHeight or 1) - scroll:GetHeight())))
         positionMarker()
     end
+    local function collectionVisible()
+        return runtime.portrait.active and self.tab == "Pose" and self.actorTab == "Outfits" and self.wardrobeTab == "Collection"
+    end
     function self.Build(resetScroll)
+        if not collectionVisible() and runtime.portrait.collection.busy then runtime.portrait.collection.Cancel() end
         self.building = true
         editor.EndLookEdit()
         self.ClearFocus()
@@ -241,6 +245,13 @@ function U.New(runtime, composition)
     runtime.portrait.Refresh = function()
         if not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
         else self.Refresh() end
+    end
+    runtime.portrait.collection.RefreshUI = function()
+        if collectionVisible() and not self.building and not self.dragging and self.panel:IsVisible() then
+            local focus = ns.ReadOnly.Call(runtime.reader, env.GetCurrentKeyBoardFocus)
+            -- A completed background read must not erase an unsubmitted search.
+            if focus and focus[1] then self.Refresh() else self.Build() end
+        end
     end
     editor.Refresh = self.Refresh
     preview.Refresh = self.Refresh

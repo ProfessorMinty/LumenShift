@@ -210,6 +210,11 @@ function D.Build(runtime)
             .. " savedOutfits=" .. #ns.Value.Keys(db.camera.portrait.outfits) .. " combatStudio=" .. bool(db.camera.keepInCombat) .. " combatEffects=" .. bool(db.camera.effectsInCombat)
             .. " savedLights=" .. #ns.Value.Keys(db.camera.portrait.lights) .. " loadFailures=" .. #ns.Value.Keys(stage and stage.failures or {})
             .. " layerCapture=" .. bool(stage and stage.layerCapture ~= nil)
+        local collection = stage and stage.collection
+        lines[#lines + 1] = "Transmog browser: categories=" .. #(collection and collection.categories or {})
+            .. " appearances=" .. #(collection and collection.rows or {}) .. " sets=" .. #(collection and collection.sets or {})
+            .. " category=" .. D.Number(collection and collection.category) .. " loading=" .. bool(collection and collection.busy)
+            .. " complete=" .. bool(collection and collection.loaded)
         local actions, zoom = runtime.cameraActions, db.camera.composition.zoom
         lines[#lines + 1] = "Photo movement: zoom=" .. D.Number(actions and actions.ReadZoom()) .. " original=" .. D.Number(zoom and zoom.original)
             .. " expected=" .. D.Number(zoom and zoom.expected) .. " state=" .. safe(zoom and zoom.state or "unowned")

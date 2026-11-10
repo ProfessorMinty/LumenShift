@@ -146,8 +146,9 @@ function B.New(runtime)
             local item=spec.outfit[slot]
             if not call(model,"UndressSlot",slot) then return nil,"Could not clear the preview slot." end
             local hidden=slot==1 and spec.hideHead or slot==15 and spec.hideCloak or (slot==16 or slot==17 or slot==18) and spec.hideWeapons
-            if item>0 and not hidden then
-                local r=ns.ReadOnly.Call(reader,model.TryOn,model,"item:"..item,slot==16 and "MAINHANDSLOT" or slot==17 and "SECONDARYHANDSLOT" or nil)
+            if ns.PortraitConfig.Worn(item) and not hidden then
+                local preview=type(item)=="table" and tostring(item.sourceID) or "item:"..item
+                local r=ns.ReadOnly.Call(reader,model.TryOn,model,preview,slot==16 and "MAINHANDSLOT" or slot==17 and "SECONDARYHANDSLOT" or nil)
                 if not r or r.n>1 or r[1]~=nil and r[1]~=0 then
                     return nil,r and r[1]==3 and "Item data is loading. Refresh the browser and try again." or "This item cannot be previewed on that model. Previous outfit kept."
                 end

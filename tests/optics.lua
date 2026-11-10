@@ -134,7 +134,7 @@ return function(fixture, eq, test)
         old.schemaVersion, old.optics = 8, nil
         local function legacy(m) for _, k in ipairs({ "brightnessMode", "sharpening", "detail", "useBloom", "bloom", "styling" }) do m[k] = nil end end
         for _, m in pairs(old.config.studio.modes) do legacy(m) end; legacy(old.config.studio.presets[id].settings)
-        local g = make(old, f.values); eq(#g.calls, 0); eq(g.r.storeStatus, "MIGRATED_8_TO_17")
+        local g = make(old, f.values); eq(#g.calls, 0); eq(g.r.storeStatus, "MIGRATED_8_TO_18")
         eq(g.r.db.optics.quality.ResampleSharpness, 0.4); eq(g.original("ResampleSharpness"), "1.000")
         eq(g.r.db.config.studio.modes.clarity.brightness, 78); eq(g.r.db.config.studio.modes.clarity.brightnessMode, "custom")
         eq(g.r.db.config.studio.presets[id].settings.sharpening, "inherit"); eq(g.r.db.onboarding.completed, true); eq(old.optics, nil)

@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.17 — install and explore
+# LumenShift 0.2.0-beta.18 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+Beta.18: **Camera → Portrait Stage → Actors → Outfits → Collection** opens native appearance and set browsing. Choose a category, search, expand Filters, and click an appearance to preview it. Sources chooses an exact item appearance; Saved outfits retains it. Class/reset controls affect WoW’s shared wardrobe display filters only. Keep SavedVariables; no reset or Narcissus is needed. [Installation and exact test steps](63-TRANSMOG-COLLECTION.md#installation-and-owner-test).
 
 Beta.17 fixes inherited-mode effects remaining visible after switching combat filters off, keeps compositing pairs free of both treatment layers, and labels unavailable inventory readers. All beta.16 controls remain. Keep SavedVariables; no setup reset. [Audit, exact checks and remaining work](62-PHOTO-LIBRARIES-AUDIT.md).
 

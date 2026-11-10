@@ -90,7 +90,7 @@ return function(make,eq,test)
         local old=f.ns.Value.Copy(f.r.db); old.schemaVersion=16; old.camera.keepInCombat=nil; old.camera.effectsInCombat=nil
         local p=old.camera.portrait; p.version=1; p.outfits=nil
         for _,s in ipairs({p.scene,p.saved.Old}) do s.version=1; for _,a in pairs(s.actors) do a.variation=nil; a.outfit=nil; a.spellKit=nil end end
-        local db,code=f.ns.Store.Open(old); assert(db); eq(code,"MIGRATED_16_TO_17"); eq(db.camera.portrait.saved.Old.actors[1].animation,69)
+        local db,code=f.ns.Store.Open(old); assert(db); eq(code,"MIGRATED_16_TO_18"); eq(db.camera.portrait.saved.Old.actors[1].animation,69)
         eq(db.camera.keepInCombat,true); eq(db.camera.effectsInCombat,true); eq(old.camera.portrait.version,1); eq(old.camera.keepInCombat,nil)
     end)
     test("PX15 corrupt new saved data is preserved rather than silently reset",function()

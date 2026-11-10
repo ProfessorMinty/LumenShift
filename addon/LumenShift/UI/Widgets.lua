@@ -88,6 +88,8 @@ function W.CreatePool(env, root)
 end
 function W.Text(parent, text, x, y, width, size, color)
     local f = region(parent, "font", "OVERLAY")
+    -- Collection labels disable wrapping; pooled labels must not leak that style.
+    f:SetWordWrap(true); f:SetNonSpaceWrap(false)
     f:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); f:SetWidth(width); f:SetJustifyH("LEFT")
     if f.GetFont then local font = f:GetFont(); if font then f:SetFont(font, size or 13, "") end end
     f:SetTextColor(unpack(color or W.colors.text)); f:SetText(text)
