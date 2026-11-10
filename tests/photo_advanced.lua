@@ -41,7 +41,7 @@ return function(cameraFixture, eq, test)
         local f = make(); local data = f.ns.Value.Copy(f.r.db); data.schemaVersion = 14; data.camera.editor.version = 1
         data.camera.editor.look.leak, data.camera.editor.look.leakSide, data.camera.editor.look.leakWidth = nil, nil, nil
         data.camera.editor.saved.Old = f.ns.Value.Copy(data.camera.editor.look); data.camera.output, data.camera.composition = nil, nil
-        local updated, code = f.ns.Store.Open(data); eq(code, "MIGRATED_14_TO_19"); eq(updated.camera.editor.saved.Old.leak, 0)
+        local updated, code = f.ns.Store.Open(data); eq(code, "MIGRATED_14_TO_20"); eq(updated.camera.editor.saved.Old.leak, 0)
         eq(data.camera.editor.look.leak, nil); eq(updated.camera.editor.look.warmth, data.camera.editor.look.warmth)
         local exported = f.ns.PhotoConfig.Export(updated.camera.editor.look)
         local old = exported:gsub("LSPHOTO2", "LSPHOTO1"):gsub(";[^;]*;[^;]*;[^;]*$", "")
@@ -192,13 +192,13 @@ return function(cameraFixture, eq, test)
     end)
     test("PB25 visible framing toggle and held orbit are wired to native actions without rebuilding the hold", function()
         local f = make(); f.ui.tab = "Frame"; f.ui.Build()
-        f.mock.Click("Dynamic framing"); f.flush(); eq(f.values.test_cameraDynamicPitch, "1")
-        local button
-        for _, b in ipairs(f.mock.nodes) do if b.kind == "Button" and b.label and b.label.text == "Hold orbit left" and b:IsVisible() then button = b end end
+        f.mock.Click("Framing"); f.mock.Click("Dynamic framing"); f.flush(); eq(f.values.test_cameraDynamicPitch, "1")
+        f.mock.Click("Position"); local button
+        for _, b in ipairs(f.mock.nodes) do if b.kind == "Button" and b.label and b.label.text == "Orbit left" and b:IsVisible() then button = b end end
         assert(button); button.scripts.OnMouseDown(button, "LeftButton"); eq(f.starts, 1); eq(f.stops, 0)
         button.scripts.OnMouseUp(button, "LeftButton"); eq(f.stops, 1); f.flush()
-        f.mock.Click("Restore all framing"); f.flush(); eq(f.values.test_cameraDynamicPitch, "0")
-        assert(f.r.photoPreview.Queue("cameraFov", 80)); f.flush(); eq(f.ui.sliders.cameraFov:GetValue(), 80)
+        f.mock.Click("Framing"); f.mock.Click("Restore all framing"); f.flush(); eq(f.values.test_cameraDynamicPitch, "0")
+        f.mock.Click("Position"); assert(f.r.photoPreview.Queue("cameraFov", 80)); f.flush(); eq(f.ui.sliders.cameraFov:GetValue(), 80)
         f.mock.Click("Restore field of view"); f.flush(); eq(f.ui.sliders.cameraFov:GetValue(), 90)
         f.mock.Click("Look"); eq(f.ui.tab, "Look")
     end)

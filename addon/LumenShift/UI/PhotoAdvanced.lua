@@ -1,38 +1,76 @@
 local _, ns = ...
 local U, W, V = {}, ns.Widgets, ns.Value; ns.PhotoAdvancedUI = U
 local function report(ui, ok, reason)
-    ui.notice = ok and nil or ns.Product.Message(reason or "OPTION_UNAVAILABLE")
+    ui.notice = nil
+    if not ok then ui.notice = ns.Product.Message(reason or "OPTION_UNAVAILABLE") end
     ui.Refresh()
 end
-function U.Frame(runtime, env, parent, y, ui, liveSlider)
-    local actions, preview = runtime.cameraActions, runtime.photoPreview
+function U.CameraTabs(env, parent, ui)
+    local buttons = {}
+    for i, label in ipairs({ "Position", "Framing", "Visibility" }) do
+        local page = label
+        local button = W.Button(env, parent, label, (i - 1) * 105, 0, 100, function()
+            ui.cameraPage = page
+            ui.notice = nil
+            ui.Build(true)
+        end)
+        buttons[page] = button
+    end
+    return buttons
+end
+
+function U.Position(runtime, env, parent, y, ui)
+    local actions = runtime.cameraActions
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
-    W.Section(parent, "WORLD CAMERA", 0, y, 310); y = y - 40
+    text("Hold to move the camera. Release to keep the angle.", 34)
+    local buttons = {
+        { "up", "Tilt up", 106, 0 }, { "left", "Orbit left", 0, -38 },
+        { "right", "Orbit right", 212, -38 }, { "down", "Tilt down", 106, -76 },
+    }
+    local missing = false
+    for _, item in ipairs(buttons) do
+        local direction = item[1]
+        local button = W.Button(env, parent, item[2], item[3], y + item[4], 98, function() end)
+        W.Script(button, "OnMouseDown", function(_, which)
+            if which == "LeftButton" then report(ui, actions.Orbit(direction, ui.precision)) end
+        end)
+        local function stop()
+            if actions.orbit == direction then
+                actions.StopOrbit(direction)
+                ui.status:SetText(actions.status)
+            end
+        end
+        W.Script(button, "OnMouseUp", stop)
+        W.Script(button, "OnHide", stop)
+        W.Script(button, "OnLeave", stop)
+        if not actions.HasMovement(direction) then button:Disable(); missing = true
+        elseif runtime.db.config.preferences.reducedMotion then button:Disable() end
+    end
+    y = y - 116
+    if runtime.db.config.preferences.reducedMotion then text("Reduced motion is on. Held camera movement is off.", 48)
+    elseif missing then text("Dimmed directions are unavailable on this client.", 40) end
+    W.Toggle(env, parent, "Precision movement", 0, y, 310, function() return ui.precision end,
+        function(value) ui.precision = value end, "Slow down held movement for small adjustments."); y = y - 40
     local zoom = actions.ReadZoom()
-    text(zoom and ("Actual distance: " .. string.format("%.2f", zoom)) or "Zoom is unavailable on this client.", 32)
     for i, item in ipairs({ { "Closer", -1 }, { "Farther", 1 } }) do
         local delta = item[2]
         local b = W.Button(env, parent, item[1], (i - 1) * 160, y, 150, function() report(ui, actions.Step(delta)) end)
         if not zoom then b:Disable() end
     end
     y = y - 40
-    W.Button(env, parent, "Return zoom", 0, y, 150, function() report(ui, actions.Restore()) end)
-    W.Button(env, parent, "Keep current zoom", 160, y, 150, function() report(ui, actions.ForgetZoom()) end); y = y - 44
+    text(zoom and ("Camera distance  " .. string.format("%.2f", zoom)) or "Zoom is unavailable on this client.", 28)
     local original = runtime.db.camera.composition.zoom
-    text(original and "Pre-photo distance: " .. string.format("%.2f", original.original) .. ". Exit attempts a return; collision can limit it."
-        or "Closer / Farther captures your distance first. World collision can limit zoom.", 58)
-    for i, direction in ipairs({ "left", "right" }) do
-        local d = direction
-        local b = W.Button(env, parent, "Hold orbit " .. d, (i - 1) * 160, y, 150, function() end)
-        W.Script(b, "OnMouseDown", function(_, button) if button == "LeftButton" then report(ui, actions.Orbit(d)) end end)
-        W.Script(b, "OnMouseUp", function() actions.StopOrbit() end)
-        W.Script(b, "OnHide", function() actions.StopOrbit() end)
-        W.Script(b, "OnLeave", function() actions.StopOrbit() end)
-        local start = d == "left" and "MoveViewLeftStart" or "MoveViewRightStart"
-        local stop = d == "left" and "MoveViewLeftStop" or "MoveViewRightStop"
-        if runtime.db.config.preferences.reducedMotion or type(runtime.reader.env[start]) ~= "function" or type(runtime.reader.env[stop]) ~= "function" then b:Disable() end
+    if original then
+        W.Button(env, parent, "Return zoom", 0, y, 150, function() report(ui, actions.Restore()) end)
+        W.Button(env, parent, "Keep current zoom", 160, y, 150, function() report(ui, actions.ForgetZoom()) end)
+        y = y - 40
+        text("Original distance  " .. string.format("%.2f", original.original), 28)
     end
-    y = y - 44; text("Hold to turn, release to stop. Each hold lasts at most 5 seconds. Your chosen angle stays; no saved views are replaced.", 70)
+    return y
+end
+function U.Frame(runtime, env, parent, y, ui, liveSlider)
+    local preview = runtime.photoPreview
+    local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
     W.Section(parent, "SHOULDER & DYNAMIC FRAMING", 0, y, 310); y = y - 40
     for _, item in ipairs({ { "test_cameraOverShoulder", "Shoulder offset" }, { "test_cameraDynamicPitchBaseFovPad", "Dynamic footroom" } }) do
         local key = item[1]; local seen = ns.ReadOnly.Read(runtime.reader, key)

@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.19** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.20** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.20 puts **Camera** first in Photo Studio. World Photo adds held vertical tilt and precision movement. Portrait Stage adds live yaw, pitch and horizon roll with numeric entry and saved angles. Choose Position, Framing or Visibility in either mode. [Design research, controls and test guide](docs/65-PHOTO-CAMERA-CONTROLS.md).
 
 Beta.19 audits collection loading and repairs photo name-control feedback: explicit immediate Hide switches, Hide all / Restore names, focused-unit coverage, and readable NPC values. Collection interruption, failed scheduling and partial source lists are handled honestly. Schema 19 preserves settings and recovery; no reset or Narcissus is needed. The remaining quest-giver label is still a native acceptance question. [Audit and exact test](docs/64-COLLECTION-AND-NAME-AUDIT.md).
 

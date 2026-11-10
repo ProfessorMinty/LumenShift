@@ -194,14 +194,31 @@ function P.New(runtime)
         if not ok then backend.Light(db.camera.portrait.scene.light); return report(nil, why) end
         db.camera.portrait.scene.light = V.Copy(light); return report(true)
     end
+    local function setLens(scene)
+        local current = db.camera.portrait.scene
+        local ok, why = backend.Camera(scene)
+        if not ok then
+            if not backend.Camera(current) then
+                return nil, "Stage camera could not restore the previous view. Try Reset stage camera."
+            end
+            return nil, why
+        end
+        for key in pairs(C.CameraRanges) do current[key] = scene[key] end
+        return true
+    end
+    function self.ResetCamera()
+        if not ready() then return report(nil, "Portrait not ready.") end
+        return report(setLens(C.Scene()))
+    end
     function self.SetScene(key, value)
         if not ready() then return report(nil, "Portrait not ready.") end
-        if not ({ background = true, distance = true, height = true, fov = true })[key] then return report(nil, "Unknown stage control.") end
+        if key ~= "background" and not C.CameraRanges[key] then return report(nil, "Unknown stage control.") end
         local scene = V.Copy(db.camera.portrait.scene); scene[key] = value
         if not C.ValidScene(scene) then return report(nil, "Invalid stage value.") end
-        if key == "background" then backend.Background(value)
-        else local ok, why = backend.Camera(scene); if not ok then backend.Camera(db.camera.portrait.scene); return report(nil, why) end end
-        db.camera.portrait.scene = scene; return report(true)
+        if key ~= "background" then return report(setLens(scene)) end
+        backend.Background(value)
+        db.camera.portrait.scene.background = value
+        return report(true)
     end
     function self.Save(name, lighting)
         if not ready() then return report(nil, "Portrait not ready.") end
@@ -225,8 +242,9 @@ function P.New(runtime)
         local ok, why = self.SetLight(value.light)
         self.notice = not ok and why or nil
         if backend.kind == "ModelScene" then
-            ok, why = backend.Camera(value); if not ok then return report(nil, why) end
-            data.scene.distance, data.scene.height, data.scene.fov = value.distance, value.height, value.fov
+            ok, why = setLens(value); if not ok then return report(nil, why) end
+        else
+            for key in pairs(C.CameraRanges) do data.scene[key] = value[key] end
         end
         backend.Background(value.background); data.scene.background = value.background
         -- Each replacement is double buffered. Missing targets cannot remove an existing actor.

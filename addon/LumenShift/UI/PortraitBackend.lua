@@ -200,8 +200,12 @@ function B.New(runtime)
     end
     function self.Camera(scene)
         if not self.scene then return nil, "Stage camera lens needs the ModelScene backend; actor transforms still work." end
-        local a = call(self.scene, "SetCameraPosition", scene.distance, 0, scene.height)
-        local b = call(self.scene, "SetCameraOrientationByYawPitchRoll", math.pi, 0, 0)
+        -- Orbit around the framing height. Positive pitch places the lens above the cast.
+        local yaw, pitch = math.rad(scene.yaw), math.rad(scene.pitch)
+        local radius = scene.distance * math.cos(pitch)
+        local a = call(self.scene, "SetCameraPosition", radius * math.cos(yaw), radius * math.sin(yaw),
+            scene.height + scene.distance * math.sin(pitch))
+        local b = call(self.scene, "SetCameraOrientationByYawPitchRoll", math.pi + yaw, pitch, math.rad(scene.roll))
         local c = call(self.scene, "SetCameraFieldOfView", math.rad(scene.fov))
         return a and b and c, "Stage camera unavailable."
     end

@@ -107,8 +107,8 @@ return function(make,eq,test)
         local f=fixture(); local old=f.ns.Value.Copy(f.r.db); old.schemaVersion=17
         local p=old.camera.portrait; p.version=2; p.scene.version=2; p.scene.actors[1].outfit={[5]=1002,[1]=0}
         p.saved.Old=f.ns.Value.Copy(p.scene); p.outfits.Old={[5]=1002}; old.camera.effectsInCombat=false
-        local updated,code=f.ns.Store.Open(old); assert(updated); eq(code,"MIGRATED_17_TO_19")
-        eq(updated.camera.portrait.version,3); eq(updated.camera.portrait.saved.Old.actors[1].outfit[1],0)
+        local updated,code=f.ns.Store.Open(old); assert(updated); eq(code,"MIGRATED_17_TO_20")
+        eq(updated.camera.portrait.version,4); eq(updated.camera.portrait.saved.Old.actors[1].outfit[1],0)
         eq(updated.camera.portrait.outfits.Old[5],1002); eq(updated.camera.effectsInCombat,false); eq(old.camera.portrait.version,2)
     end)
     test("TC11 malformed source descriptors are rejected without executing or resetting data",function()

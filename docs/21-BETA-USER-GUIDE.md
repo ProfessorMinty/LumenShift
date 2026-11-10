@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.19 — install and explore
+# LumenShift 0.2.0-beta.20 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+**Beta.20 camera controls.** Open **Camera → Position** for held world orbit, tilt, precision movement and zoom. Choose **Portrait Stage** for angle sliders, Level horizon and Reset stage camera. **Framing** has guides and backdrop settings. **Visibility** has names and bubbles, including the quest-giver test. Keep SavedVariables when installing. [Camera research and exact test steps](65-PHOTO-CAMERA-CONTROLS.md).
 
 Beta.19: **World Photo → Frame → Names & Bubbles → Hide all names** applies the available name settings immediately, including focused-unit names where supported. Individual switches now say Hide; Restore names returns pre-photo name choices, while chat bubbles stay separate. The same controls are in **Portrait Stage → Scene**. Readback/error feedback and NPC values help distinguish a refused setting from a label the client still forces. Collection loading resumes on re-entry and reports incomplete source details. Keep SavedVariables; no reset. [Exact quest-giver test and remaining work](64-COLLECTION-AND-NAME-AUDIT.md).
 

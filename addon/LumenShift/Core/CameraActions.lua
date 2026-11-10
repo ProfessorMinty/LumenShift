@@ -1,5 +1,11 @@
 local _, ns = ...
 local A, V = {}, ns.Value; ns.CameraActions = A
+local movement = {
+    up = { "MoveViewUpStart", "MoveViewUpStop" },
+    down = { "MoveViewDownStart", "MoveViewDownStop" },
+    left = { "MoveViewLeftStart", "MoveViewLeftStop" },
+    right = { "MoveViewRightStart", "MoveViewRightStop" },
+}
 -- Native movement only. No CVar setters, view-slot writes or imported camera library.
 function A.New(runtime)
     local env, reader, db = runtime.reader.env, runtime.reader, runtime.db
@@ -15,28 +21,34 @@ function A.New(runtime)
             and not runtime.camera.interrupted and not runtime.composition.suspended and not runtime.captureSequence.active and not runtime.composition.capturing
             and not runtime.photoPreview.Pending() and not self.busy
     end
-    function self.StopOrbit()
-        if not self.orbitStop then return true end
+    function self.StopOrbit(direction)
+        if not self.orbitStop or direction and self.orbit ~= direction then return true end
         local fn = self.orbitStop
         local ok = ns.ReadOnly.Call(reader, fn)
         if not ok or ok.n ~= 0 then refresh("CAMERA_STOP_FAILED"); return nil, self.status end
         self.orbitStop, self.orbit = nil, nil; self.orbitGeneration = (self.orbitGeneration or 0) + 1
         self.status = "Motion stopped."; return true
     end
-    function self.Orbit(direction)
-        if not ready() or runtime.db.config.preferences.reducedMotion then return nil, "CAMERA_NOT_READY" end
-        local names = { left = { "MoveViewLeftStart", "MoveViewLeftStop" }, right = { "MoveViewRightStart", "MoveViewRightStop" } }
-        local pair = names[direction]
-        if not pair or type(env[pair[1]]) ~= "function" or type(env[pair[2]]) ~= "function" or not env.C_Timer then return nil, "ORBIT_UNAVAILABLE" end
+    function self.HasMovement(direction)
+        local pair = movement[direction]
+        return pair ~= nil and type(env[pair[1]]) == "function" and type(env[pair[2]]) == "function"
+            and type(env.C_Timer) == "table" and type(env.C_Timer.After) == "function"
+    end
+    function self.Orbit(direction, precision)
+        if not ready() or runtime.db.config.preferences.reducedMotion or runtime.portrait.active then return nil, "CAMERA_NOT_READY" end
+        if not self.HasMovement(direction) then return nil, "ORBIT_UNAVAILABLE" end
+        local pair = movement[direction]
         local stopped = self.StopOrbit(); if not stopped then return nil, self.status end
         self.orbitStop, self.orbit = env[pair[2]], direction
         self.orbitGeneration = (self.orbitGeneration or 0) + 1; local id = self.orbitGeneration
         -- A held control is capped at five seconds even if its release event is lost.
-        local timer = ns.ReadOnly.Call(reader, env.C_Timer.After, 5, function() if id == self.orbitGeneration then self.StopOrbit() end end)
+        local timer = ns.ReadOnly.Call(reader, env.C_Timer.After, 5, function()
+            if id == self.orbitGeneration and self.StopOrbit() then refresh() end
+        end)
         if not timer then self.orbitStop, self.orbit = nil, nil; return nil, "ORBIT_TIMER_UNAVAILABLE" end
-        local ok = ns.ReadOnly.Call(reader, env[pair[1]], .08)
+        local ok = ns.ReadOnly.Call(reader, env[pair[1]], precision and .025 or .08)
         if not ok or ok.n ~= 0 then self.StopOrbit(); refresh("ORBIT_FAILED"); return nil, self.status end
-        refresh("Hold to orbit; release to stop."); return true
+        refresh("Moving " .. direction .. ". Release to stop."); return true
     end
     local function move(target, restoring, callback)
         if self.busy or not db or runtime.product.IsCombat() or reader.resetPending then return nil, "CAMERA_NOT_READY" end

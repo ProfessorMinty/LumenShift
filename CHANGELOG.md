@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.20 - 2026-11-10
+
+- Open Photo Studio on Camera with Position, Framing and Visibility pages. World Photo gains held vertical tilt and precision movement alongside horizontal orbit.
+- Portrait Stage adds saved orbit yaw, pitch and horizon roll, plus Level horizon and Reset stage camera. Existing scenes migrate to a level front view.
+
 ## 0.2.0-beta.19 - 2026-11-10
 
 - Apply explicit hide-name switches immediately, add a focused-name option and Hide all / Restore names actions, and display actual NPC name values and failures. Keep exact pre-photo restoration through the existing writer.

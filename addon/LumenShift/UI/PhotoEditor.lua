@@ -3,7 +3,7 @@ local U, W = {}, ns.Widgets
 ns.PhotoEditorUI = U
 function U.New(runtime, composition)
     local env, editor, db, preview = runtime.reader.env, runtime.photoEditor, runtime.db, runtime.photoPreview
-    local self = { tab = "Look", sliders = {}, drafts = {} }
+    local self = { tab = "Frame", cameraPage = "Position", precision = false, sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); W.Border(panel); W.Window(env, panel, 42, 12)
@@ -11,17 +11,23 @@ function U.New(runtime, composition)
     local subtitle = W.Text(panel, "Compose in the world", 16, -47, 300, 12, W.colors.muted)
     local world, portrait
     world = W.Button(env, panel, "World Photo", 12, -70, 160, function()
-        local ok, why = runtime.portrait.World(); self.notice = not ok and why or nil; self.Build(true)
+        local ok, why = runtime.portrait.World()
+        self.notice = not ok and why or nil
+        if ok then self.tab, self.cameraPage = "Frame", "Position" end
+        self.Build(true)
     end)
     portrait = W.Button(env, panel, "Portrait Stage", 184, -70, 160, function()
         local ok, why = runtime.portrait.Enter(); self.notice = not ok and why or nil
-        if ok then self.tab = "Pose" end; self.Build(true)
+        if ok then self.tab, self.cameraPage = "Frame", "Position" end; self.Build(true)
     end)
     local tabs = {}
-    for i, label in ipairs({ "Look", "Light", "Frame", "Pose", "Capture", "Saved" }) do
+    for i, label in ipairs({ "Frame", "Look", "Light", "Pose", "Capture", "Saved" }) do
         local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -112 - math.floor((i - 1) / 3) * 40, 104, function() runtime.cameraActions.StopOrbit(); self.notice = nil; self.tab = label; self.Build(true) end)
         tabs[label] = button
     end
+    local pageRow = env.CreateFrame("Frame", nil, panel)
+    pageRow:SetSize(310, 32); pageRow:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -198)
+    local pageButtons = ns.PhotoAdvancedUI.CameraTabs(env, pageRow, self)
     local scroll = env.CreateFrame("ScrollFrame", nil, panel); self.scroll = scroll
     scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -198); scroll:SetSize(310, 402); scroll:EnableMouseWheel(true)
     local content = env.CreateFrame("Frame", nil, scroll); content:SetSize(310, 1); scroll:SetScrollChild(content); content:SetPoint("TOPLEFT", scroll, "TOPLEFT", 0, 0)
@@ -40,7 +46,7 @@ function U.New(runtime, composition)
     footer:SetSize(332, 94); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 14, 12)
     W.Rule(footer, 0, 0, 332)
     self.compare = W.Button(env, footer, "Before / After", 0, -12, 160, function() preview.Finish(editor.Compare) end)
-    W.Button(env, footer, "Reset photo look", 172, -12, 160, function() editor.Recipe("neutral"); self.Build() end)
+    local resetLook = W.Button(env, footer, "Reset photo look", 172, -12, 160, function() editor.Recipe("neutral"); self.Build() end)
     self.status = W.Text(footer, "", 0, -53, 332, 12, W.colors.muted)
     local marker = env.CreateFrame("Button", nil, composition.root); self.marker = marker
     marker:SetSize(38, 38); marker:EnableMouse(true); marker:SetMovable(true); marker:SetClampedToScreen(true); marker:RegisterForDrag("LeftButton")
@@ -64,7 +70,16 @@ function U.New(runtime, composition)
         local h = math.min(640, env.UIParent:GetHeight() - 154)
         local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 360), math.max(.4, h / 480))
         panel:SetScale(scale); h = math.max(480, h / scale); panel:SetHeight(h)
-        scroll:SetHeight(h - 314); scrollbar:SetHeight(h - 314)
+        local cameraTab = self.tab == "Frame"
+        local viewport = h - (cameraTab and 304 or 314)
+        local top = cameraTab and -242 or -198
+        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, top)
+        scrollbar:ClearAllPoints(); scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, top)
+        footer:SetHeight(cameraTab and 40 or 94)
+        self.status:ClearAllPoints()
+        self.status:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, cameraTab and -10 or -53)
+        if cameraTab then self.compare:Hide(); resetLook:Hide() else self.compare:Show(); resetLook:Show() end
+        scroll:SetHeight(viewport); scrollbar:SetHeight(viewport)
         scrollbar:SetMinMaxValues(0, math.max(0, (self.contentHeight or 1) - scroll:GetHeight()))
         scrollbar:SetValue(math.min(scroll:GetVerticalScroll(), math.max(0, (self.contentHeight or 1) - scroll:GetHeight())))
         positionMarker()
@@ -84,7 +99,7 @@ function U.New(runtime, composition)
         subtitle:SetText(staged and "Compose with staged models" or "Compose in the world")
         for label, button in pairs(tabs) do
             button.SetSelected(self.tab == label)
-            button.label:SetText(staged and ({ Frame = "Scene", Pose = "Actors" })[label] or label)
+            button.label:SetText(label == "Frame" and "Camera" or staged and label == "Pose" and "Actors" or label)
         end
         local y = 0
         local function text(value, height)
@@ -114,8 +129,14 @@ function U.New(runtime, composition)
             W.Script(slider.edit, "OnEnterPressed", function(s) preview.Begin(); entered(s) end)
             self.sliders[key] = slider; y = y - 68
         end
-        if staged and (self.tab == "Light" or self.tab == "Frame" or self.tab == "Pose" or self.tab == "Saved") then
-            y = ns.PortraitControls.Build(runtime, penv, content, self.tab, self)
+        if self.tab == "Frame" then
+            pageRow:Show()
+            for label, button in pairs(pageButtons) do button.SetSelected(self.cameraPage == label) end
+        else pageRow:Hide() end
+        if self.tab == "Frame" and self.cameraPage == "Visibility" then
+            y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
+        elseif staged and (self.tab == "Light" or self.tab == "Frame" or self.tab == "Pose" or self.tab == "Saved") then
+            y = ns.PortraitControls.Build(runtime, penv, content, self.tab, self, y)
         elseif self.tab == "Look" then
             for i, recipe in ipairs({ { "neutral", "Neutral" }, { "ember", "Warm Ember" }, { "night", "Cool Night" }, { "portrait", "Soft Portrait" }, { "sunflare", "Sun Flare" }, { "bluehour", "Blue Hour" } }) do
                 local id = recipe[1]
@@ -163,18 +184,8 @@ function U.New(runtime, composition)
                 section("PRE-PHOTO VALUES")
                 for _, key in ipairs(ns.Value.Keys(s.before)) do text(key .. " = " .. s.before[key], 30) end
             end
-        elseif self.tab == "Frame" then
-            section("COMPOSITION")
-            W.Toggle(penv, content, "Rule of thirds", 0, y, 310, function() return db.camera.thirds end,
-                function(v) db.camera.thirds = v; composition.Show() end); y = y - 48
-            text("Frame guides disappear in clean view. Letterbox bars below remain in the image.", 52)
-            for i, choice in ipairs({ { "none", "No guide" }, { "wide", "16:9" }, { "cinema", "2.39:1" }, { "square", "Square" } }) do
-                local id = choice[1]
-                local b = W.Button(penv, content, choice[2], (i - 1) % 2 * 160, y - math.floor((i - 1) / 2) * 40, 150, function()
-                    db.camera.aspect = id; composition.Show(); self.Build()
-                end); b.SetSelected(db.camera.aspect == id)
-            end
-            y = y - 88; lookSlider("letterbox", "Letterbox height")
+        elseif self.tab == "Frame" and self.cameraPage == "Position" then
+            y = ns.PhotoAdvancedUI.Position(runtime, penv, content, y, self)
             local range = ns.Framing.Range(runtime.reader); local seen = ns.ReadOnly.Read(runtime.reader, "cameraFov")
             if range and ns.Planner.SafeObservation(seen) and ns.Value.Number(seen.raw) then
                 liveSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw))
@@ -188,10 +199,22 @@ function U.New(runtime, composition)
                     return ok, why
                 end)
             end); y = y - 48
+            text("Horizon roll is available in Portrait Stage.", 36)
+        elseif self.tab == "Frame" then
+            section("COMPOSITION")
+            W.Toggle(penv, content, "Rule of thirds", 0, y, 310, function() return db.camera.thirds end,
+                function(v) db.camera.thirds = v; composition.Show() end); y = y - 48
+            text("Frame guides disappear in clean view. Letterbox bars below remain in the image.", 52)
+            for i, choice in ipairs({ { "none", "No guide" }, { "wide", "16:9" }, { "cinema", "2.39:1" }, { "square", "Square" } }) do
+                local id = choice[1]
+                local b = W.Button(penv, content, choice[2], (i - 1) % 2 * 160, y - math.floor((i - 1) / 2) * 40, 150, function()
+                    db.camera.aspect = id; composition.Show(); self.Build()
+                end); b.SetSelected(db.camera.aspect == id)
+            end
+            y = y - 88; lookSlider("letterbox", "Letterbox height")
             y = ns.PhotoAdvancedUI.Frame(runtime, penv, content, y, self, function(key, label, low, high, step, value, at)
                 y = at; liveSlider(key, label, low, high, step, value); return y
             end)
-            y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
             section("NEXT CAMERA ENTRY")
             W.Toggle(penv, content, "Temporary photo quality", 0, y, 310, function() return db.camera.photoEnabled end,
                 function(v) db.camera.photoEnabled = v end); y = y - 46

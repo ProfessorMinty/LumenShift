@@ -1,7 +1,7 @@
 local _, ns = ...
 local U, W, C, V = {}, ns.Widgets, ns.PortraitConfig, ns.Value; ns.PortraitControls = U
-function U.Build(runtime, env, parent, tab, ui)
-    local stage, data, y = runtime.portrait, runtime.db.camera.portrait, 0
+function U.Build(runtime, env, parent, tab, ui, startY)
+    local stage, data, y = runtime.portrait, runtime.db.camera.portrait, startY or 0
     local function text(value, height) W.Text(parent, value, 0, y, 310, 12, W.colors.muted); y = y - (height or 48) end
     local function section(value) W.Section(parent, value, 0, y, 310); y = y - 40 end
     local function action(label, fn)
@@ -78,16 +78,29 @@ function U.Build(runtime, env, parent, tab, ui)
             slider("light_" .. key, item[2], r[1], r[2], (key == "azimuth" or key == "elevation") and 1 or .01,
                 function() return data.scene.light[key] end, function(v) local l = V.Copy(data.scene.light); l[key] = v; return stage.SetLight(l) end)
         end
+    elseif tab == "Frame" and ui.cameraPage == "Position" then
+        if stage.backend.kind ~= "ModelScene" then
+            text("This renderer supports individual actor positioning. Open Actors and choose Transform.", 66)
+            return y
+        end
+        text("Orbit the cast or roll the shot. The game world behind the cast stays level.", 44)
+        local function lens(key, label, step)
+            local range = C.CameraRanges[key]
+            slider("stage_" .. key, label, range[1], range[2], step,
+                function() return data.scene[key] end, function(value) return stage.SetScene(key, value) end)
+        end
+        lens("yaw", "Orbit left / right (yaw °)", 1)
+        lens("pitch", "Camera elevation (pitch °)", 1)
+        lens("roll", "Horizon roll (°)", 1)
+        W.Button(env, parent, "Level horizon", 0, y, 150, function() stage.SetScene("roll", 0); ui.Build() end)
+        W.Button(env, parent, "Reset stage camera", 160, y, 150, function() stage.ResetCamera(); ui.Build() end)
+        y = y - 44
+        lens("distance", "Camera distance", .1)
+        lens("height", "Aim height", .1)
+        lens("fov", "Field of view (degrees)", .1)
     elseif tab == "Frame" then
         section("BACKDROP")
         for _, choice in ipairs(C.Backgrounds) do local id = choice[1]; action(choice[2], function() stage.SetScene("background", id) end) end
-        if stage.backend.kind == "ModelScene" then
-            section("STAGE LENS")
-            for _, item in ipairs({ { "distance", "Camera distance", 3, 12 }, { "height", "Camera height", -1, 4 }, { "fov", "Stage field of view", 20, 70 } }) do
-                local key = item[1]
-                slider("stage_" .. key, item[2], item[3], item[4], .1, function() return data.scene[key] end, function(v) return stage.SetScene(key, v) end)
-            end
-        end
         section("FRAMING")
         W.Toggle(env, parent, "Rule of thirds", 0, y, 310, function() return runtime.db.camera.thirds end,
             function(v) runtime.db.camera.thirds = v; runtime.composition.Show() end); y = y - 46
@@ -95,7 +108,6 @@ function U.Build(runtime, env, parent, tab, ui)
         slider("letterbox", "Letterbox height", range[1], range[2], .01, function() return runtime.db.camera.editor.look.letterbox end,
             function(v) return runtime.photoEditor.Set("letterbox", v) end)
         text("H hides all controls and guides. Look filters and the staged cast remain in the image.", 60)
-        y = ns.PhotoToolsUI.Names(runtime, env, parent, y, ui)
     elseif tab == "Saved" then
         text("Scenes store layout, poses, light and backdrop. Loading resolves your current player, target and pet; it does not save another player's identity.", 84)
         local sceneName = W.Edit(env, parent, ui.sceneName or "My portrait", 0, y, 310, function(v) ui.sceneName = v end, 32); y = y - 40
