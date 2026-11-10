@@ -4,6 +4,8 @@
 
 **Outcome:** the three planned photo deliveries have implementations and automated coverage. Phase 3 needed the corrections below. The updated candidate is usable for testing; complete native rendering, capture and interaction acceptance has not been established. No new activation gate, confirmation card, prerequisite addon or reset was added.
 
+**Follow-up, 2026-11-10:** [Beta.16](61-PORTRAIT-LIBRARIES-AND-COMBAT.md) implements the subsequently authorized pose library, model spell effects, outfit browser and combat choices. Their former optional/future status below is historical; native visual acceptance and true-mask limitations remain.
+
 ## Findings and corrections
 
 | Reproduced problem | Correction and regression evidence |

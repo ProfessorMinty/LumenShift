@@ -29,6 +29,8 @@ function N.Targets(reader, data)
     return targets, unavailable
 end
 function N.UpgradeTools(data)
+    if data.keepInCombat == nil then data.keepInCombat = true end
+    if data.effectsInCombat == nil then data.effectsInCombat = true end
     if data.portrait == nil then data.portrait = ns.PortraitConfig.Defaults() end
     if data.output == nil then data.output = ns.PhotoOutput.Defaults() end
     if data.composition == nil then data.composition = ns.PhotoComposition.Defaults() end
@@ -64,9 +66,10 @@ function N.Defaults()
     N.Upgrade(data); return data
 end
 function N.Validate(data)
-    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true, editor = true, tools = true, nameGroups = true, output = true, composition = true, portrait = true })
+    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true, editor = true, tools = true, nameGroups = true, output = true, composition = true, portrait = true, keepInCombat = true, effectsInCombat = true })
         or not ns.Store.ValidateJournal(data.journal) or type(data.sideEffects) ~= "table"
         or type(data.hideWithUI) ~= "boolean" or type(data.keepEffects) ~= "boolean" then return false end
+    if type(data.keepInCombat) ~= "boolean" or type(data.effectsInCombat) ~= "boolean" then return false end
     if type(data.thirds) ~= "boolean" or not ({ none = true, wide = true, cinema = true, square = true })[data.aspect]
         or type(data.photoEnabled) ~= "boolean" or not V.Finite(data.photoLevel) or data.photoLevel % 1 ~= 0
         or data.photoLevel < 1 or data.photoLevel > 10 or not ns.Framing.Validate(data.framing)

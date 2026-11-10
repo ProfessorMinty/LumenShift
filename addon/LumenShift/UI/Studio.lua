@@ -282,9 +282,14 @@ function S.New(runtime)
             button("Disable controls (restore originals first)", 206, -370, 360, function() product.Disable() end, "quiet")
             button("Reset LumenShift & Restart Setup", 0, -414, 398, function() runtime.reset.Open() end)
             text("Clear only this addon's saved data. Current game settings stay as they are.", 438, -421, 398, 12, W.colors.muted)
-            section("ART & CREDITS", -482)
-            text("Core UI icons by Streamline · CC BY 4.0 · streamlinehq.com\nMesh Gradients by Craftwork Studio · Lumen Loops by Jon Lehman\nCraftwork Commercial License · craftwork.design/license\nLumenShift logo and original mode artwork · Northern Lights Labs", 0, -523, 820, 12, W.colors.muted)
-            height = 618
+            section("COMBAT", -482)
+            toggle("Keep filters during combat",0,-526,398,function() return db.camera.effectsInCombat end,
+                function(v) db.camera.effectsInCombat=v; product.RefreshPresentation(true) end)
+            toggle("Stay in Photo Studio in combat",438,-526,398,function() return db.camera.keepInCombat end,
+                function(v) db.camera.keepInCombat=v end)
+            section("ART & CREDITS", -594)
+            text("Core UI icons by Streamline · CC BY 4.0 · streamlinehq.com\nMesh Gradients by Craftwork Studio · Lumen Loops by Jon Lehman\nCraftwork Commercial License · craftwork.design/license\nLumenShift logo and original mode artwork · Northern Lights Labs", 0, -635, 820, 12, W.colors.muted)
+            height = 730
         elseif ui.page == 7 then
             section("ADDON HEALTH", 0)
             local counts = {}; for _, check in ipairs(runtime.checks or {}) do counts[check.status] = (counts[check.status] or 0) + 1 end

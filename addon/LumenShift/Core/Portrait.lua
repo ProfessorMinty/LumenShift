@@ -4,13 +4,14 @@ function P.New(runtime)
     local env, reader, db = runtime.reader.env, runtime.reader, runtime.db
     local self = { active = false, busy = false, selected = 1, generation = 0, slots = {}, failures = {}, status = "World Photo" }
     local backend = ns.PortraitBackend.New(runtime); self.backend = backend
+    self.wardrobe = ns.PortraitWardrobe.New(runtime)
     local function report(ok, why)
         self.status = why or "Portrait ready."
         if self.Refresh then self.Refresh() end
         return ok, why
     end
     local function context()
-        return db and runtime.camera.active and not runtime.camera.interrupted and not runtime.product.IsCombat()
+        return db and runtime.camera.active and not runtime.camera.interrupted and runtime.camera.CanCompose()
             and not runtime.composition.suspended and not reader.resetPending
     end
     local function ready()
@@ -105,25 +106,68 @@ function P.New(runtime)
     function self.SetActor(key, value)
         if not ready() then return report(nil, "Portrait not ready.") end
         local slot = self.slots[self.selected]; if not slot or not slot.front then return report(nil, "Select a loaded actor.") end
-        if not C.ActorRanges[key] and not ({ animation = true, paused = true, sheathed = true, hideWeapons = true,
+        if not C.ActorRanges[key] and not ({ animation = true, variation = true, spellKit = true, paused = true, sheathed = true, hideWeapons = true,
             transmog = true, hideHead = true, hideCloak = true })[key] then return report(nil, "Unknown actor control.") end
         if not backend.Supports(backend.models[slot.front], key) then return report(nil, "This model control is unavailable; saved choices are kept.") end
         local spec = V.Copy(slot.spec); spec[key] = value
         if not C.ValidActor(spec) then return report(nil, "Invalid actor value.") end
         if key == "time" then spec.paused = true end
-        if key == "animation" then spec.time = 0 end
+        if key == "animation" then spec.time, spec.variation = 0, 0 end
         if ({ sheathed = true, hideWeapons = true, transmog = true, hideHead = true, hideCloak = true })[key] then
             if backend.Identity(slot.spec.unit) ~= slot.identity then
                 return report(nil, "Unit changed. Select the staged target again before refreshing its appearance.")
             end
             return load(self.selected, spec)
         end
-        local fn = ({ animation = true, time = true, speed = true, paused = true })[key] and backend.Pose or backend.Transform
+        local fn = ({ animation = true, variation = true, time = true, speed = true, paused = true })[key] and backend.Pose or backend.Transform
         local ok, why
-        if key == "paused" then ok = backend.Pause(backend.models[slot.front], spec.paused); why = "Model pause unavailable."
+        if key == "spellKit" then
+            ok, why = backend.Spell(backend.models[slot.front],value)
+            if not ok then backend.Spell(backend.models[slot.front],slot.spec.spellKit); return report(nil,why) end
+        elseif key == "paused" then ok = backend.Pause(backend.models[slot.front], spec.paused); why = "Model pause unavailable."
         else ok, why = fn(backend.models[slot.front], spec) end
         if not ok then fn(backend.models[slot.front], slot.spec); return report(nil, why) end
         slot.spec = spec; db.camera.portrait.scene.actors[self.selected] = V.Copy(spec); return report(true)
+    end
+    function self.SetOutfit(outfit)
+        if not ready() or not C.ValidOutfit(outfit) then return report(nil,"Outfit not ready or invalid.") end
+        local slot=self.slots[self.selected]
+        if not slot or not slot.front then return report(nil,"Select a loaded actor.") end
+        if not backend.Supports(backend.models[slot.front],"outfit") then return report(nil,"Outfit preview is unavailable on this model.") end
+        if backend.Identity(slot.spec.unit)~=slot.identity then return report(nil,"Select the staged unit again before changing its outfit.") end
+        local spec=V.Copy(slot.spec); spec.outfit=V.Copy(outfit)
+        if outfit[1] and outfit[1]>0 then spec.hideHead=false end
+        if outfit[15] and outfit[15]>0 then spec.hideCloak=false end
+        if outfit[16] and outfit[16]>0 or outfit[17] and outfit[17]>0 then spec.hideWeapons=false end
+        return load(self.selected,spec)
+    end
+    function self.TryItem(slotID,itemID)
+        if not ns.PortraitLibrary.Slot(slotID) then return report(nil,"Choose an outfit slot.") end
+        if not V.Finite(itemID) or itemID%1~=0 or itemID<0 or itemID>9999999 then return report(nil,"Enter a valid item ID or item link.") end
+        local selected=self.slots[self.selected]; if not selected or not selected.front then return report(nil,"Select an actor.") end
+        if itemID~=0 then
+            local item=self.wardrobe.Info(itemID)
+            if not item then self.wardrobe.Request(itemID); return report(nil,"Item data unavailable. Refresh the browser and try again.") end
+            local fits=false; for _,slot in ipairs(item.slots) do if slot==slotID then fits=true end end
+            if not fits then return report(nil,"That item does not fit the selected preview slot.") end
+        end
+        local outfit=V.Copy(selected.spec.outfit); outfit[slotID]=itemID
+        return self.SetOutfit(outfit)
+    end
+    function self.UseEquippedOutfit()
+        local outfit,why=self.wardrobe.Capture("player"); if not outfit then return report(nil,why) end
+        return self.SetOutfit(outfit)
+    end
+    function self.SaveOutfit(name)
+        if not ready() then return report(nil,"Portrait not ready.") end
+        local slot=self.slots[self.selected]; if not slot or not slot.front then return report(nil,"Select an actor.") end
+        if backend.Identity(slot.spec.unit)~=slot.identity then return report(nil,"Select the staged unit again before saving its outfit.") end
+        local outfit,why=self.wardrobe.Capture(slot.spec.unit); if not outfit then return report(nil,why) end
+        for key,id in pairs(slot.spec.outfit) do outfit[key]=id end
+        if slot.spec.hideHead then outfit[1]=0 end; if slot.spec.hideCloak then outfit[15]=0 end
+        if slot.spec.hideWeapons then outfit[16],outfit[17],outfit[18]=0,0,0 end
+        local ok,code=C.Save(db.camera.portrait.outfits,name,outfit,C.ValidOutfit)
+        return report(ok,code or "Outfit saved. Item appearances use their base items.")
     end
     function self.SetLight(light)
         if not ready() or not C.ValidLight(light) then return report(nil, "Portrait light not ready or invalid.") end

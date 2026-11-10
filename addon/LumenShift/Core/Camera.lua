@@ -11,6 +11,9 @@ function C.New(runtime)
         if runtime.product and runtime.product.Refresh then runtime.product.Refresh() end
         return ok, why
     end
+    function camera.CanCompose()
+        return not runtime.product.IsCombat() or db and db.camera.keepInCombat == true
+    end
     function camera.Visible()
         local parent = reader.env.UIParent
         local result = ns.ReadOnly.Call(reader, parent and parent.IsShown, parent)
@@ -173,15 +176,20 @@ function C.New(runtime)
         return not firstError or nil, firstError
     end
     function camera.Combat()
-        if runtime.portrait then runtime.portrait.Exit() end
+        -- Cancel native movement/writes, not the user's screen treatment or staged art.
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
         if runtime.cameraActions then runtime.cameraActions.Cancel() end
+        if runtime.photoPreview then runtime.photoPreview.Cancel("COMBAT") end
+        if runtime.captureSequence and runtime.captureSequence.state=="WAITING_FOR_PREVIEW" then runtime.captureSequence.Cancel() end
+        if db and db.camera.keepInCombat and camera.active and not camera.interrupted then
+            if runtime.photoEditor then runtime.photoEditor.Render() end
+            return
+        end
+        if runtime.portrait then runtime.portrait.Exit() end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
         camera.interrupted = true
-        if runtime.photoPreview then runtime.photoPreview.Cancel("COMBAT") end
-        if runtime.photoEditor then runtime.photoEditor.Hide() end
         if runtime.composition then runtime.composition.CancelCapture() end
-        -- Restore access to combat cues only; never queue graphics restoration.
+        if runtime.photoEditor then runtime.photoEditor.Render() end
         if camera.active or camera.busy then visibility(true) end
     end
     function camera.Toggle()
@@ -190,7 +198,15 @@ function C.New(runtime)
         if shown == nil then return report(nil, why) end
         if camera.active or not shown then return camera.Exit() end
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
-        if runtime.product.IsCombat() then return report(nil, "COMBAT_OR_RESTRICTION") end
+        if runtime.product.IsCombat() then
+            if not camera.CanCompose() then return report(nil,"COMBAT_OR_RESTRICTION") end
+            -- Start a cosmetic/model session at current native settings. Never queue deferred writes.
+            if runtime.photoCompatibility then local ok,why=runtime.photoCompatibility.Prepare(); if not ok then return report(nil,why) end end
+            camera.interrupted=false
+            local ok,why=visibility(false); camera.active=ok==true
+            if ok then runtime.photoEditor.Enter(); runtime.composition.Show() end
+            return report(ok,why)
+        end
         if type(reader.env.SetUIVisibility) ~= "function" then return report(nil, "UI_VISIBILITY_UNAVAILABLE") end
         if db.camera.nameReturn then return report(nil, "RESTORE_CAMERA_NAMES_FIRST") end
         if runtime.photoCompatibility then

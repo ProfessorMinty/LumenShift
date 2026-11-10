@@ -24,7 +24,7 @@ return function(fixture, eq, test)
     test("C01 camera startup and diagnostics never hide UI or change name CVars", function()
         local f = setup(); f.r.ui.Open(9); f.ns.Report.Export(f.r)
         eq(#f.calls, 0); eq(#f.visibility, 0); eq(f.env.UIParent:IsShown(), true)
-        eq(f.r.db.schemaVersion, 16); eq(f.c.active, false)
+        eq(f.r.db.schemaVersion, 17); eq(f.c.active, false)
     end)
     test("C02 names toggle restores independent mixed originals instead of forcing both on", function()
         local f = setup(nil, { [player] = "1", [pet] = "0" })
@@ -91,7 +91,7 @@ return function(fixture, eq, test)
         eq(g.ns.Report.Export(g.r):find("PRIVATE_UI_ERROR", 1, true), nil)
     end)
     test("C11 combat during verification leaves HUD visible and names available for recovery", function()
-        local f = setup(); f.env.InCombatLockdown = function() return true end
+        local f = setup(); f.r.db.camera.keepInCombat=false; f.env.InCombatLockdown = function() return true end
         eq(f.c.Toggle(), nil); eq(#f.calls, 0)
         f.env.InCombatLockdown = function() return false end
         assert(f.c.Toggle()); f.env.InCombatLockdown = function() return true end; f.mock.Flush()
@@ -107,7 +107,7 @@ return function(fixture, eq, test)
         old.schemaVersion, old.camera, old.addonVersion, old.baseline = 4, nil, "0.2.0-dev.6", nil; old.graphics = nil; old.optics = nil
         old.onboarding.completed = true; old.config.studio.modes.lantern.brightness = 67
         local copy, why = f.ns.Store.Open(old)
-        eq(why, "MIGRATED_4_TO_16"); eq(copy.schemaVersion, 16); eq(copy.onboarding.completed, true)
+        eq(why, "MIGRATED_4_TO_17"); eq(copy.schemaVersion, 17); eq(copy.onboarding.completed, true)
         eq(copy.config.studio.modes.lantern.brightness, 67); eq(old.camera, nil); eq(old.schemaVersion, 4)
         copy.camera.journal.entries.Unknown = {}; eq(f.ns.Store.Open(copy), nil)
     end)

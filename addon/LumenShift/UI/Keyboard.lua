@@ -110,7 +110,7 @@ function K.Attach(env, window, viewport, shortcuts)
     end
     local function key(_, value)
         if not nav.enabled or not window:IsVisible() then return end
-        if ns.runtime and ns.runtime.product.IsCombat() then return end
+        if ns.runtime and ns.runtime.product.IsCombat() and not (nav.AllowInCombat and nav.AllowInCombat()) then return end
         -- Establish pass-through before any fallible query or action.
         if not propagate(true) then return end
         local ok, focused = pcall(env.GetCurrentKeyBoardFocus)
@@ -139,7 +139,7 @@ function K.Attach(env, window, viewport, shortcuts)
     end
     local function keyUp(_, value)
         if not nav.enabled or not window:IsVisible() then return end
-        if ns.runtime and ns.runtime.product.IsCombat() then return end
+        if ns.runtime and ns.runtime.product.IsCombat() and not (nav.AllowInCombat and nav.AllowInCombat()) then return end
         -- A consumed Tab must not suppress the release of an unrelated held
         -- movement key. Only pair consumption with this key's own down event.
         propagate(not nav.consumed[value]); nav.consumed[value] = nil

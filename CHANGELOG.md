@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.16 — Portrait library and combat continuity
+
+- Add 56 grouped/searchable model poses with variations, 12 replaceable model spell effects, equipped/bag/equipment-set browsing and eight saved base-item outfits. No Narcissus dependency or world equipment/spell mutation.
+- Keep filters and active Photo Studio through combat by default; Capture and Accessibility offer independent Studio/filter combat choices. Native graphics/name edits and camera orbit remain locally restricted; no deferred writes.
+- Preserve previous data through schema 17 and portrait schema 2. Expand the bounded saved-data copy budget for full outfit/scene banks.
+- See [implementation, source decisions and testing](docs/61-PORTRAIT-LIBRARIES-AND-COMBAT.md). Native visual acceptance remains separate from mocks.
+
 ## 0.2.0-beta.15 — Portrait Stage audit
 
 - Preserve the staged actor when the live target changes; reject source-token edits outside model loading.

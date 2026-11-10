@@ -28,6 +28,12 @@ function U.Build(runtime, env, parent, tab, ui)
             pin.SetSelected(prefs.favorites[token] == true); y = y - 40
         end
     else
+        W.Section(parent,"COMBAT BEHAVIOR",0,y,310); y=y-40
+        W.Toggle(env,parent,"Stay in Photo Studio in combat",0,y,310,function() return runtime.db.camera.keepInCombat end,
+            function(v) runtime.db.camera.keepInCombat=v; if not v and runtime.product.IsCombat() then runtime.camera.Combat() end end); y=y-46
+        W.Toggle(env,parent,"Keep filters during combat",0,y,310,function() return runtime.db.camera.effectsInCombat end,
+            function(v) runtime.db.camera.effectsInCombat=v; runtime.product.RefreshPresentation(true); runtime.photoEditor.Render() end); y=y-46
+        text("Both on by default. Off: return to the game UI, or temporarily hide filters. Native graphics/name edits and orbit pause in combat; they are never queued.",90)
         text("Set up a single timed shot or a short burst. Controls disappear before every screenshot.", 56)
         for _, item in ipairs({ { "delay", "Delay before first shot", 0, 10 }, { "shots", "Number of shots", 1, 5 }, { "interval", "Seconds between shots", 1, 5 } }) do
             local key = item[1]

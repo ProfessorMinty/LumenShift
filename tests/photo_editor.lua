@@ -14,7 +14,7 @@ return function(cameraFixture, eq, test)
         local f = make(); local old = f.ns.Value.Copy(f.r.db)
         old.schemaVersion, old.camera.editor, old.onboarding.completed = 12, nil, true
         old.camera.thirds = true
-        local g = make(old); eq(g.r.storeStatus, "MIGRATED_12_TO_16"); eq(g.r.db.schemaVersion, 16)
+        local g = make(old); eq(g.r.storeStatus, "MIGRATED_12_TO_17"); eq(g.r.db.schemaVersion, 17)
         eq(g.r.db.onboarding.completed, true); eq(g.r.db.camera.thirds, true); eq(#g.calls, 0)
         eq(old.camera.editor, nil); eq(g.r.db.camera.editor.version, 2)
     end)
@@ -141,7 +141,7 @@ return function(cameraFixture, eq, test)
         f.mock.Click("Reset photo look"); eq(f.r.db.camera.editor.look.glow, 0); eq(#f.calls, 0)
     end)
     test("PE18 combat suspends editor/effects without restoring or queuing native edits", function()
-        local f = make(); enter(f); assert(f.editor.Native({ Brightness = 70 })); f.flush(); local calls = #f.calls
+        local f = make(); f.r.db.camera.keepInCombat=false; f.r.db.camera.effectsInCombat=false; enter(f); assert(f.editor.Native({ Brightness = 70 })); f.flush(); local calls = #f.calls
         f.env.InCombatLockdown = function() return true end; f.r.camera.Combat()
         eq(f.r.photoEffects.root:IsShown(), false); eq(f.env.UIParent:IsShown(), true); eq(#f.calls, calls)
         eq(f.editor.Native({ Brightness = 80 }), nil); eq(#f.calls, calls)

@@ -32,7 +32,7 @@ function P.New(runtime)
     end
     function self.Apply(look, before)
         if runtime.portrait and runtime.portrait.layerCapture then self.Hide(); return end
-        if runtime.product.IsCombat() or not ns.PhotoConfig.ValidLook(look) then self.Hide(); return end
+        if runtime.product.IsCombat() and not runtime.db.camera.effectsInCombat or not ns.PhotoConfig.ValidLook(look) then self.Hide(); return end
         build()
         if before then self.Hide(); return end
         local root, strength = self.root, look.strength

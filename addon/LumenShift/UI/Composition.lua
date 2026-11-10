@@ -6,7 +6,7 @@ function C.New(runtime)
     local self = { capturing = false, controlsHidden = false, status = "READY", generation = 0 }
     local function sync()
         if not self.root then return end
-        local active = runtime.camera.active and not runtime.product.IsCombat() and not self.suspended
+        local active = runtime.camera.active and not runtime.camera.interrupted and runtime.camera.CanCompose() and not self.suspended
         if active and not self.capturing and not self.controlsHidden then self.root:Show() else self.root:Hide() end
         -- This pixel-free, mouse-transparent frame must survive a clean view or
         -- pending screenshot so Escape can still exit. It never captures outside Camera.
@@ -35,7 +35,7 @@ function C.New(runtime)
         if self.root then self.root:Hide(); self.input:Hide() end
     end
     function self.ToggleControls()
-        if not runtime.camera.active or runtime.product.IsCombat() or not self.keyboard or not self.keyboard.enabled then return nil end
+        if not runtime.camera.active or runtime.camera.interrupted or not runtime.camera.CanCompose() or not self.keyboard or not self.keyboard.enabled then return nil end
         if not self.controlsHidden and runtime.photoPreview and runtime.photoPreview.Pending() then
             return runtime.photoPreview.Finish(self.ToggleControls)
         end
@@ -75,6 +75,7 @@ function C.New(runtime)
             if key == "ESCAPE" then return function() runtime.camera.Exit() end end
             if key == "H" then return self.ToggleControls end
         end)
+        self.keyboard.AllowInCombat = runtime.camera.CanCompose
         local bar = env.CreateFrame("Frame", nil, root); self.bar = bar
         bar:SetSize(720, 84); bar:SetPoint("BOTTOM", root, "BOTTOM", 0, 32)
         W.Fill(bar, W.colors.bg); W.Border(bar)
@@ -113,18 +114,18 @@ function C.New(runtime)
                 if self.capturing and self.requested then
                     complete(event == "SCREENSHOT_SUCCEEDED", event)
                 end
-            elseif not runtime.product.IsCombat() then layout() end
+            elseif runtime.camera.CanCompose() then layout() end
         end)
         self.Hide()
     end
     function self.Suspend() self.suspended = true; self.CancelCapture() end
     function self.Show()
-        if not db or runtime.product.IsCombat() then return end
+        if not db or not runtime.camera.CanCompose() then return end
         self.suspended = false; build(); layout(); sync()
         if self.editor then self.editor.Refresh() end
     end
     function self.Capture(callback)
-        if self.capturing or not runtime.camera.active or runtime.product.IsCombat() then return nil, "CAMERA_NOT_READY" end
+        if self.capturing or not runtime.camera.active or runtime.camera.interrupted or not runtime.camera.CanCompose() then return nil, "CAMERA_NOT_READY" end
         if type(callback) ~= "function" then callback = nil end
         if runtime.portrait and runtime.portrait.layerCapture and not callback then return nil, "PORTRAIT_CAPTURE_ACTIVE" end
         if runtime.captureSequence and runtime.captureSequence.active and not callback then return nil, "CAPTURE_SEQUENCE_ACTIVE" end
@@ -145,7 +146,7 @@ function C.New(runtime)
         -- Let the hidden guides render before requesting the native screenshot.
         local scheduled = pcall(env.C_Timer.After, 0.1, function()
             if id ~= self.generation then return end
-            if not runtime.camera.active or runtime.product.IsCombat() then
+            if not runtime.camera.active or runtime.camera.interrupted or not runtime.camera.CanCompose() then
                 complete(false, "CAPTURE_CANCELLED"); return
             end
             self.requested = true

@@ -59,6 +59,7 @@ function B.New(runtime)
     end
     function self.Clear(model)
         if not model then return end
+        if self.Supports(model,"spellKit") then self.Spell(model,0) end
         self.Pause(model, true); call(model, "Hide"); call(model, "ClearModel")
     end
     function self.Hide()
@@ -98,6 +99,8 @@ function B.New(runtime)
         elseif ns.Value.Finite(r[1]) and r[1] >= 0 then return r[1] > 0 end
     end
     function self.Supports(model, key)
+        if key == "spellKit" then return self.kind == "ModelScene" and type(model.SetSpellVisualKit) == "function" end
+        if key == "outfit" then return type(model.TryOn) == "function" and type(model.UndressSlot) == "function" end
         if key == "time" or key == "speed" then return self.kind == "ModelScene" end
         if key == "sheathed" or key == "hideWeapons" then
             return self.kind == "ModelScene" or type(model.SetSheathed) == "function"
@@ -123,8 +126,8 @@ function B.New(runtime)
             if not r or r.n ~= 1 or r[1] ~= true then return nil, "This model does not support that pose." end
         end
         local ok
-        if self.kind == "ModelScene" then ok = call(model, "SetAnimation", spec.animation, 0, spec.speed, spec.time)
-        else ok = call(model, "SetAnimation", spec.animation, 0) end
+        if self.kind == "ModelScene" then ok = call(model, "SetAnimation", spec.animation, spec.variation, spec.speed, spec.time)
+        else ok = call(model, "SetAnimation", spec.animation, spec.variation) end
         local paused = self.Pause(model, spec.paused)
         return ok and paused, "Model animation unavailable."
     end
@@ -136,8 +139,34 @@ function B.New(runtime)
         end
         return true
     end
+    function self.Outfit(model, spec)
+        if not next(spec.outfit) then return true end
+        if not self.Supports(model,"outfit") then return true end -- retained data; control reports local absence
+        for _,slot in ipairs(ns.Value.Keys(spec.outfit)) do
+            local item=spec.outfit[slot]
+            if not call(model,"UndressSlot",slot) then return nil,"Could not clear the preview slot." end
+            local hidden=slot==1 and spec.hideHead or slot==15 and spec.hideCloak or (slot==16 or slot==17 or slot==18) and spec.hideWeapons
+            if item>0 and not hidden then
+                local r=ns.ReadOnly.Call(reader,model.TryOn,model,"item:"..item,slot==16 and "MAINHANDSLOT" or slot==17 and "SECONDARYHANDSLOT" or nil)
+                if not r or r.n>1 or r[1]~=nil and r[1]~=0 then
+                    return nil,r and r[1]==3 and "Item data is loading. Refresh the browser and try again." or "This item cannot be previewed on that model. Previous outfit kept."
+                end
+            end
+        end
+        if type(model.SetSheathed)=="function" and not call(model,"SetSheathed",spec.sheathed,spec.hideWeapons) then return nil,"Model weapon preview unavailable." end
+        return true
+    end
+    function self.Spell(model, kit)
+        if not self.Supports(model,"spellKit") then return nil,"Model spell effects need the ModelScene backend." end
+        local ok=call(model,"SetSpellVisualKit",kit,false)
+        if ok and type(model.GetSpellVisualKit)=="function" then
+            local r=ns.ReadOnly.Call(reader,model.GetSpellVisualKit,model); ok=r and r.n==1 and r[1]==kit
+        end
+        return ok,"Model spell effect unavailable."
+    end
     function self.Apply(model, spec)
-        for _, fn in ipairs({ self.Transform, self.Pose, self.Appearance }) do local ok, why = fn(model, spec); if not ok then return nil, why end end
+        for _, fn in ipairs({ self.Transform, self.Pose, self.Appearance, self.Outfit }) do local ok, why = fn(model, spec); if not ok then return nil, why end end
+        if self.Supports(model,"spellKit") then return self.Spell(model,spec.spellKit) end
         return true
     end
     function self.CanLight()

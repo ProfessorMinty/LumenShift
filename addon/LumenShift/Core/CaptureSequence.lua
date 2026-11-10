@@ -5,7 +5,7 @@ function S.New(runtime)
     local self = { active = false, state = "IDLE", generation = 0, completed = 0, remaining = 0 }
     local function refresh() if self.Refresh then self.Refresh() end end
     local function context()
-        return runtime.camera.active and not runtime.camera.interrupted and not runtime.product.IsCombat() and not reader.resetPending
+        return runtime.camera.active and not runtime.camera.interrupted and runtime.camera.CanCompose() and not reader.resetPending
     end
     local function finish(state)
         self.active, self.state, self.remaining = false, state, 0

@@ -17,7 +17,7 @@ return function(fixture, native, eq, test)
         local old = f.ns.Value.Copy(f.env.LumenShiftDB)
         old.schemaVersion = 1; old.baseline = nil; old.camera = nil; old.config.studio = nil; old.experiments = nil; old.onboarding = nil; old.graphics = nil; old.optics = nil
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_1_TO_16"); eq(copy.schemaVersion, 16); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
+        eq(code, "MIGRATED_1_TO_17"); eq(copy.schemaVersion, 17); eq(old.schemaVersion, 1); eq(old.config.studio, nil)
         eq(copy.journal.entries.Brightness.originalRaw, "52"); eq(copy.journal.entries.Brightness.state, "owned")
         eq(copy.config.studio.enabled, false)
         local reload = studio(old, "75"); eq(#reload.calls, 0); eq(reload.engine.Status().state, "RECOVERY")
@@ -146,7 +146,7 @@ return function(fixture, native, eq, test)
         f.select("natural"); eq(#f.uiMock.soundCalls, 2); assert(#f.uiMock.stops >= 1); f.zero()
     end)
     test("P15 audio errors do not falsify graphics success; combat hides all presentation", function()
-        local f = studio(); f.enable(); f.env.LumenShiftDB.config.preferences.sound = true
+        local f = studio(); f.enable(); f.env.LumenShiftDB.camera.effectsInCombat=false; f.env.LumenShiftDB.config.preferences.sound = true
         f.env.PlaySoundFile = function() error("audio private error") end
         f.select("nightVision"); eq(f.engine.Status().state, "ACTIVE")
         eq(f.ns.runtime.audio.lastError, "API_ERROR")

@@ -10,13 +10,13 @@ function P.New(env)
     function self.Status()
         if self.suspended then return "SUSPENDED_COMBAT" end
         if not self.enabled then return "OFF" end
-        if inCombat() then return "SUSPENDED_COMBAT" end
+        if inCombat() and not self.inCombat then return "SUSPENDED_COMBAT" end
         if not self.keepEffects and not env.UIParent:IsShown() then return "HIDDEN_WITH_UI" end
         return self.frame and self.frame:IsVisible() and "VISIBLE" or "HIDDEN"
     end
     function self.SyncVisibility()
         if not self.frame then return end
-        if self.enabled and not inCombat() and (self.keepEffects or env.UIParent:IsShown()) then self.frame:Show()
+        if self.enabled and (not inCombat() or self.inCombat) and (self.keepEffects or env.UIParent:IsShown()) then self.frame:Show()
         else self.frame:Hide() end
     end
     local function layout()
@@ -63,7 +63,7 @@ function P.New(env)
         end
         frame:Hide()
         local function resize()
-            if not inCombat() then
+            if not inCombat() or self.inCombat then
                 local ok = pcall(layout)
                 if not ok then self.Clear(); self.lastError = "PRESENTATION_UNAVAILABLE" end
             end
@@ -75,12 +75,16 @@ function P.New(env)
         frame:SetScript("OnEvent", resize)
     end
     function self.Clear() self.enabled, self.suspended = false, false; if self.frame then self.frame:Hide() end end
-    function self.Combat() self.Clear(); self.suspended = true end -- never resize/hide the user's HUD
-    function self.Apply(id, mode, config, keepEffects)
+    function self.Combat(keep)
+        self.inCombat=keep==true
+        if keep then self.suspended=false; self.SyncVisibility() else self.Clear(); self.suspended=true end
+    end -- never resize/hide the user's HUD
+    function self.Apply(id, mode, config, keepEffects, keepInCombat)
         self.Clear()
         if id == "natural" or mode.styling == "clear" or not config.studio.effects then return true end
         local checked, inCombat = pcall(env.InCombatLockdown)
-        if not checked or inCombat ~= false then return true end
+        if not checked or type(inCombat)~="boolean" or inCombat and not keepInCombat then return true end
+        self.inCombat=keepInCombat==true
         local ok = pcall(function()
             build()
             self.keepEffects, self.enabled = keepEffects ~= false, true

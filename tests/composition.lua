@@ -26,7 +26,7 @@ return function(nativeFixture, eq, test)
         local f = make(); local old = f.ns.Value.Copy(f.r.db)
         old.schemaVersion, old.camera.thirds, old.camera.aspect, old.camera.photoEnabled, old.camera.photoLevel = 10, nil, nil, nil, nil
         old.camera.framing, old.camera.photo = nil, nil; old.onboarding.completed = true
-        local copy, code = f.ns.Store.Open(old); eq(code, "MIGRATED_10_TO_16"); eq(copy.onboarding.completed, true)
+        local copy, code = f.ns.Store.Open(old); eq(code, "MIGRATED_10_TO_17"); eq(copy.onboarding.completed, true)
         eq(copy.camera.photoEnabled, false); eq(copy.camera.aspect, "none"); eq(old.camera.photo, nil)
         f.r.ui.Open(9); f.ns.Report.Export(f.r); eq(#f.calls, 0); eq(f.captures, 0)
         copy.camera.photo.records.unknown = {}; eq(f.ns.Store.Open(copy), nil)
@@ -87,7 +87,7 @@ return function(nativeFixture, eq, test)
     end)
     test("CAM08 combat exposes HUD and hides composition without restoring graphics", function()
         local f = make(); assert(f.r.camera.ApplyFOV(80)); f.flush(); assert(f.r.camera.Toggle())
-        local count = #f.calls; f.env.InCombatLockdown = function() return true end
+        f.r.db.camera.keepInCombat=false; local count = #f.calls; f.env.InCombatLockdown = function() return true end
         f.frame.OnEvent(f.frame, "PLAYER_REGEN_DISABLED")
         eq(f.env.UIParent:IsShown(), true); eq(f.r.composition.root:IsShown(), false); eq(#f.calls, count)
         eq(f.values.cameraFov, "80"); eq(f.r.composition.Capture(), nil)

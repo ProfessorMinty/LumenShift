@@ -62,7 +62,7 @@ return function(cameraFixture, eq, test)
     end)
     test("WF07 Escape combat and world leave cancel pending sequences across re-entry", function()
         for _, event in ipairs({ "exit", "combat", "leave" }) do
-            local f = make(); assert(f.seq.Start())
+            local f = make(); f.r.db.camera.keepInCombat=false; assert(f.seq.Start())
             if event == "exit" then f.r.camera.Exit()
             elseif event == "combat" then f.env.InCombatLockdown = function() return true end; f.frame.OnEvent(f.frame, "PLAYER_REGEN_DISABLED")
             else f.frame.OnEvent(f.frame, "PLAYER_LEAVING_WORLD") end
@@ -106,7 +106,7 @@ return function(cameraFixture, eq, test)
     test("WF13 history is bounded and look mutation is refused during capture or combat", function()
         local f = make(); for i = 1, 70 do f.editor.Set("warmth", i / 100) end; eq(#f.editor.undo, 32)
         assert(f.seq.Start()); eq(f.editor.Set("warmth", -1), nil); eq(f.editor.Undo(), nil)
-        f.seq.Cancel(); f.env.InCombatLockdown = function() return true end; eq(f.editor.Recipe("ember"), nil)
+        f.seq.Cancel(); f.r.db.camera.keepInCombat=false; f.env.InCombatLockdown = function() return true end; eq(f.editor.Recipe("ember"), nil)
     end)
     test("WF14 name groups omit absent optional keys and restore exact originals through the sole writer", function()
         local f = make(); f.values.UnitNameOwn, f.values.UnitNameEnemyPlayerName = "01", "1"
@@ -135,7 +135,7 @@ return function(cameraFixture, eq, test)
         local f = make(); local old = f.ns.Value.Copy(f.r.db); old.schemaVersion = 13
         old.camera.tools, old.camera.nameGroups = nil, nil; old.onboarding.completed = true
         old.camera.editor.look.warmth = .42
-        local copy, why = f.ns.Store.Open(old); eq(why, "MIGRATED_13_TO_16"); eq(copy.camera.editor.look.warmth, .42)
+        local copy, why = f.ns.Store.Open(old); eq(why, "MIGRATED_13_TO_17"); eq(copy.camera.editor.look.warmth, .42)
         eq(copy.onboarding.completed, true); eq(copy.camera.nameGroups.players, false); eq(old.camera.tools, nil)
         copy.camera.tools.shots = 100; eq(f.ns.Store.Open(copy), nil); eq(#f.calls, 0)
     end)

@@ -110,7 +110,7 @@ function P.New(runtime)
             requested = id ~= "natural" and settings.brightness or nil,
             detail = id == "natural" and (db.baseline.chosen and "SELECTED_BASELINE_VERIFIED" or "CAPTURED_ORIGINAL_RESTORED") or nil })
         if runtime.presentation then
-            local ok, code = runtime.presentation.Apply(id, settings, db.config, db.camera.keepEffects)
+            local ok, code = runtime.presentation.Apply(id, settings, db.config, db.camera.keepEffects, db.camera.effectsInCombat)
             if not ok then
                 product.lastError, product.lastMessage = code, P.Message(code); ns.Diagnostics.Emit(runtime, "LumenShift: " .. code)
                 ns.Log.Record(runtime.reader, "presentation", "apply", "ERROR", code)
@@ -326,9 +326,9 @@ function P.New(runtime)
         if product.Refresh then product.Refresh() end
     end
     function product.Combat()
-        product.combatSuspended = true
-        ns.Log.Record(runtime.reader, "product", "combat", "INFO", "PRESENTATION_SUSPENDED_NO_WRITE")
-        if runtime.presentation then runtime.presentation.Combat() end
+        product.combatSuspended = not (db and db.camera.effectsInCombat)
+        ns.Log.Record(runtime.reader, "product", "combat", "INFO", product.combatSuspended and "PRESENTATION_SUSPENDED_NO_WRITE" or "PRESENTATION_KEPT_NO_WRITE")
+        if runtime.presentation then runtime.presentation.Combat(not product.combatSuspended) end
         if runtime.audio then runtime.audio.Stop() end
         if runtime.ui then runtime.ui.CloseWheel() end
         if runtime.exportUI then runtime.exportUI.window:Hide() end
@@ -337,7 +337,8 @@ function P.New(runtime)
     function product.RefreshPresentation(resume, photoReturn)
         if not photoReturn and runtime.photoEditor and runtime.photoEditor.active then runtime.photoEditor.Render(); return true end
         if runtime.presentation and db then
-            if product.state ~= "ACTIVE" or product.IsCombat()
+            if product.IsCombat() and not db.camera.effectsInCombat then product.combatSuspended=true end
+            if product.state ~= "ACTIVE" or product.IsCombat() and not db.camera.effectsInCombat
                 or db.optics.comparison and db.optics.comparison.state ~= "after" then runtime.presentation.Clear(); return true end
             product.combatSuspended = false
             local mode = resume and product.appliedSettings or config().modes[product.active]
@@ -345,7 +346,7 @@ function P.New(runtime)
             if not resume then mode = ns.Modes.Evaluate(mode, ns.Modes.Home(runtime)) end
             if not mode then runtime.presentation.Clear(); return nil, "INVALID_MODE_CONFIG" end
             product.appliedSettings = ns.Value.Copy(mode)
-            return runtime.presentation.Apply(product.active, mode, db.config, db.camera.keepEffects)
+            return runtime.presentation.Apply(product.active, mode, db.config, db.camera.keepEffects, db.camera.effectsInCombat)
         end
     end
     function product.Compare(side, onComplete)

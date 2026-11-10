@@ -207,6 +207,7 @@ function D.Build(runtime)
         for _, slot in pairs(stage and stage.slots or {}) do if slot.front then loaded = loaded + 1 end end
         lines[#lines + 1] = "Portrait stage: active=" .. bool(stage and stage.active) .. " backend=" .. safe(stage and stage.backend.kind or "not-created")
             .. " loading=" .. bool(stage and stage.busy) .. " actors=" .. loaded .. " savedScenes=" .. #ns.Value.Keys(db.camera.portrait.saved)
+            .. " savedOutfits=" .. #ns.Value.Keys(db.camera.portrait.outfits) .. " combatStudio=" .. bool(db.camera.keepInCombat) .. " combatEffects=" .. bool(db.camera.effectsInCombat)
             .. " savedLights=" .. #ns.Value.Keys(db.camera.portrait.lights) .. " loadFailures=" .. #ns.Value.Keys(stage and stage.failures or {})
             .. " layerCapture=" .. bool(stage and stage.layerCapture ~= nil)
         local actions, zoom = runtime.cameraActions, db.camera.composition.zoom

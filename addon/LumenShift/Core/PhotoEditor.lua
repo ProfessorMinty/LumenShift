@@ -21,7 +21,7 @@ function P.New(runtime)
     end
     function self.Render()
         if runtime.photoEffects then
-            if self.active and not runtime.product.IsCombat() then
+            if self.active and (not runtime.product.IsCombat() or db.camera.effectsInCombat) then
                 local look = data().look
                 local treated = look.strength > 0 and (look.warmth ~= 0 or look.tint ~= 0 or look.vignette > 0 or look.glow > 0 or look.grain > 0 or look.leak > 0) or look.letterbox > 0
                 if self.before or not treated then runtime.product.RefreshPresentation(true, true)
@@ -43,7 +43,7 @@ function P.New(runtime)
         if runtime.photoEffects then runtime.photoEffects.Hide() end
     end
     local function editable()
-        return self.active and not runtime.product.IsCombat() and not reader.resetPending
+        return self.active and runtime.camera.CanCompose() and not reader.resetPending
             and not (runtime.captureSequence and runtime.captureSequence.active)
             and not (runtime.composition and runtime.composition.capturing)
     end
@@ -79,7 +79,7 @@ function P.New(runtime)
         return self.SetMany({ [key] = value })
     end
     function self.Recipe(id)
-        local look = ns.PhotoConfig.Recipe(id); if not look or not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
+        local look = ns.PhotoConfig.Recipe(id); if not look or not self.active or reader.resetPending or not runtime.camera.CanCompose() then return nil end
         if not replaceLook(look) then return nil end; refresh(); return true
     end
     function self.Save(name)
@@ -90,13 +90,13 @@ function P.New(runtime)
         data().saved[name] = V.Copy(data().look); refresh("Photo look saved."); return true
     end
     function self.Load(name)
-        if not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
+        if not self.active or reader.resetPending or not runtime.camera.CanCompose() then return nil end
         local look = data().saved[name]; if not look then return nil end
         if not replaceLook(look) then return nil end; refresh("Photo look loaded."); return true
     end
     function self.Delete(name) if not self.active or reader.resetPending then return nil end; data().saved[name] = nil; refresh("Photo look deleted.") end
     function self.Import(text)
-        if not self.active or reader.resetPending or runtime.product.IsCombat() then return nil end
+        if not self.active or reader.resetPending or not runtime.camera.CanCompose() then return nil end
         local look = ns.PhotoConfig.Import(text); if not look then refresh("Invalid photo look."); return nil end
         if not replaceLook(look) then return nil end; refresh("Photo look imported."); return true
     end
@@ -161,6 +161,9 @@ function P.New(runtime)
         return ok, code
     end
     function self.Compare()
+        if not data().session and editable() then
+            self.before=not self.before; self.Render(); refresh(self.before and "Before photo edits" or "After photo edits"); return true
+        end
         local allowed, why = gate(); if not allowed then return nil, why end
         local target = not self.before
         local s = data().session

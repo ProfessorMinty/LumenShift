@@ -32,6 +32,17 @@ function U.Build(runtime, env, parent, tab, ui)
         end
         local selected = stage.slots[stage.selected]
         if selected and selected.front then
+            for i,label in ipairs({"Transform","Poses","Outfits","Effects"}) do local choice=label
+                local b=W.Button(env,parent,label,(i-1)%2*160,y-math.floor((i-1)/2)*40,150,function()
+                    ui.actorTab=choice; if choice=="Outfits" then stage.wardrobe.Refresh() end; ui.Build(true)
+                    if choice~="Transform" and ui.libraryY then ui.scrollbar:SetValue(-ui.libraryY) end
+                end)
+                b.SetSelected((ui.actorTab or "Transform")==label)
+            end; y=y-88
+            if (ui.actorTab or "Transform")~="Transform" then
+                ui.libraryY=y
+                y=ns.PortraitLibraryUI.Build(runtime,env,parent,ui,y,selected)
+            else
             section("POSITION")
             for _, item in ipairs({ { "x", "Horizontal" }, { "y", "Vertical" }, { "depth", "Depth" }, { "scale", "Scale" }, { "yaw", "Turn" }, { "pitch", "Tilt" }, { "roll", "Roll" } }) do
                 local key, r = item[1], C.ActorRanges[item[1]]
@@ -39,20 +50,6 @@ function U.Build(runtime, env, parent, tab, ui)
                     slider(key, item[2], r[1], r[2], key == "yaw" and 1 or .01, function() return selected.spec[key] end, function(v) return stage.SetActor(key, v) end)
                 else text(item[2] .. " unavailable on this model. Saved value kept.", 48) end
             end
-            section("POSE")
-            text("Animation availability varies by race and form. Timeline is an offset into the selected pose, not a duration estimate.", 66)
-            for i, pose in ipairs(C.Animations) do
-                local animation = pose[1]
-                local b = W.Button(env, parent, pose[2], (i - 1) % 2 * 160, y - math.floor((i - 1) / 2) * 40, 150,
-                    function() stage.SetActor("animation", animation); ui.Build() end)
-                b.SetSelected(selected.spec.animation == animation)
-            end
-            y = y - 128
-            action(selected.spec.paused and "Play pose" or "Pause pose", function() stage.SetActor("paused", not selected.spec.paused) end)
-            if stage.backend.kind == "ModelScene" then
-                slider("time", "Pose offset (seconds)", 0, 10, .01, function() return selected.spec.time end, function(v) return stage.SetActor("time", v) end)
-                slider("speed", "Playback speed", .1, 2, .05, function() return selected.spec.speed end, function(v) return stage.SetActor("speed", v) end)
-            else text("Model-widget fallback: play/pause and curated poses. Timeline, speed and stage lens need ModelScene.", 66) end
             section("APPEARANCE PREVIEW")
             for _, item in ipairs({ { "sheathed", "Sheathe weapons" }, { "hideWeapons", "Hide weapons" }, { "transmog", "Use transmog appearance" }, { "hideHead", "Hide helmet" }, { "hideCloak", "Hide cloak" } }) do
                 local key = item[1]
@@ -60,6 +57,7 @@ function U.Build(runtime, env, parent, tab, ui)
                     W.Toggle(env, parent, item[2], 0, y, 310, function() return selected.spec[key] end,
                         function(v) stage.SetActor(key, v); ui.Build() end); y = y - 46
                 else text(item[2] .. " unavailable on this model. Saved choice kept.", 48) end
+            end
             end
         else text("Add a player, target or pet, then select its row to edit it.", 54) end
     elseif tab == "Light" then

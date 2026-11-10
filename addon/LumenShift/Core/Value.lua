@@ -30,7 +30,7 @@ function V.Copy(value)
     local seen, count = {}, 0
     local function copy(item, depth)
         count = count + 1
-        if depth > 12 or count > 4096 then error("DATA_LIMIT") end
+        if depth > 12 or count > 8192 then error("DATA_LIMIT") end
         local kind = type(item)
         if kind == "nil" or kind == "boolean" then return item end
         if kind == "number" and V.Finite(item) then return item end

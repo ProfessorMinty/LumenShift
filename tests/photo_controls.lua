@@ -81,7 +81,7 @@ return function(make, eq, test)
         local f = make(); assert(f.r.camera.Toggle()); local c = f.r.composition
         c.ToggleControls(); assert(f.r.camera.Exit()); assert(f.r.camera.Toggle())
         eq(c.controlsHidden, false); eq(c.root:IsShown(), true)
-        c.ToggleControls(); f.env.InCombatLockdown = function() return true end
+        c.ToggleControls(); f.r.db.camera.keepInCombat=false; f.env.InCombatLockdown = function() return true end
         f.frame.OnEvent(f.frame, "PLAYER_REGEN_DISABLED")
         eq(c.root:IsShown(), false); eq(c.input:IsShown(), false); eq(f.env.UIParent:IsShown(), true)
         local g = make(f.r.db, f.values); eq(g.r.composition.controlsHidden, false)
