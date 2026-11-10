@@ -238,14 +238,14 @@ function P.New(runtime)
         local value = V.Copy((lighting and data.lights or data.saved)[name])
         if lighting then return self.SetLight(value) end
         if not C.ValidScene(value) then return report(nil, "Invalid saved scene.") end
-        -- A missing optional light API must not prevent loading the cast/layout.
-        local ok, why = self.SetLight(value.light)
-        self.notice = not ok and why or nil
         if backend.kind == "ModelScene" then
-            ok, why = setLens(value); if not ok then return report(nil, why) end
+            local ok, why = setLens(value); if not ok then return report(nil, why) end
         else
             for key in pairs(C.CameraRanges) do data.scene[key] = value[key] end
         end
+        -- Commit the lens first so a rejected angle leaves the current lighting intact.
+        local lit, reason = self.SetLight(value.light)
+        self.notice = not lit and reason or nil
         backend.Background(value.background); data.scene.background = value.background
         -- Each replacement is double buffered. Missing targets cannot remove an existing actor.
         for id = 1, 3 do

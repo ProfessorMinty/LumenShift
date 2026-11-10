@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.20 — install and explore
+# LumenShift 0.2.0-beta.21 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+**Beta.21 camera check.** Try all four held directions on World Photo, then set yaw, pitch and roll in Portrait Stage. Use **Level horizon**, save an angled scene, and load it again. [Camera audit and remaining in-game tests](65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work).
 
 **Beta.20 camera controls.** Open **Camera → Position** for held world orbit, tilt, precision movement and zoom. Choose **Portrait Stage** for angle sliders, Level horizon and Reset stage camera. **Framing** has guides and backdrop settings. **Visibility** has names and bubbles, including the quest-giver test. Keep SavedVariables when installing. [Camera research and exact test steps](65-PHOTO-CAMERA-CONTROLS.md).
 

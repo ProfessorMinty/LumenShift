@@ -151,7 +151,11 @@ function C.New(runtime)
     function camera.Exit()
         if runtime.portrait then runtime.portrait.Exit() end
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
-        if runtime.cameraActions then runtime.cameraActions.StopOrbit() end
+        local motionError
+        if runtime.cameraActions then
+            local stopped, why = runtime.cameraActions.StopOrbit()
+            if not stopped then motionError = why end
+        end
         if runtime.captureSequence then runtime.captureSequence.Cancel() end
         if runtime.photoPreview then runtime.photoPreview.Cancel("EXIT") end
         -- Showing the HUD is always the first attempt, even if name restoration fails.
@@ -183,6 +187,7 @@ function C.New(runtime)
             if not tasks[index] then
                 camera.busy = false
                 if not firstError then camera.changedNames = false end
+                if motionError and runtime.cameraActions.orbit then firstError = firstError or motionError end
                 runtime.product.RefreshPresentation(true)
                 report(not firstError, firstError); return
             end

@@ -37,7 +37,7 @@ function U.Position(runtime, env, parent, y, ui)
         local function stop()
             if actions.orbit == direction then
                 actions.StopOrbit(direction)
-                ui.status:SetText(actions.status)
+                ui.status:SetText(ns.Product.Message(actions.status))
             end
         end
         W.Script(button, "OnMouseUp", stop)

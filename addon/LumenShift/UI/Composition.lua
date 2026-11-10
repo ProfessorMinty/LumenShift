@@ -39,7 +39,13 @@ function C.New(runtime)
         if not self.controlsHidden and runtime.photoPreview and runtime.photoPreview.Pending() then
             return runtime.photoPreview.Finish(self.ToggleControls)
         end
-        runtime.cameraActions.StopOrbit()
+        if not self.controlsHidden then
+            local stopped, reason = runtime.cameraActions.StopOrbit()
+            if not stopped then
+                self.status = reason
+                return nil, reason
+            end
+        end
         self.controlsHidden = not self.controlsHidden
         if env.GameTooltip then env.GameTooltip:Hide() end
         if runtime.photoCompatibility then runtime.photoCompatibility.Clean() end

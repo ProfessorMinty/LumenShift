@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.21 - 2026-11-10
+
+- Keep the stage slider at the angle the renderer accepted. A saved scene whose camera fails to load now preserves the current lighting.
+- Report native movement stop failures during clean view and exit. Exit still shows the HUD and restores other camera settings. Discard stale callbacks after a movement timer rejects a request.
+
 ## 0.2.0-beta.20 - 2026-11-10
 
 - Open Photo Studio on Camera with Position, Framing and Visibility pages. World Photo gains held vertical tilt and precision movement alongside horizontal orbit.

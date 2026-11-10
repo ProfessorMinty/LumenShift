@@ -258,7 +258,7 @@ function U.New(runtime, composition)
         local seq, pose = runtime.captureSequence, runtime.photoTools
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
             or self.tab == "Pose" and ns.PhotoToolsUI.Status(pose.status)
-        if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and runtime.cameraActions.status or nil
+        if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and ns.Product.Message(runtime.cameraActions.status) or nil
         elseif self.tab == "Capture" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Saved" then extra = runtime.photoComposition.status end
         self.status:SetText(self.notice or runtime.portrait.active and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)

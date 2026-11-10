@@ -37,3 +37,20 @@ The following observations describe each developer's published interface. The la
 The automated suite covers native-call routing, release and interruption, degree/radian conversion, orbit geometry, live and typed edits, reset, failed edits, save/load, migration, fallback rendering and page navigation with Narcissus absent. Native movement direction and speed, model framing, world-backdrop compositing, comfort and screenshot output still need the owner test.
 
 All 695 Lua 5.1 mock tests and 10 packaging tests passed, including 14 new camera regressions. Syntax checks covered 100 Lua files and four binding bodies. Structural checks covered 67 runtime modules and the existing single CVar writer. Off-client previews covered both position pages and scrolling the smaller viewport with the page buttons pinned.
+
+## Beta.21 verification and remaining work
+
+The standalone fixture exercised all four World Photo buttons and their matching native stop functions. In Portrait Stage, a known pose with yaw −90°, pitch 60° and roll −90° places the camera at approximately (0, −3, 6.29615) at the default distance and aim height. The independent expected orientation is (π/2, π/3, −π/2) radians. The simulated renderer received those coordinates and angles from the visible sliders. The earlier tests also cover live dragging, numeric entry, precision movement, saved scenes, level/reset and the actor-only renderer. The numerical check follows the published [Forever orbit convention](https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bbae1768ac3405b3716000bd93eda06/Interface/AddOns/Blizzard_SharedXML/Shared/ModelSceneCameras/OrbitCameraMixin.lua) and [vector math](https://github.com/Gethe/wow-ui-source/blob/9dc84f0d3bbae1768ac3405b3716000bd93eda06/Interface/AddOns/Blizzard_SharedXML/Vector3D.lua).
+
+- If a stage angle is rejected, its thumb and numeric field return to the accepted value together. Updating the thumb does not issue another camera request. Loading a saved angle that fails now preserves the current lighting as well as the cast.
+- If WoW rejects a movement stop, clean view keeps its controls accessible and shows the failure. Exit returns the normal HUD, runs the other restorations and reports any outstanding stop failure. A rejected start followed by a rejected stop preserves the stop error so the player can see the outstanding problem.
+- If a timer queues a callback and then reports a scheduling error, the abandoned callback cannot later refresh the controls.
+
+All **704 Lua 5.1 mock tests** passed, including **23 camera-axis cases**, along with **10 packaging tests**. Syntax checks covered 100 Lua files and four binding bodies. Structural checks verified 67 runtime modules, the TOC and the single graphics writer. The camera tests ran with Narcissus absent. No new in-game rendering or movement result was recorded for beta.21.
+
+**Owner acceptance checklist.** All three planned photo deliveries are implemented. The remaining work is in-client acceptance and repairs for discrepancies found there.
+
+1. With Narcissus disabled, try the four world directions at both speeds, release, switch pages and exit. Check yaw, pitch and roll on a staged subject against a solid backdrop, then level, save and reload it. A world backdrop should stay level. Confirm the actual shot matches the preview.
+2. Recheck Marshal Dughan in **Camera → Visibility → Hide all names**. If his label persists, record the NPC, Special, Interactive and Focused readbacks and compare while untargeted with the pointer away. Check original names return afterward.
+3. On representative player, pet and NPC models, verify poses, spell effects, exact transmog sources, both weapon hands and saved outfits. Inspect the actual single, timed, burst and compositing images plus an external screenshot made with controls hidden.
+4. Exercise combat preferences, H/Escape, cancellation, world transitions, reload and restoration after another addon changes an owned setting. Check input, responsiveness and clipping in a three-actor scene at the player's usual UI scale.

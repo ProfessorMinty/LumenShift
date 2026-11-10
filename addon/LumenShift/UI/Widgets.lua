@@ -280,10 +280,17 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
     W.Rule(slider, 0, -5, width, W.colors.border, 3)
     local progress = W.Rule(slider, 0, -5, 1, W.colors.accent, 3)
     local thumb = W.Texture(slider, "OVERLAY"); thumb:SetSize(8, 15); thumb:SetColorTexture(unpack(W.colors.accent)); slider:SetThumbTexture(thumb)
-    local initialized, edit = false
-    local function update(value)
-        value = math.max(minimum, math.min(maximum, math.floor(value / step + 0.5) * step))
+    local initialized, edit, changeHandler = false
+    local function update(requested)
+        local value = math.max(minimum, math.min(maximum, math.floor(requested / step + 0.5) * step))
         if not set(value) then value = get() end
+        -- A setter can rebuild the panel and reassign this pooled widget.
+        if slider:GetScript("OnValueChanged") ~= changeHandler then return end
+        if requested ~= value then
+            initialized = false
+            slider:SetValue(value)
+            initialized = true
+        end
         progress:SetWidth(math.max(1, width * (value - minimum) / (maximum - minimum)))
         edit:SetText(string.format(step < 1 and "%.2f" or "%.0f", value))
     end
@@ -293,6 +300,7 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
         slider:SetValue(number)
     end)
     W.Script(slider, "OnValueChanged", function(_, value) if initialized then update(value) end end)
+    changeHandler = slider:GetScript("OnValueChanged")
     slider:SetValue(get()); initialized = true
     progress:SetWidth(math.max(1, width * (get() - minimum) / (maximum - minimum)))
     slider.edit = edit

@@ -45,9 +45,18 @@ function A.New(runtime)
         local timer = ns.ReadOnly.Call(reader, env.C_Timer.After, 5, function()
             if id == self.orbitGeneration and self.StopOrbit() then refresh() end
         end)
-        if not timer then self.orbitStop, self.orbit = nil, nil; return nil, "ORBIT_TIMER_UNAVAILABLE" end
+        if not timer then
+            self.orbitGeneration = self.orbitGeneration + 1
+            self.orbitStop, self.orbit = nil, nil
+            return nil, "ORBIT_TIMER_UNAVAILABLE"
+        end
         local ok = ns.ReadOnly.Call(reader, env[pair[1]], precision and .025 or .08)
-        if not ok or ok.n ~= 0 then self.StopOrbit(); refresh("ORBIT_FAILED"); return nil, self.status end
+        if not ok or ok.n ~= 0 then
+            local stopped, reason = self.StopOrbit()
+            if not stopped then return nil, reason end
+            refresh("ORBIT_FAILED")
+            return nil, self.status
+        end
         refresh("Moving " .. direction .. ". Release to stop."); return true
     end
     local function move(target, restoring, callback)

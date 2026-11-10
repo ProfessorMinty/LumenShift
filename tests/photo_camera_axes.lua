@@ -149,4 +149,87 @@ return function(make, eq, test)
         assert(button(f,"Hide all names")); f.mock.Click("Position"); assert(button(f,"Tilt up"))
         eq(#f.moves,0); eq(#f.calls,0)
     end)
+    test("AX15 rejected stage pitch restores the physical thumb, number and native view", function()
+        local f=make(); f.mock.Click("Portrait Stage"); f.flush()
+        local apply=f.scene.SetCameraOrientationByYawPitchRoll
+        local attempts=0
+        f.scene.SetCameraOrientationByYawPitchRoll=function(s,y,p,r)
+            attempts=attempts+1
+            if p>0 then error("angle rejected") end
+            apply(s,y,p,r)
+        end
+        local slider=f.ui.sliders.stage_pitch
+        slider.scripts.OnMouseDown(slider); slider:SetValue(24); slider.scripts.OnMouseUp(slider)
+        eq(f.r.db.camera.portrait.scene.pitch,0); near(f.scene.cameraAngles[2],0)
+        eq(slider.edit:GetText(),"0"); eq(attempts,2); eq(slider:GetValue(),0)
+    end)
+    test("AX16 rejected saved camera leaves the current scene light and cast intact", function()
+        local f=make(); f.start()
+        assert(f.p.SetLight(f.ns.PortraitConfig.LightPreset("ember"))); assert(f.p.SetScene("roll",30)); assert(f.p.Save("Warm angle"))
+        assert(f.p.ResetCamera()); local current=f.ns.PortraitConfig.LightPreset("soft"); assert(f.p.SetLight(current))
+        local front=f.front(); local apply=f.scene.SetCameraOrientationByYawPitchRoll
+        f.scene.SetCameraOrientationByYawPitchRoll=function(s,y,p,r)
+            if r~=0 then error("angle rejected") end
+            apply(s,y,p,r)
+        end
+        eq(f.p.Load("Warm angle"),nil); eq(f.front(),front); eq(f.r.db.camera.portrait.scene.roll,0)
+        eq(f.r.db.camera.portrait.scene.light.ambient,current.ambient)
+        eq(f.r.db.camera.portrait.saved["Warm angle"].roll,30)
+    end)
+    test("AX17 clean view keeps controls available if native pitch cannot stop", function()
+        local f=world(); local fail=true
+        f.env.MoveViewUpStop=function() if fail then error("stop rejected") end end
+        assert(f.r.cameraActions.Orbit("up"))
+        local ok,why=f.c.ToggleControls(); eq(ok,nil); eq(why,"CAMERA_STOP_FAILED")
+        eq(f.c.controlsHidden,false); assert(f.ui.panel:IsVisible())
+        eq(f.ui.status:GetText(),f.ns.Product.Message(why))
+        fail=false; assert(f.c.ToggleControls()); eq(f.c.controlsHidden,true); eq(f.r.cameraActions.orbit,nil)
+    end)
+    test("AX18 Exit returns the game HUD and reports a failed native yaw stop", function()
+        local f=world(); f.env.MoveViewRightStop=function() error("stop rejected") end
+        assert(f.r.cameraActions.Orbit("right")); local ok,why=f.r.camera.Exit()
+        assert(f.env.UIParent:IsShown()); eq(f.r.camera.active,false)
+        eq(ok,nil); eq(why,"CAMERA_STOP_FAILED"); eq(f.r.camera.error,why)
+    end)
+    test("AX19 rejected watchdog scheduling cannot rebuild controls from a stale callback", function()
+        local f=world(); local a=f.r.cameraActions; local after=f.env.C_Timer.After
+        local refreshes=0; a.Refresh=function() refreshes=refreshes+1 end
+        f.env.C_Timer.After=function(delay,fn) after(delay,fn); error("scheduled then rejected") end
+        eq(a.Orbit("down"),nil); eq(#f.moves,0); local before=refreshes
+        f.env.C_Timer.After=after; f.flush(); eq(refreshes,before); eq(#f.moves,0)
+    end)
+    test("AX20 signed yaw pitch and roll match a known off-axis stage pose", function()
+        local f=make(); f.mock.Click("Portrait Stage"); f.flush()
+        for _, pair in ipairs({{"yaw",-90},{"pitch",60},{"roll",-90}}) do
+            local slider=f.ui.sliders["stage_"..pair[1]]
+            slider.scripts.OnMouseDown(slider); slider:SetValue(pair[2]); slider.scripts.OnMouseUp(slider)
+        end
+        local x,y,z=unpack(f.scene.cameraPosition); near(x,0); near(y,-3); near(z,6.296152423)
+        local yaw,pitch,roll=unpack(f.scene.cameraAngles)
+        near(yaw,math.pi/2); near(pitch,math.pi/3); near(roll,-math.pi/2)
+        eq(f.env.Narci,nil); eq(#f.calls,0)
+    end)
+    test("AX21 all world pad buttons stop the same native axis they start", function()
+        local f=world()
+        for _, pair in ipairs({{"Orbit left","Left"},{"Orbit right","Right"},{"Tilt up","Up"},{"Tilt down","Down"}}) do
+            local b=button(f,pair[1]); f.moves={}
+            b.scripts.OnMouseDown(b,"LeftButton"); b.scripts.OnMouseUp(b,"LeftButton"); f.flush()
+            eq(#f.moves,2); eq(f.moves[1][1],pair[2]); eq(f.moves[2][1],pair[2]); eq(f.moves[2][2],"stop")
+        end
+        eq(f.ui.sliders.stage_roll,nil); eq(#f.calls,0)
+    end)
+    test("AX22 an unresolved world stop still allows exact FOV restoration on exit", function()
+        local f=world(); local original=f.values.cameraFov
+        assert(f.r.camera.ApplyFOV(75)); f.flush()
+        f.env.MoveViewUpStop=function() error("stop rejected") end
+        assert(f.r.cameraActions.Orbit("up")); f.r.camera.Exit(); f.flush()
+        assert(f.env.UIParent:IsShown()); eq(f.values.cameraFov,original)
+        eq(next(f.r.db.camera.framing.journal.entries),nil); eq(f.r.camera.error,"CAMERA_STOP_FAILED")
+    end)
+    test("AX23 native start error with failed cleanup keeps the stop failure visible", function()
+        local f=world(); f.env.MoveViewDownStart=function() error("start rejected") end
+        f.env.MoveViewDownStop=function() error("stop rejected") end
+        local ok,why=f.r.cameraActions.Orbit("down"); eq(ok,nil); eq(why,"CAMERA_STOP_FAILED")
+        eq(f.r.cameraActions.orbit,"down"); eq(f.r.cameraActions.status,why)
+    end)
 end

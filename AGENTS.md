@@ -7,7 +7,9 @@ LumenShift is intended for public publication on **CurseForge for World of Warcr
 
 ## Current authorization
 
-**Current beta.20 / photo camera controls (2026-11-10).** Read [65](docs/65-PHOTO-CAMERA-CONTROLS.md) for the interface comparison, Forever API evidence, and owner test. World Photo offers held yaw and pitch with precision movement. Portrait Stage saves orbit, elevation and horizon roll. Camera groups Position, Framing and Visibility. Keep standalone support, the single graphics writer, and the existing PR #5.
+**Current beta.21 / camera verification.** See [camera audit and remaining photo work](docs/65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work) for the standalone axis tests, failure handling and native acceptance checklist.
+
+**Prior beta.20 / photo camera controls (2026-11-10).** Read [65](docs/65-PHOTO-CAMERA-CONTROLS.md) for the interface comparison, Forever API evidence, and owner test. World Photo offers held yaw and pitch with precision movement. Portrait Stage saves orbit, elevation and horizon roll. Camera groups Position, Framing and Visibility. Keep standalone support, the single graphics writer, and the existing PR #5.
 
 **Prior beta.19 / collection and names audit (2026-11-10):** The owner requested collection verification and a fix for names remaining visible, supplying screenshots of a quest giver. Read [64](docs/64-COLLECTION-AND-NAME-AUDIT.md). Preserve standalone collection/source previews; correct interrupted reads, timer failures and incomplete-list reporting. Name switches apply immediately through the existing writer; add explicit focused-name coverage, bulk actions and local feedback. Schema 19 preserves prior choices and originals. A successful readback does not prove the remaining NPC label disappeared; native acceptance remains pending. Same branch/PR #5; no installed-game operation, merge or publication.
 
