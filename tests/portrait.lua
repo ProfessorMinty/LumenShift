@@ -175,7 +175,7 @@ return function(cameraFixture, eq, test)
         for i=1,8 do assert(f.p.Save("Scene"..i)); assert(f.p.Save("Light"..i,true)) end
         eq(f.p.Save("Ninth"),nil); assert(f.p.Delete("Scene8")); assert(f.p.Save("Ninth"))
         assert(f.ns.Store.Open(f.r.db)); local old=f.ns.Value.Copy(f.r.db); old.schemaVersion=15; old.camera.portrait=nil
-        local updated,code=f.ns.Store.Open(old); eq(code,"MIGRATED_15_TO_18"); eq(updated.camera.portrait.version,3)
+        local updated,code=f.ns.Store.Open(old); eq(code,"MIGRATED_15_TO_19"); eq(updated.camera.portrait.version,3)
         eq(updated.config.preferences.reducedMotion,old.config.preferences.reducedMotion); eq(old.camera.portrait,nil)
     end)
     test("PC15 saved stage data never creates or starts models on reload", function()

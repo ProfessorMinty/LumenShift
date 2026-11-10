@@ -4,10 +4,12 @@ ns.NamePolicy = N
 N.Keys = { "UnitNameFriendlyPlayerName", "UnitNameFriendlyPetName" }
 N.Version = 4
 N.Groups = {
-    { id = "players", label = "All player names", keys = { "UnitNameOwn", "UnitNameFriendlyPlayerName", "UnitNameEnemyPlayerName" } },
-    { id = "pets", label = "All pet names", keys = { "UnitNameFriendlyPetName", "UnitNameEnemyPetName" } },
-    { id = "npcs", label = "NPC names", keys = { "UnitNameNPC", "UnitNameFriendlySpecialNPCName", "UnitNameInteractiveNPC", "UnitNameHostleNPC", "UnitNameNonCombatCreatureName" } },
-    { id = "bubbles", label = "Chat bubbles", keys = { "chatBubbles", "chatBubblesParty", "chatBubblesRaid" } },
+    { id = "players", label = "Hide player names", keys = { "UnitNameOwn", "UnitNameFriendlyPlayerName", "UnitNameEnemyPlayerName" } },
+    { id = "pets", label = "Hide pet / minion names", keys = { "UnitNameFriendlyPetName", "UnitNameEnemyPetName", "UnitNameFriendlyMinionName", "UnitNameEnemyMinionName", "UnitNameFriendlyGuardianName", "UnitNameEnemyGuardianName", "UnitNameFriendlyTotemName", "UnitNameEnemyTotemName" } },
+    { id = "npcs", label = "Hide NPC / quest-giver names", keys = { "UnitNameNPC", "UnitNameFriendlySpecialNPCName", "UnitNameInteractiveNPC", "UnitNameHostleNPC", "UnitNameNonCombatCreatureName" } },
+    -- Registered in the Forever 70532 capture; visible behavior still needs native acceptance.
+    { id = "focused", label = "Hide focused-unit names", keys = { "UnitNameFocused" } },
+    { id = "bubbles", label = "Hide chat bubbles", keys = { "chatBubbles", "chatBubblesParty", "chatBubblesRaid" } },
 }
 N.AllKeys = {}
 local known = {}
@@ -35,7 +37,7 @@ function N.UpgradeTools(data)
     if data.output == nil then data.output = ns.PhotoOutput.Defaults() end
     if data.composition == nil then data.composition = ns.PhotoComposition.Defaults() end
     if data.tools == nil then data.tools = ns.PhotoTools.Defaults() end
-    if data.nameGroups == nil then data.nameGroups = { players = false, pets = false, npcs = false, bubbles = false } end
+    if data.nameGroups == nil then data.nameGroups = { players = false, pets = false, npcs = false, focused = false, bubbles = false } end
 end
 function N.Layer() return "camera" end
 function N.Bounds(key, original)
@@ -74,7 +76,7 @@ function N.Validate(data)
         or type(data.photoEnabled) ~= "boolean" or not V.Finite(data.photoLevel) or data.photoLevel % 1 ~= 0
         or data.photoLevel < 1 or data.photoLevel > 10 or not ns.Framing.Validate(data.framing)
         or not ns.NativeGraphics.Validate(data.photo) or not ns.PhotoConfig.Validate(data.editor) then return false end
-    if not ns.PortraitConfig.Validate(data.portrait) or not ns.PhotoOutput.Validate(data.output) or not ns.PhotoComposition.Validate(data.composition) or not ns.PhotoTools.Validate(data.tools) or not V.Fields(data.nameGroups, { players = true, pets = true, npcs = true, bubbles = true }) then return false end
+    if not ns.PortraitConfig.Validate(data.portrait) or not ns.PhotoOutput.Validate(data.output) or not ns.PhotoComposition.Validate(data.composition) or not ns.PhotoTools.Validate(data.tools) or not V.Fields(data.nameGroups, { players = true, pets = true, npcs = true, focused = true, bubbles = true }) then return false end
     for _, group in ipairs(N.Groups) do if type(data.nameGroups[group.id]) ~= "boolean" then return false end end
     if data.nameReturn ~= nil and (not V.Fields(data.nameReturn, { targets = true })
         or not N.ValidateTargets(data.nameReturn.targets, "camera")) then return false end

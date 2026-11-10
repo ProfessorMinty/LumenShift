@@ -59,11 +59,36 @@ function C.New(runtime)
         if not ok then return report(ok, why) end
         return true
     end
+    local function namesResult(ok, code, pending)
+        camera.nameResult = { ok = ok == true, code = code, pending = pending == true }
+        if camera.NamesChanged then camera.NamesChanged() end
+        if not pending then return report(ok, code) end
+    end
+    local function namesReady(entering)
+        if not db or camera.busy or reader.resetPending or not camera.active and not entering then return nil, "CAMERA_NOT_READY" end
+        if runtime.product.IsCombat() then return nil, "COMBAT_OR_RESTRICTION" end
+        if names.busy or runtime.composition and runtime.composition.capturing
+            or runtime.captureSequence and runtime.captureSequence.active or runtime.photoPreview and runtime.photoPreview.Pending() then return nil, "BUSY" end
+        return true
+    end
+    function camera.EditNames(id, hidden)
+        local ready, why = namesReady(false)
+        if not ready then return namesResult(nil, why) end
+        local known = id == "friendly" or id == "all"
+        for _, group in ipairs(ns.NamePolicy.Groups) do if id == group.id then known = true end end
+        if not known or type(hidden) ~= "boolean" then return namesResult(nil, "INVALID_NAME_CHOICE") end
+        if id == "all" then
+            db.camera.hideWithUI = hidden
+            for _, group in ipairs(ns.NamePolicy.Groups) do
+                if group.id ~= "bubbles" then db.camera.nameGroups[group.id] = hidden end
+            end
+        elseif id == "friendly" then db.camera.hideWithUI = hidden
+        else db.camera.nameGroups[id] = hidden end
+        return camera.ApplyNames()
+    end
     function camera.ApplyNames(onComplete)
-        if not db or camera.busy or runtime.product.IsCombat() or reader.resetPending then return report(nil, "CAMERA_NOT_READY") end
-        if not camera.active and type(onComplete) ~= "function" then return report(nil, "CAMERA_NOT_READY") end
-        if runtime.composition and runtime.composition.capturing then return report(nil, "BUSY") end
-        if runtime.captureSequence and runtime.captureSequence.active or runtime.photoPreview and runtime.photoPreview.Pending() then return report(nil, "BUSY") end
+        local ready, why = namesReady(type(onComplete) == "function")
+        if not ready then return namesResult(nil, why) end
         local targets, unavailable = ns.NamePolicy.Targets(reader, db.camera)
         camera.unavailableNames = unavailable
         -- Keep pre-session manual intent until the whole Camera session returns.
@@ -73,17 +98,18 @@ function C.New(runtime)
         end
         for key, value in pairs(prior) do if targets[key] == nil then targets[key] = value end end
         local proposal, code = names.CanApply("camera", targets)
-        if not proposal then return report(nil, code) end
+        if not proposal then return namesResult(nil, code) end
         db.camera.nameReturn = db.camera.nameReturn or { targets = ns.Value.Copy(prior) }
+        namesResult(nil, nil, true)
         local ok, why = names.Apply("camera", targets, function(done, reason)
             if done then camera.changedNames = next(db.camera.journal.entries) ~= nil end
-            report(done, reason)
+            namesResult(done, reason)
             if done and onComplete then onComplete() end
             if camera.interrupted and camera.active and not runtime.product.IsCombat() then
                 ns.ReadOnly.Call(reader, reader.env.C_Timer and reader.env.C_Timer.After, 0, camera.Exit)
             end
         end)
-        if not ok then return report(nil, why) end
+        if not ok then return namesResult(nil, why) end
         return true
     end
     function camera.ApplyFraming(values, onComplete)

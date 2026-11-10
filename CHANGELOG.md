@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.19 - 2026-11-10
+
+- Apply explicit hide-name switches immediately, add a focused-name option and Hide all / Restore names actions, and display actual NPC name values and failures. Keep exact pre-photo restoration through the existing writer.
+- Preserve saved settings with schema 19; add name controls to Portrait Stage Scene.
+- Fix collection cancellation/resumption and late callbacks after timer errors; disclose incomplete source lists.
+- Native quest-giver label behavior remains under investigation; simulated checks do not certify live rendering.
+
 ## 0.2.0-beta.18 — Native transmog collection browser
 
 - Browse native transmog appearances by category, class, name/ID, collection status, favorite and acquisition source; preview exact sources and native set variants on staged actors.

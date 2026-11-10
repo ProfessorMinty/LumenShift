@@ -189,6 +189,7 @@ function W.Tip(env, frame, text)
 end
 function W.Button(env, parent, label, x, y, width, callback, tip, style)
     local button = env.CreateFrame("Button", nil, parent)
+    button.RefreshValue = nil
     button:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y); button:SetSize(width, 30)
     button.background = W.Fill(button)
     button.label = W.Text(button, label, 10, -7, width - 16, 13)
@@ -231,6 +232,7 @@ function W.Toggle(env, parent, label, x, y, width, get, set, tip)
         button.value = value
     end
     W.Script(button, "OnClick", function() set(not get()); refresh() end)
+    button.RefreshValue = refresh
     refresh()
     return button
 end

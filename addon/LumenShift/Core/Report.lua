@@ -194,6 +194,11 @@ function D.Build(runtime)
         for _, group in ipairs(ns.NamePolicy.Groups) do
             lines[#lines + 1] = "photo hide group " .. group.id .. "=" .. bool(db.camera.nameGroups[group.id])
         end
+        local namesResult = runtime.camera and runtime.camera.nameResult
+        lines[#lines + 1] = "Photo name operation: requested=" .. bool(namesResult ~= nil)
+            .. " pending=" .. bool(namesResult and namesResult.pending) .. " readbackOK=" .. bool(namesResult and namesResult.ok)
+            .. " reason=" .. safe(namesResult and namesResult.code or "none")
+            .. " unavailable=" .. D.Number(runtime.camera and #(runtime.camera.unavailableNames or {}))
         for _, key in ipairs(ns.Framing.Keys) do
             if key ~= "cameraFov" then
                 local item = ns.ReadOnly.Read(runtime.reader, key); local record = db.camera.framing.journal.entries[key]

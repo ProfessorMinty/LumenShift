@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.18** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.19** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.19 audits collection loading and repairs photo name-control feedback: explicit immediate Hide switches, Hide all / Restore names, focused-unit coverage, and readable NPC values. Collection interruption, failed scheduling and partial source lists are handled honestly. Schema 19 preserves settings and recovery; no reset or Narcissus is needed. The remaining quest-giver label is still a native acceptance question. [Audit and exact test](docs/64-COLLECTION-AND-NAME-AUDIT.md).
 
 Beta.18 adds **native transmog collection browsing** under **Camera → Portrait Stage → Actors → Outfits → Collection**: categories, search, collection-status/favorite/source filters, class selection, exact-source previews and native sets/variants. Selected appearance sources survive outfit/scene saving; older settings migrate without a reset. Works without Narcissus. Entries depend on the client’s native collection data; uncollected availability is not assumed. [Controls, source decisions and test steps](docs/63-TRANSMOG-COLLECTION.md).
 

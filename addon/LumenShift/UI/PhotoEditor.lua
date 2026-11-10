@@ -77,6 +77,7 @@ function U.New(runtime, composition)
         self.building = true
         editor.EndLookEdit()
         self.ClearFocus()
+        self.RefreshNames = nil
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
         world.SetSelected(not staged); portrait.SetSelected(staged)
@@ -254,6 +255,7 @@ function U.New(runtime, composition)
         end
     end
     editor.Refresh = self.Refresh
+    runtime.camera.NamesChanged = function() if self.RefreshNames then self.RefreshNames() end end
     preview.Refresh = self.Refresh
     runtime.photoTools.Refresh = self.Refresh
     runtime.cameraActions.Refresh = self.Refresh

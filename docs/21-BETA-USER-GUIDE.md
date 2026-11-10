@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.18 — install and explore
+# LumenShift 0.2.0-beta.19 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+Beta.19: **World Photo → Frame → Names & Bubbles → Hide all names** applies the available name settings immediately, including focused-unit names where supported. Individual switches now say Hide; Restore names returns pre-photo name choices, while chat bubbles stay separate. The same controls are in **Portrait Stage → Scene**. Readback/error feedback and NPC values help distinguish a refused setting from a label the client still forces. Collection loading resumes on re-entry and reports incomplete source details. Keep SavedVariables; no reset. [Exact quest-giver test and remaining work](64-COLLECTION-AND-NAME-AUDIT.md).
 
 Beta.18: **Camera → Portrait Stage → Actors → Outfits → Collection** opens native appearance and set browsing. Choose a category, search, expand Filters, and click an appearance to preview it. Sources chooses an exact item appearance; Saved outfits retains it. Class/reset controls affect WoW’s shared wardrobe display filters only. Keep SavedVariables; no reset or Narcissus is needed. [Installation and exact test steps](63-TRANSMOG-COLLECTION.md#installation-and-owner-test).
 
@@ -14,7 +16,7 @@ Beta.14: Open **Camera → Portrait Stage** near the top of Photo Studio. **Acto
 
 Beta.13: **Frame** adds native zoom, held orbit and shoulder/dynamic framing. Scroll down **Capture** for supported AA, ray-shadow and JPEG-quality controls. **Look** adds Sun Flare/Blue Hour and edge light; **Saved** keeps compositions separate from looks. Phase 1 pose/capture/history tools remain included. Schema 15 preserves your settings. No Narcissus or new setup is required. [Exact Phase 2 test](58-PHOTO-COMPOSITION-AND-OUTPUT.md#installation-and-owner-test).
 
-Beta.12: **Photo Studio works with Narcissus disabled or uninstalled.** Pose offers twelve world emotes, Pin, Stop and optional one-shot capture after posing. Capture offers a 0–10 second delay, 1–5 shots, 1–5 second interval, Start and Cancel. Frame has separate name/bubble groups plus Apply name choices now. Look has Undo/Redo. Keep SavedVariables; schema 14 preserves your settings without repeating setup. [Standalone test and controls](57-STANDALONE-PHOTO-WORKFLOW.md#installation-and-owner-test).
+Beta.12: **Photo Studio works with Narcissus disabled or uninstalled.** Pose offers twelve world emotes, Pin, Stop and optional one-shot capture after posing. Capture offers a 0–10 second delay, 1–5 shots, 1–5 second interval, Start and Cancel. Frame has separate name/bubble groups (beta.19 switches apply immediately). Look has Undo/Redo. Keep SavedVariables; schema 14 preserves your settings without repeating setup. [Standalone test and controls](57-STANDALONE-PHOTO-WORKFLOW.md#installation-and-owner-test).
 
 Beta.11: native lighting and FOV now **preview as you drag**, with paced updates and the last pointer value retained. Capture/Hide controls/Before-After finish the pending edit first. Escape cancels queued input and restores through the existing Camera path. No reset is needed. [Live-slider test](55-LIVE-PHOTO-SLIDERS.md).
 

@@ -16,7 +16,7 @@ function T.New(runtime)
     local function changed() if self.RefreshUI then self.RefreshUI() end end
     function self.Cancel()
         self.generation=self.generation+1
-        if self.busy then self.loaded=false; self.status="Collection loading stopped. Refresh to continue." end
+        if self.busy then self.loaded=false; self.attempted=false; self.status="Collection loading stopped. Reopen or Refresh to continue." end
         self.busy=false
     end
     function self.Discover()
@@ -67,7 +67,7 @@ function T.New(runtime)
             icon=icon and id(icon[1]) and icon[1] or nil}
     end
     function self.Load(category)
-        self.Cancel(); self.rows={}; self.category=category; self.loaded=false
+        self.Cancel(); self.rows={}; self.category=category; self.loaded=false; self.attempted=true
         if not self.Category(category) then self.status="Choose an available collection category."; changed(); return nil end
         local raw=tableResult(call("GetCategoryAppearances",category))
         if not raw then self.status="Collection data is unavailable or still loading. Refresh to try again."; changed(); return nil end
@@ -85,10 +85,12 @@ function T.New(runtime)
                     local sources=tableResult(call("GetAppearanceSources",a.visualID,category)); local valid={}
                     if sources then
                         local n=0; for _,s in ipairs(sources) do
-                            n=n+1; if n>1024 then break end
+                            n=n+1; if n>1024 then skipped=skipped+1; break end
                             if access(s) and type(s)=="table" and id(s.sourceID) then
                                 local entry=self.Source(s.sourceID,s)
-                                if entry and entry.visualID==a.visualID and entry.categoryID==category then valid[#valid+1]=entry end
+                                if entry and entry.visualID==a.visualID and entry.categoryID==category then valid[#valid+1]=entry
+                                else skipped=skipped+1 end
+                            else skipped=skipped+1
                             end
                         end
                     end
@@ -103,16 +105,16 @@ function T.New(runtime)
             end
             if index<=total then
                 if not ns.ReadOnly.Call(reader,env.C_Timer and env.C_Timer.After,.01,step) then
-                    self.busy=false; self.status="Collection loading paused: timer unavailable. Refresh to retry."; changed()
+                    self.generation=self.generation+1; self.busy=false; self.status="Collection loading paused: timer unavailable. Refresh to retry."; changed()
                 end
             else
                 self.busy=false; self.loaded=true
                 table.sort(self.rows,function(a,b) return a.name==b.name and a.visualID<b.visualID or a.name<b.name end)
-                self.status=#self.rows.." appearances returned by WoW."..(skipped>0 and " Some source details are unavailable; Refresh to retry." or "")
+                self.status=#self.rows.." appearances returned by WoW."..(skipped>0 and " Source details incomplete (unavailable, invalid or over the browser limit)." or "")
                 changed()
             end
         end
-        if not ns.ReadOnly.Call(reader,env.C_Timer and env.C_Timer.After,0,step) then self.busy=false; self.status="Collection timer unavailable."; changed(); return nil end
+        if not ns.ReadOnly.Call(reader,env.C_Timer and env.C_Timer.After,0,step) then self.generation=self.generation+1; self.busy=false; self.status="Collection timer unavailable."; changed(); return nil end
         return true
     end
     function self.Filter(rows, query, owned, favorites, sourceType)

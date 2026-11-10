@@ -143,6 +143,12 @@ function S.Open(raw)
     if data.schemaVersion == 17 then
         data.schemaVersion, migrated = 18, migrated and migrated:gsub("_TO_17$", "_TO_18") or "MIGRATED_17_TO_18"
     end
+    if data.schemaVersion == 18 then
+        if type(data.camera) == "table" and type(data.camera.nameGroups) == "table" and data.camera.nameGroups.focused == nil then
+            data.camera.nameGroups.focused = false
+        end
+        data.schemaVersion, migrated = 19, migrated and migrated:gsub("_TO_18$", "_TO_19") or "MIGRATED_18_TO_19"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
         -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"

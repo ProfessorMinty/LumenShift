@@ -95,6 +95,7 @@ function U.Build(runtime, env, parent, tab, ui)
         slider("letterbox", "Letterbox height", range[1], range[2], .01, function() return runtime.db.camera.editor.look.letterbox end,
             function(v) return runtime.photoEditor.Set("letterbox", v) end)
         text("H hides all controls and guides. Look filters and the staged cast remain in the image.", 60)
+        y = ns.PhotoToolsUI.Names(runtime, env, parent, y, ui)
     elseif tab == "Saved" then
         text("Scenes store layout, poses, light and backdrop. Loading resolves your current player, target and pet; it does not save another player's identity.", 84)
         local sceneName = W.Edit(env, parent, ui.sceneName or "My portrait", 0, y, 310, function(v) ui.sceneName = v end, 32); y = y - 40
