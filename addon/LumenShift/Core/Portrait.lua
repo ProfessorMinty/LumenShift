@@ -257,7 +257,7 @@ function P.New(runtime)
         if not ready() then return report(nil, "Portrait not ready.") end
         local ok, why = self.Freeze(); if not ok then return nil, why end
         local token = {}; self.layerCapture = token
-        runtime.photoEffects.Hide()
+        runtime.photoEditor.Render()
         layer(false, db.camera.portrait.scene.background)
         local function finish(success, reason)
             if self.layerCapture ~= token then return end

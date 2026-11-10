@@ -21,6 +21,12 @@ function P.New(runtime)
     end
     function self.Render()
         if runtime.photoEffects then
+            -- Both treatment layers must stay absent for a background/chroma pair,
+            -- including event-driven refreshes while its screenshots are pending.
+            if runtime.portrait and runtime.portrait.layerCapture then
+                if runtime.presentation then runtime.presentation.Clear() end
+                runtime.photoEffects.Hide(); return
+            end
             if self.active and (not runtime.product.IsCombat() or db.camera.effectsInCombat) then
                 local look = data().look
                 local treated = look.strength > 0 and (look.warmth ~= 0 or look.tint ~= 0 or look.vignette > 0 or look.glow > 0 or look.grain > 0 or look.leak > 0) or look.letterbox > 0
@@ -29,7 +35,10 @@ function P.New(runtime)
                 local ok = pcall(runtime.photoEffects.Apply, data().look, self.before)
                 self.renderError = not ok and "Photo effects unavailable; Camera capture and exit still work." or nil
                 if not ok then runtime.photoEffects.Hide() end
-            else runtime.photoEffects.Hide() end
+            else
+                if self.active and runtime.presentation then runtime.presentation.Clear() end
+                runtime.photoEffects.Hide()
+            end
         end
     end
     function self.Enter()

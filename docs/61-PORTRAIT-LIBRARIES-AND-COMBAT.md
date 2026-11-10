@@ -2,6 +2,8 @@
 
 2026-11-10 · Northern Lights Labs. The owner authorized the formerly optional larger pose library, model spell effects and outfit browsing, plus configurable combat continuity. Builds on the [Phase 3 audit](60-PHOTO-AUDIT-AND-COMPLETION.md) on the existing implementation branch/PR #5. LumenShift remains standalone; Narcissus is neither a dependency nor a source of runtime functionality or bundled art.
 
+**Follow-up:** [Beta.17 audit and completion checklist](62-PHOTO-LIBRARIES-AUDIT.md) corrects inherited treatment visibility during combat choices/compositing and labels unavailable inventory readers. The beta.16 results below remain historical evidence; schema 17 and the delivered controls are preserved.
+
 ## Delivered controls
 
 Open **Camera → Portrait Stage → Actors**, select an actor, then choose a tool. Choosing a browser scrolls directly to it; its top button returns to actor selection/tools. Transform retains positioning, scale, sheathe, transmog-preview and helmet/cloak controls.

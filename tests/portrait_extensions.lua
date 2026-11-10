@@ -205,4 +205,5 @@ return function(make,eq,test)
         f.env.C_Item=nil; f.p.wardrobe.Refresh(); assert(f.p.wardrobe.status:find("unavailable",1,true)); eq(#f.itemRequests,0)
     end)
 
+    return fixture
 end

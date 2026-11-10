@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.0-beta.17 — Portrait libraries and combat audit
+
+- Clear inherited visual-mode treatments immediately when combat filters are switched off in Photo Studio.
+- Exclude both visual-mode and photo treatments throughout compositing pairs, including combat/resize refreshes; restore the selected treatment after completion, cancellation or failure.
+- Distinguish unavailable inventory readers from genuinely empty bags/sets while retaining accessible preview items.
+- Preserve schema 17, saved settings and standalone operation without Narcissus. See [audit and remaining photo work](docs/62-PHOTO-LIBRARIES-AUDIT.md).
+
 ## 0.2.0-beta.16 — Portrait library and combat continuity
 
 - Add 56 grouped/searchable model poses with variations, 12 replaceable model spell effects, equipped/bag/equipment-set browsing and eight saved base-item outfits. No Narcissus dependency or world equipment/spell mutation.

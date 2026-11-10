@@ -29,7 +29,7 @@ function U.New(runtime)
     end
     function self.Refresh()
         local seen,items,sets,pending={}, {}, {}, 0
-        local unavailable=false
+        local unavailable, sourcesUnavailable=false, false
         local function add(value)
             if not id(value) or seen[value] or #items>=256 then return end
             seen[value]=true
@@ -38,13 +38,20 @@ function U.New(runtime)
             elseif why=="ITEM_DATA_PENDING" then pending=pending+1; if pending<=64 then self.Request(value) end
             elseif why~="NOT_WEARABLE" then unavailable=true end
         end
-        for _,slot in ipairs(L.Slots) do local r=call(env.GetInventoryItemID,"player",slot[1]); if r then add(r[1]) end end
+        for _,slot in ipairs(L.Slots) do
+            local r=call(env.GetInventoryItemID,"player",slot[1])
+            if r and r.n==1 then add(r[1]) else sourcesUnavailable=true end
+        end
         local container=env.C_Container or {}
         for bag=0,4 do
             local n=call(container.GetContainerNumSlots,bag)
-            if n and n.n==1 and V.Finite(n[1]) and n[1]>=0 and n[1]<=100 then
-                for index=1,n[1] do local r=call(container.GetContainerItemID,bag,index); if r then add(r[1]) end end
-            end
+            if n and n.n==1 and V.Finite(n[1]) and n[1]%1==0 and n[1]>=0 and n[1]<=100 then
+                for index=1,n[1] do
+                    local r=call(container.GetContainerItemID,bag,index)
+                    -- Native empty bag slots may return no values at all.
+                    if r and r.n<=1 then add(r[1]) else sourcesUnavailable=true end
+                end
+            else sourcesUnavailable=true end
         end
         local equipment=env.C_EquipmentSet or {}; local ids=call(equipment.GetEquipmentSetIDs)
         if ids and ids.n==1 and type(ids[1])=="table" then
@@ -57,15 +64,16 @@ function U.New(runtime)
                         local outfit={}
                         for _,slot in ipairs(L.Slots) do local item=contents[1][slot[1]]; if id(item) then outfit[slot[1]]=item; add(item) end end
                         if next(outfit) then sets[#sets+1]={ name=info[1]:gsub("|"," "):sub(1,64), outfit=outfit } end
-                    end
+                    else sourcesUnavailable=true end
                 end
             end
-        end
+        else sourcesUnavailable=true end
         table.sort(items,function(a,b) return a.name==b.name and a.id<b.id or a.name<b.name end)
         table.sort(sets,function(a,b) return a.name<b.name end)
         self.items,self.sets=items,sets
         self.status=#items.." wearable items; "..#sets.." equipment sets."..(pending>0 and " Some items are uncached; Refresh to check again." or "")
         if unavailable then self.status=self.status.." Some item information is unavailable." end
+        if sourcesUnavailable then self.status=self.status.." Some inventory sources are unavailable." end
         return true
     end
     function self.Items(slot, query)
