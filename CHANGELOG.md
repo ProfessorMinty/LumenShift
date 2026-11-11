@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.27 - 2026-11-11
+
+- Save and find World Photo looks and compositions in separate searchable libraries. Each page shows up to three cards with effect or framing details.
+- Apply the selected entry, replace an existing name, or delete it from the library. Newly saved entries are selected automatically.
+- Keep pasted look codes editable when an import fails.
+
 ## 0.2.0-beta.26 - 2026-11-11
 
 - Choose a single screenshot or a 2–5 shot burst from World Photo → Capture → Timer. Set the first-shot delay and burst spacing on the same page.

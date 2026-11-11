@@ -76,3 +76,15 @@ The existing event-driven sequence handles the shutter, clean frame and screensh
 **In-game check.** With Narcissus disabled, try Single shot with a three-second delay. Check the countdown, wait for WoW's confirmation and inspect the new file in Screenshots. Then try a three-shot burst with two seconds between shots. After the first confirmation, click Stop burst before the next shot. Verify the confirmed count against the new files and check that the capture controls are absent from the images.
 
 The Lua 5.1 suite has 740 passing simulated tests, including eight World Capture cases. All 10 packaging tests passed. An additional timing check covered the 11 first-shot delays at each of the five shot counts, yielding the expected 165 simulated screenshots. Timer, Output and Combat fit without scrolling in the tested standard and compact layouts. Actual frame timing, game fonts and saved files need the in-game check above.
+
+## World Photo Saved in beta.27
+
+In **Saved → Looks**, choose **Save current** to store color and screen effects such as vignette, glow and grain. Native lighting stays separate. In **Compositions**, the same action captures the framing guides, zoom and camera settings available on the current client. The existing banks hold 12 looks and eight compositions. Older entries use the same format.
+
+Enter a name and save. The library selects the saved card and opens its page. To update an entry, select its card, choose **Save current → Use selected name**, then click **Replace look** or **Replace composition**. The two libraries can contain the same name.
+
+Search by part of a name or use Previous and Next. Each page holds three cards. Stock looks use their palette illustrations. Custom looks show their effect details; composition thumbnails draw the saved aspect and thirds guides on a reference landscape. Browsing reads the library without changing the shot. **Apply look** loads screen styling. **Apply composition** recalls guides and the captured camera settings and reports the result. **Delete** removes the selected entry from that library. **Share** still imports and exports look codes.
+
+**In-game check.** With Narcissus disabled, save a warm look, change to a cool look, then search for the saved name and apply it. Save a different composition with a square guide, move the camera, and apply that composition. Check the framing, available zoom and field of view, and confirm the warm look is still active. Reload the UI and find both entries again.
+
+Nine simulated library tests cover existing full banks after reload, literal search and keyboard focus, replacement at capacity, deletion, asynchronous camera failures, guide-only clients, look sharing and Before/After. A separate sweep saved, searched and applied all 20 entries through the visible controls. The library and save forms fit both tested panel sizes. Native rendering and persistence on the installed client remain part of the in-game check.

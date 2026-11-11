@@ -1,5 +1,6 @@
 local _, ns = ...
 local C, V = {}, ns.Value; ns.PhotoComposition = C
+C.MaxPresets = 8
 function C.Defaults() return { saved = {} } end
 function C.ValidPreset(p)
     if not V.Fields(p, { thirds = true, aspect = true, framing = true, zoom = true }) or type(p.thirds) ~= "boolean"
@@ -16,7 +17,7 @@ end
 function C.Validate(data)
     if not V.Fields(data, { saved = true, zoom = true }) or type(data.saved) ~= "table" then return false end
     local count = 0
-    for name, p in pairs(data.saved) do count = count + 1; if count > 8 or not ns.PhotoConfig.Name(name) or not C.ValidPreset(p) then return false end end
+    for name, p in pairs(data.saved) do count = count + 1; if count > C.MaxPresets or not ns.PhotoConfig.Name(name) or not C.ValidPreset(p) then return false end end
     local z = data.zoom
     if z and (not V.Fields(z, { original = true, expected = true, requested = true, state = true })
         or not V.Finite(z.original) or z.original < 0 or z.original > 100
@@ -31,9 +32,10 @@ function C.New(runtime)
     local function ready() return db and runtime.camera.active and not runtime.product.IsCombat() and not runtime.reader.resetPending
         and not runtime.camera.interrupted and not runtime.composition.suspended and not self.busy and not runtime.cameraActions.busy and not runtime.output.busy and not runtime.captureSequence.active and not runtime.composition.capturing and not runtime.photoPreview.Pending() end
     function self.Save(name)
-        if not ready() or not ns.PhotoConfig.Name(name) then return nil end
+        if not ready() then return nil, "CAMERA_NOT_READY" end
+        if not ns.PhotoConfig.Name(name) then return nil end
         local saved = db.camera.composition.saved
-        if not saved[name] and #V.Keys(saved) >= 8 then return nil, "COMPOSITION_LIMIT" end
+        if not saved[name] and #V.Keys(saved) >= C.MaxPresets then return nil, "COMPOSITION_LIMIT" end
         local p = { thirds = db.camera.thirds, aspect = db.camera.aspect, framing = {}, zoom = runtime.cameraActions.ReadZoom() }
         if p.zoom and p.zoom > 50 then p.zoom = nil end
         for _, key in ipairs(ns.Framing.Keys) do
@@ -47,10 +49,10 @@ function C.New(runtime)
         local p = db and db.camera.composition.saved[name]
         if not ready() or not C.ValidPreset(p) then return nil, "CAMERA_NOT_READY" end
         if runtime.cameraActions.busy then return nil, "BUSY" end
-        self.busy, self.generation = true, self.generation + 1
+        self.busy, self.generation, self.status = true, self.generation + 1, "Applying composition…"
         local id = self.generation
         local function complete(ok, code)
-            if id ~= self.generation then return end
+            if id ~= self.generation or not self.busy then return end
             self.busy = false; self.status = ok and "Composition applied." or code
             if self.Refresh then self.Refresh() end
         end

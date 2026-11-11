@@ -95,7 +95,7 @@ function P.New(runtime)
         if not self.active or reader.resetPending then return nil end
         if not ns.PhotoConfig.Name(name) then refresh("Use a name of 1-32 characters."); return nil end
         local count = 0; for _ in pairs(data().saved) do count = count + 1 end
-        if count >= 12 and not data().saved[name] then refresh("Twelve looks saved; delete one first."); return nil end
+        if count >= ns.PhotoConfig.MaxLooks and not data().saved[name] then refresh("Twelve looks saved; delete one first."); return nil end
         data().saved[name] = V.Copy(data().look); refresh("Photo look saved."); return true
     end
     function self.Load(name)
@@ -103,7 +103,10 @@ function P.New(runtime)
         local look = data().saved[name]; if not look then return nil end
         if not replaceLook(look) then return nil end; refresh("Photo look loaded."); return true
     end
-    function self.Delete(name) if not self.active or reader.resetPending then return nil end; data().saved[name] = nil; refresh("Photo look deleted.") end
+    function self.Delete(name)
+        if not self.active or reader.resetPending or not data().saved[name] then return nil end
+        data().saved[name] = nil; refresh("Photo look deleted."); return true
+    end
     function self.Import(text)
         if not self.active or reader.resetPending or not runtime.camera.CanCompose() then return nil end
         local look = ns.PhotoConfig.Import(text); if not look then refresh("Invalid photo look."); return nil end

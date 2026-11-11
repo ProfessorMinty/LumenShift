@@ -147,19 +147,3 @@ function U.Capture(runtime, env, parent, y, ui)
     end
     return y
 end
-function U.Saved(runtime, env, parent, y, ui)
-    local saved = runtime.photoComposition
-    W.Section(parent, "SAVED COMPOSITIONS", 0, y, 310); y = y - 40
-    W.Text(parent, "Save guides, zoom and available framing separately from looks. Apply changes the camera; it never applies AA or lighting.", 0, y, 310, 12, W.colors.muted); y = y - 74
-    local field = W.Edit(env, parent, ui.compositionName or "My composition", 0, y, 310, function(v) ui.compositionName = v end, 32); y = y - 40
-    W.Button(env, parent, "Save / replace composition", 0, y, 310, function()
-        ui.compositionName = field:GetText(); local ok, why = saved.Save(ui.compositionName); report(ui, ok, why); ui.Build()
-    end); y = y - 48
-    for _, name in ipairs(V.Keys(runtime.db.camera.composition.saved)) do
-        local selected = name
-        W.Text(parent, name, 0, y, 310, 12); y = y - 24
-        W.Button(env, parent, "Apply composition", 0, y, 224, function() report(ui, saved.Apply(selected)) end)
-        W.Button(env, parent, "Delete", 232, y, 78, function() saved.Delete(selected); ui.Build() end); y = y - 44
-    end
-    return y
-end

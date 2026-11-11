@@ -54,6 +54,13 @@ local function matches(look, recipe)
     return true
 end
 
+function S.IdentifyLook(look)
+    for _, recipe in ipairs(recipes) do
+        if matches(look, recipe.look) then return recipe[1], recipe[2] end
+    end
+    return nil, "Custom"
+end
+
 function S.Swatch(env,parent,label,x,y,width,pictureHeight,asset,apply,tip)
     local b=W.Button(env,parent,label,x,y,width,apply,tip,"quiet")
     b:SetHeight(pictureHeight+20)
@@ -79,12 +86,8 @@ local function gallery(runtime, env, parent, ui)
         buttons[i] = b
     end
     ui.RefreshGallery = function()
-        local current = "Custom"
-        for i, recipe in ipairs(recipes) do
-            local selected = matches(runtime.db.camera.editor.look, recipe.look)
-            buttons[i].SetSelected(selected)
-            if selected then current = recipe[2] end
-        end
+        local id, current = S.IdentifyLook(runtime.db.camera.editor.look)
+        for i, recipe in ipairs(recipes) do buttons[i].SetSelected(recipe[1] == id) end
         selection:SetText(current)
     end
     ui.RefreshGallery()

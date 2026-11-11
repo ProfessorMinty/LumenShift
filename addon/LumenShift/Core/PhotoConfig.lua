@@ -1,6 +1,7 @@
 local _, ns = ...
 local P, V = {}, ns.Value
 ns.PhotoConfig = P
+P.MaxLooks = 12
 -- All look values are normalized screen treatments, independent of visual modes.
 P.Ranges = { strength = { 0, 1 }, warmth = { -1, 1 }, tint = { -1, 1 },
     vignette = { 0, 1 }, size = { 0.25, 1.5 }, feather = { 0.05, 1 },
@@ -49,7 +50,7 @@ function P.Validate(data)
     local count = 0
     for name, look in pairs(data.saved) do
         count = count + 1
-        if count > 12 or not P.Name(name) or not P.ValidLook(look) then return false end
+        if count > P.MaxLooks or not P.Name(name) or not P.ValidLook(look) then return false end
     end
     local s = data.session
     if s then

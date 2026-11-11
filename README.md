@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.26** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.27** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+World Photo → Saved has searchable libraries for looks and compositions. Save the current setup by name, browse three previews per page and apply the selected entry. [Saved library guide](docs/66-PHOTO-STUDIO-INTERFACE.md#world-photo-saved-in-beta27).
 
 World Photo → Capture → Timer puts the first-shot delay, burst length, spacing, countdown and cancellation on one screen. Both shutter buttons follow the settings while Timer is open. [Capture guide](docs/66-PHOTO-STUDIO-INTERFACE.md#world-photo-capture-in-beta26).
 

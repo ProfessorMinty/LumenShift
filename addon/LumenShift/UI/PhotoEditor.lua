@@ -7,6 +7,7 @@ function U.New(runtime, composition)
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
         actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
         worldLightPage = "Tone", worldPoseTab = "All emotes", worldOutputPage = "JPEG", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
+    self.savedLibraries = {Looks={page=1,query=""}, Compositions={page=1,query=""}}
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
@@ -169,6 +170,7 @@ function U.New(runtime, composition)
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         self.RefreshWorldPose = nil
         self.RefreshWorldCapture = nil
+        self.RefreshWorldSaved = nil
         composition.SetTimerShutter()
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
@@ -286,27 +288,18 @@ function U.New(runtime, composition)
             y = ns.WorldCaptureUI.Timer(runtime, penv, content, self)
         elseif self.tab == "Capture" then
             y = ns.PhotoToolsUI.Capture(runtime, penv, content, self)
-        elseif self.savedPage == "Compositions" then
-            y = ns.PhotoAdvancedUI.Saved(runtime, penv, content, y, self)
-        elseif self.savedPage == "Looks" then
-            text("Save styling without native graphics values. Native lighting always starts from your current scene.", 54)
-            self.name = self.name or "My photo look"
-            W.Edit(penv, content, self.name, 0, y, 310, function(name) self.name = name end, 32); y = y - 38
-            W.Button(penv, content, "Save / replace look", 0, y, 310, function()
-                -- Read the visible field even if the user has not pressed Enter.
-                for _, f in ipairs(pool.frames.EditBox or {}) do if f:IsShown() then self.name = f:GetText(); break end end
-                editor.Save(self.name); self.Build()
-            end); y = y - 48
-            for _, name in ipairs(ns.Value.Keys(db.camera.editor.saved)) do
-                local selected = name
-                W.Button(penv, content, name, 0, y, 224, function() editor.Load(selected); self.Build() end)
-                W.Button(penv, content, "Delete", 232, y, 78, function() editor.Delete(selected); self.Build() end); y = y - 40
-            end
+        elseif self.savedPage ~= "Share" then
+            y = ns.WorldSavedUI.Build(runtime, penv, content, self)
         else
             section("SHARE A LOOK")
             local transfer = W.Edit(penv, content, ns.PhotoConfig.Export(db.camera.editor.look), 0, y, 310, function() end, 512)
-            transfer:SetScript("OnEditFocusGained", function(s) s:HighlightText() end); y = y - 40
-            W.Button(penv, content, "Import pasted photo look", 0, y, 310, function() editor.Import(transfer:GetText()); self.Build() end); y = y - 48
+            local onFocus = transfer:GetScript("OnEditFocusGained")
+            W.Script(transfer, "OnEditFocusGained", function(s) onFocus(s); s:HighlightText() end); y = y - 40
+            W.Button(penv, content, "Import pasted photo look", 0, y, 310, function()
+                local ok = editor.Import(transfer:GetText())
+                self.notice = ok and "Photo look imported." or "Could not import this photo look."
+                if ok then self.Build() else self.Refresh() end
+            end); y = y - 48
             text("Click the field and copy to share, or paste a look and Import. No scripts are accepted.", 52)
         end
         self.contentHeight = -y + 16; content:SetHeight(self.contentHeight)
@@ -335,7 +328,13 @@ function U.New(runtime, composition)
         elseif self.RefreshWorldCapture then extra = self.captureHint
         elseif self.tab == "Capture" and self.capturePage == "Output" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Capture" and not runtime.portrait.active then extra = ""
-        elseif self.tab == "Saved" then extra = runtime.photoComposition.status end
+        elseif self.RefreshWorldSaved then
+            local height
+            extra,height = self.RefreshWorldSaved()
+            if height and self.contentHeight~=height+16 then
+                self.contentHeight=height+16; content:SetHeight(self.contentHeight); self.Layout()
+            end
+        elseif self.tab == "Saved" then extra = "" end
         local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
         self.status:SetText(message ~= "READY" and message or "")
         if self.tab=="Look" then
