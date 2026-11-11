@@ -4,11 +4,6 @@ function U.Build(runtime,env,parent,ui,y,selected)
     local stage=runtime.portrait
     local function text(s,h) W.Text(parent,s,0,y,310,12,W.colors.muted); y=y-(h or 50) end
     local function action(label,fn) W.Button(env,parent,label,0,y,310,function() fn(); ui.Build() end); y=y-40 end
-    local function slider(key,label,lo,hi,step,get,set)
-        local s=W.Slider(env,parent,label,0,y,lo,hi,step,get,set,nil,310); ui.sliders[key]=s
-        W.Script(s,"OnMouseDown",function() ui.dragging=s end)
-        W.Script(s,"OnMouseUp",function() ui.dragging=nil; ui.Refresh() end); y=y-68
-    end
     local function page(items,key,draw)
         local pages=math.max(1,math.ceil(#items/8)); ui[key]=math.min(pages,math.max(1,ui[key] or 1))
         local current=ui[key]
@@ -18,37 +13,17 @@ function U.Build(runtime,env,parent,ui,y,selected)
         for i=(current-1)*8+1,math.min(#items,current*8) do draw(items[i],y); y=y-40 end
         if #items==0 then text("No matching entries. Try another category or refresh.",50) end
     end
-    action("Actor "..stage.selected.." / "..selected.spec.unit.." - back to tools",function() ui.scrollbar:SetValue(0) end)
-    if ui.actorTab=="Poses" then
-        text("56 model poses. Availability varies by model.",36)
-        local groups={"All"}; for _,g in ipairs(L.Groups) do groups[#groups+1]=g end
-        for i,g in ipairs(groups) do local group=g
-            local b=W.Button(env,parent,g,(i-1)%3*106,y-math.floor((i-1)/3)*40,98,function() ui.poseGroup=group; ui.posePage=1; ui.Build() end)
-            b.SetSelected((ui.poseGroup or "All")==g)
-        end; y=y-88
-        local query=W.Edit(env,parent,ui.poseQuery or "",0,y,224,function(v) ui.poseQuery=v; ui.posePage=1; ui.Build() end,40)
-        W.Button(env,parent,"Search",232,y,78,function() ui.poseQuery=query:GetText(); ui.posePage=1; ui.Build() end); y=y-44
-        page(L.FindPoses(ui.poseGroup,ui.poseQuery),"posePage",function(p,at)
-            local id=p[1]; local b=W.Button(env,parent,p[2],0,at,310,function() stage.SetActor("animation",id); ui.Build() end)
-            b.SetSelected(selected.spec.animation==id)
-        end)
-        text("Selected: "..L.Pose(selected.spec.animation)[2],38)
-        action(selected.spec.paused and "Play pose" or "Pause pose",function() stage.SetActor("paused",not selected.spec.paused) end)
-        slider("variation","Animation variation",0,5,1,function() return selected.spec.variation end,function(v) return stage.SetActor("variation",v) end)
-        if stage.backend.kind=="ModelScene" then
-            slider("time","Pose offset (seconds)",0,10,.01,function() return selected.spec.time end,function(v) return stage.SetActor("time",v) end)
-            slider("speed","Playback speed",.1,2,.05,function() return selected.spec.speed end,function(v) return stage.SetActor("speed",v) end)
-        else text("Timeline and speed need ModelScene. Saved advanced values are kept.",54) end
-    elseif ui.actorTab=="Effects" then
-        text("One model spell effect per actor. These are visual previews, never spell casts. Some kits vary or do not render on this client.",74)
+    if ui.actorTab=="Effects" then
+        text("Select a model spell effect.",32)
         if not stage.backend.Supports(stage.backend.models[selected.front],"spellKit") then
             text("This renderer does not support replaceable model spell effects. Other portrait tools remain available.",66); return y
         end
-        for _,entry in ipairs(L.Kits) do local id=entry[1]
-            local b=W.Button(env,parent,entry[2],0,y,310,function() stage.SetActor("spellKit",id); ui.Build() end)
-            b.SetSelected(selected.spec.spellKit==id); y=y-40
+        for i,entry in ipairs(L.Kits) do
+            local id=entry[1]
+            local b=W.Button(env,parent,entry[2],(i-1)%2*156,y-math.floor((i-1)/2)*32,153,function() stage.SetActor("spellKit",id) end)
+            b.SetSelected(selected.spec.spellKit==id)
         end
-        text("No effect clears this actor's kit. Model particles may continue while a pose is paused; capture does not freeze particle simulation.",80)
+        y=y-math.ceil(#L.Kits/2)*32
     elseif ui.actorTab=="Outfits" then
         local wardrobe=stage.wardrobe
         text("Preview gear and collection appearances on this actor. Your real equipment and transmog collection stay unchanged.",64)

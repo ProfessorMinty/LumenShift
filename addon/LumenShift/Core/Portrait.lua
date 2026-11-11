@@ -105,13 +105,14 @@ function P.New(runtime)
         local slot = self.slots[id]; if slot then backend.Clear(slot.front and backend.models[slot.front]) end
         self.slots[id] = nil; self.failures[id] = nil; db.camera.portrait.scene.actors[id] = nil; return report(true, "Actor removed.")
     end
-    function self.SetActor(key, value)
+    local function editActor(key, value, vertical)
         if not ready() then return report(nil, "Portrait not ready.") end
         local slot = self.slots[self.selected]; if not slot or not slot.front then return report(nil, "Select a loaded actor.") end
         if not C.ActorRanges[key] and not ({ animation = true, variation = true, spellKit = true, paused = true, sheathed = true, hideWeapons = true,
             transmog = true, hideHead = true, hideCloak = true })[key] then return report(nil, "Unknown actor control.") end
         if not backend.Supports(backend.models[slot.front], key) then return report(nil, "This model control is unavailable; saved choices are kept.") end
         local spec = V.Copy(slot.spec); spec[key] = value
+        if vertical ~= nil then spec.y = vertical end
         if not C.ValidActor(spec) then return report(nil, "Invalid actor value.") end
         if key == "time" then spec.paused = true end
         if key == "animation" then spec.time, spec.variation = 0, 0 end
@@ -130,6 +131,13 @@ function P.New(runtime)
         else ok, why = fn(backend.models[slot.front], spec) end
         if not ok then fn(backend.models[slot.front], slot.spec); return report(nil, why) end
         slot.spec = spec; db.camera.portrait.scene.actors[self.selected] = V.Copy(spec); return report(true)
+    end
+    function self.SetActor(key, value)
+        return editActor(key, value)
+    end
+    function self.PlaceActor(horizontal, vertical)
+        if not V.Finite(vertical) then return report(nil, "Invalid actor position.") end
+        return editActor("x", horizontal, vertical)
     end
     function self.SetOutfit(outfit)
         if not ready() or not C.ValidOutfit(outfit) then return report(nil,"Outfit not ready or invalid.") end
@@ -209,6 +217,13 @@ function P.New(runtime)
     function self.ResetCamera()
         if not ready() then return report(nil, "Portrait not ready.") end
         return report(setLens(C.Scene()))
+    end
+    function self.SetOrbit(yaw, pitch)
+        if not ready() then return report(nil, "Portrait not ready.") end
+        local scene = V.Copy(db.camera.portrait.scene)
+        scene.yaw, scene.pitch = yaw, pitch
+        if not C.ValidScene(scene) then return report(nil, "Invalid orbit angles.") end
+        return report(setLens(scene))
     end
     function self.SetScene(key, value)
         if not ready() then return report(nil, "Portrait not ready.") end

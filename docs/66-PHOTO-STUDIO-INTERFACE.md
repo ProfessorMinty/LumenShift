@@ -23,3 +23,22 @@ All 711 simulated Lua 5.1 tests and 10 packaging tests passed. Seven interface c
 2. Open Camera Mode, choose **Look → Color**, click Warm Ember, then drag Cool / warm. Try Undo, Redo and Show Before.
 3. Open Vignette, raise Darkness, then click near one corner of the small image. Confirm that the clear center moves. Try Glow → Shape with Amount above zero and move the glow. Change its color under Color mix.
 4. Open Film and adjust grain. Check the settings in Portrait Stage as well. Use Hide controls or H, take a screenshot, and check the file. Confirm the labels and pointer targets feel comfortable at your usual UI scale.
+
+## Camera and actors in beta.23
+
+**World Photo.** Open Camera → Position. Hold Orbit left/right or Tilt up/down and release at the angle you want. Closer and Farther adjust distance. Precision movement slows the pad. The field-of-view track also accepts a typed value. Framing has separate Guides, Offset and Quality pages.
+
+**Portrait Stage.** Camera → Position opens a two-axis orbit map. Moving horizontally changes the viewing angle around the cast. Moving up raises the viewpoint. Front, Three-quarter and Profile jump to a view and preserve the lens distance and horizon roll. Lens holds distance, aim height and field of view. The stage lens needs the native ModelScene renderer.
+
+**Actors.** The selected cast member is shown above the controls. Pick Stand, Sit, Kneel, Wave, Cast spell or Run and press Play pose to see the motion. Browse searches 56 animations and shows six per page. Playback adjusts the variation and, on the ModelScene renderer, time and speed. Scrubbing pauses the actor. Individual models can support different animations.
+
+**Placement.** Choose Transform → Place and click the front-view map. The crosshair marks the selected actor's horizontal and vertical stage coordinates. Type X and Y for precision or adjust depth and scale. Turn changes facing, tilt and roll where supported. Use Cast to add a target or pet. Staged lighting has separate Rig, Direction and Color pages.
+
+### In-game check
+
+1. Disable Narcissus for the test. Open the LumenShift wheel and select Camera. Hold Orbit left, release, then try Tilt up with Precision movement enabled. Check that motion stops on release.
+2. Switch to Portrait Stage. Try Three-quarter, then click the orbit map and adjust Horizon roll. Confirm that Level horizon keeps the viewing angle.
+3. Select Actors → Poses → Wave and press Play pose. Open Playback and scrub to freeze a frame. In Browse, search for Dance and try it on the player.
+4. With a unit targeted, use Cast → Add target. Select the target in Transform → Place and click Right. Check that only the target moves. Hide controls, inspect the frame and press Escape to exit.
+
+All 717 Lua 5.1 mock tests and 10 packaging tests passed. The six new interface tests cover compact layouts, scaled map clicks, rejected edits, cast selection, animation browsing and the fallback model renderer. Layouts were inspected off-client at 360 UI units wide. Verify the native render, game fonts, pose playback and pointer feel at your usual UI scale.

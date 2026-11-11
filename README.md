@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.22** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.23** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Beta.23 adds a compact world camera pad, a clickable portrait orbit map and illustrated pose picks. Open **Portrait Stage → Actors** to pose the selected character. **Transform → Place** moves an actor on the stage. [Camera and actor controls](docs/66-PHOTO-STUDIO-INTERFACE.md#camera-and-actors-in-beta23).
 
 Beta.22 redesigns Photo Studio with an illustrated filter gallery, a labeled tool rail, click-to-place vignette and glow controls, and separate pages for common editing tasks. [Interface and controls](docs/66-PHOTO-STUDIO-INTERFACE.md).
 

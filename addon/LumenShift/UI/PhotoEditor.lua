@@ -5,6 +5,7 @@ function U.New(runtime, composition)
     local env, editor, db, preview = runtime.reader.env, runtime.photoEditor, runtime.db, runtime.photoPreview
     local style = ns.PhotoStyle
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
+        actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
         capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
@@ -48,11 +49,16 @@ function U.New(runtime, composition)
         local row=env.CreateFrame("Frame",nil,panel)
         row:SetSize(310,30); row:SetPoint("TOPLEFT",panel,"TOPLEFT",44,-89)
         return { row=row, field=field, buttons=style.Pages(env,row,labels,function(page)
-            self[field]=page; self.notice=nil; self.Build(true)
+            self[field]=page
+            if field=="actorTab" and page=="Outfits" then runtime.portrait.wardrobe.Refresh() end
+            self.notice=nil; self.Build(true)
         end) }
     end
     local groups={
         camera=pages({"Position","Framing","Visibility"},"cameraPage"),
+        stageCamera=pages({"Position","Lens","Framing","Visibility"},"cameraPage"),
+        actors=pages({"Cast","Transform","Poses","Outfits","Effects"},"actorTab"),
+        stageLight=pages({"Rig","Direction","Color"},"lightPage"),
         look=pages({"Color","Vignette","Glow","Film"},"lookPage"),
         capture=pages({"Timer","Output","Combat"},"capturePage"),
         stageCapture=pages({"Timer","Output","Pair","Combat"},"capturePage"),
@@ -107,10 +113,10 @@ function U.New(runtime, composition)
         end
         local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 360), math.max(.4, h / 480))
         panel:SetScale(scale); h = math.max(480, h / scale)
-        local hasActions = self.tab == "Look" or self.tab == "Light"
+        local hasActions = self.tab == "Look" or (self.tab == "Light" and not runtime.portrait.active)
         local top = self.activePages and -126 or -96
         local footerHeight = hasActions and 62 or 32
-        if self.tab == "Look" and self.contentHeight then
+        if self.contentHeight then
             h = math.min(h, math.max(390, self.contentHeight - top + footerHeight + 16))
         end
         panel:SetHeight(h); edges[3]:SetHeight(h); edges[4]:SetHeight(h); rail:SetHeight(h-47)
@@ -136,7 +142,7 @@ function U.New(runtime, composition)
         self.compactLooks = env.UIParent:GetHeight() - 154 < 550
         editor.EndLookEdit()
         self.ClearFocus()
-        self.RefreshNames, self.RefreshGallery, self.RefreshPlacement = nil, nil, nil
+        self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
         world.SetSelected(not staged); portrait.SetSelected(staged)
@@ -144,7 +150,8 @@ function U.New(runtime, composition)
             Pose=staged and "Actors" or "Poses", Capture="Capture", Saved="Library"})[self.tab])
         if self.tab=="Look" then undo:Show(); redo:Show() else undo:Hide(); redo:Hide() end
         if self.capturePage=="Pair" and not staged then self.capturePage="Timer" end
-        self.activePages = ({Frame=groups.camera, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
+        self.activePages = ({Frame=staged and groups.stageCamera or groups.camera, Pose=staged and groups.actors,
+            Light=staged and groups.stageLight, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
             Saved=staged and groups.stageSaved or groups.saved})[self.tab]
         for _, group in pairs(groups) do
             if group==self.activePages then
@@ -161,28 +168,28 @@ function U.New(runtime, composition)
             W.Text(content, value, 0, y, 310, 12, W.colors.muted); y = y - (height or 42)
         end
         local function section(label) W.Section(content, label, 0, y, 310); y = y - 40 end
-        local function lookSlider(key, label, step)
+        local function lookSlider(key, label, step, unit)
             local range = ns.PhotoConfig.Ranges[key]
             self.sliders[key] = W.Slider(penv, content, label, 0, y, range[1], range[2], step or .01,
                 function() return db.camera.editor.look[key] end,
-                function(n) local ok = editor.Set(key, n); positionMarker(); return ok end, nil, 310)
+                function(n) local ok = editor.Set(key, n); positionMarker(); return ok end, nil, 310, unit)
             W.Script(self.sliders[key], "OnMouseDown", editor.BeginLookEdit)
             W.Script(self.sliders[key], "OnMouseUp", function() editor.EndLookEdit(); self.Refresh() end)
-            y = y - 68
+            y = y - (unit and 36 or 68)
         end
-        local function liveSlider(key, label, minimum, maximum, step, current)
+        local function liveSlider(key, label, minimum, maximum, step, current, unit)
             local draft = math.max(minimum, math.min(maximum, current))
             local slider = W.Slider(penv, content, label, 0, y, minimum, maximum, step, function() return draft end,
                 function(n)
                     local ok = preview.Queue(key, n)
                     if ok then draft = n end
                     return ok
-                end, "Live preview while dragging. Changes are paced and verified; the latest value wins. You can also type a value and press Enter.", 310)
+                end, "Live preview while dragging. Changes are paced and verified; the latest value wins. You can also type a value and press Enter.", 310, unit)
             W.Script(slider, "OnMouseDown", function() self.dragging = slider; preview.Begin() end)
             W.Script(slider, "OnMouseUp", function() self.dragging = nil; self.Refresh() end)
             local entered = slider.edit:GetScript("OnEnterPressed")
             W.Script(slider.edit, "OnEnterPressed", function(s) preview.Begin(); entered(s) end)
-            self.sliders[key] = slider; y = y - 68
+            self.sliders[key] = slider; y = y - (unit and 36 or 68)
         end
         if self.tab == "Frame" and self.cameraPage == "Visibility" then
             y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
@@ -214,7 +221,7 @@ function U.New(runtime, composition)
             y = ns.PhotoAdvancedUI.Position(runtime, penv, content, y, self)
             local range = ns.Framing.Range(runtime.reader); local seen = ns.ReadOnly.Read(runtime.reader, "cameraFov")
             if range and ns.Planner.SafeObservation(seen) and ns.Value.Number(seen.raw) then
-                liveSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw))
+                liveSlider("cameraFov", "Field of view", range.min, range.max, .1, ns.Value.Number(seen.raw), "°")
             else text("Field of view unavailable; framing guides remain available.", 52) end
             W.Button(penv, content, "Restore field of view", 0, y, 310, function()
                 preview.Finish(function()
@@ -224,29 +231,34 @@ function U.New(runtime, composition)
                     if not ok then self.notice = ns.Product.Message(why); self.Refresh() end
                     return ok, why
                 end)
-            end); y = y - 48
-            text("Horizon roll is available in Portrait Stage.", 36)
+            end); y = y - 36
         elseif self.tab == "Frame" then
-            section("COMPOSITION")
-            W.Toggle(penv, content, "Rule of thirds", 0, y, 310, function() return db.camera.thirds end,
-                function(v) db.camera.thirds = v; composition.Show() end); y = y - 48
-            text("Frame guides disappear in clean view. Letterbox bars below remain in the image.", 52)
-            for i, choice in ipairs({ { "none", "No guide" }, { "wide", "16:9" }, { "cinema", "2.39:1" }, { "square", "Square" } }) do
-                local id = choice[1]
-                local b = W.Button(penv, content, choice[2], (i - 1) % 2 * 160, y - math.floor((i - 1) / 2) * 40, 150, function()
-                    db.camera.aspect = id; composition.Show(); self.Build()
-                end); b.SetSelected(db.camera.aspect == id)
-            end
-            y = y - 88; lookSlider("letterbox", "Letterbox height")
-            y = ns.PhotoAdvancedUI.Frame(runtime, penv, content, y, self, function(key, label, low, high, step, value, at)
-                y = at; liveSlider(key, label, low, high, step, value); return y
+            y=ns.StageLayout.Choices(penv,content,y,{"Guides","Offset","Quality"},self.framingTool,function(tool)
+                self.framingTool=tool; self.Build(true)
             end)
-            section("NEXT CAMERA ENTRY")
-            W.Toggle(penv, content, "Temporary photo quality", 0, y, 310, function() return db.camera.photoEnabled end,
-                function(v) db.camera.photoEnabled = v end); y = y - 46
-            W.Slider(penv, content, "Photo quality level", 0, y, 1, 10, 1, function() return db.camera.photoLevel end,
-                function(v) db.camera.photoLevel = v; return true end, nil, 310); y = y - 70
-            text("Photo quality takes effect on your next entry. Exit restores it. Your regular quality choices stay unchanged.", 70)
+            if self.framingTool=="Guides" then
+                W.Toggle(penv, content, "Rule of thirds", 0, y, 310, function() return db.camera.thirds end,
+                    function(v) db.camera.thirds = v; composition.Show() end); y = y - 48
+                text("Frame guides disappear in clean view. Letterbox bars below remain in the image.", 52)
+                for i, choice in ipairs({ { "none", "No guide" }, { "wide", "16:9" }, { "cinema", "2.39:1" }, { "square", "Square" } }) do
+                    local id = choice[1]
+                    local b = W.Button(penv, content, choice[2], (i - 1) % 2 * 160, y - math.floor((i - 1) / 2) * 40, 150, function()
+                        db.camera.aspect = id; composition.Show(); self.Build()
+                    end); b.SetSelected(db.camera.aspect == id)
+                end
+                y = y - 80; lookSlider("letterbox", "Letterbox height", .01, "")
+            elseif self.framingTool=="Offset" then
+                y = ns.PhotoAdvancedUI.Frame(runtime, penv, content, y, self, function(key, label, low, high, step, value, at)
+                    y = at; liveSlider(key, label, low, high, step, value, ""); return y
+                end)
+            else
+                section("NEXT CAMERA ENTRY")
+                W.Toggle(penv, content, "Temporary photo quality", 0, y, 310, function() return db.camera.photoEnabled end,
+                    function(v) db.camera.photoEnabled = v end); y = y - 46
+                W.Slider(penv, content, "Photo quality level", 0, y, 1, 10, 1, function() return db.camera.photoLevel end,
+                    function(v) db.camera.photoLevel = v; return true end, nil, 310); y = y - 70
+                text("Photo quality takes effect on your next entry. Exit restores it. Your regular quality choices stay unchanged.", 70)
+            end
         elseif self.tab == "Capture" and self.capturePage == "Output" then
             y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self)
         elseif self.tab == "Capture" and self.capturePage == "Pair" then
@@ -283,6 +295,7 @@ function U.New(runtime, composition)
     function self.Refresh()
         if not runtime.portrait.active and (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
             and not preview.Pending() and not runtime.cameraActions.orbit and not runtime.cameraActions.busy and self.panel:IsVisible() then self.Build(); return end
+        if self.RefreshStageMap then self.RefreshStageMap() end
         local seq, pose = runtime.captureSequence, runtime.photoTools
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
             or self.tab == "Pose" and ns.PhotoToolsUI.Status(pose.status)

@@ -54,6 +54,17 @@ local function matches(look, recipe)
     return true
 end
 
+function S.Swatch(env,parent,label,x,y,width,pictureHeight,asset,apply,tip)
+    local b=W.Button(env,parent,label,x,y,width,apply,tip,"quiet")
+    b:SetHeight(pictureHeight+20)
+    W.Art(b,asset,0,0,width,pictureHeight)
+    b.label:ClearAllPoints(); b.label:SetPoint("TOPLEFT",b,"TOPLEFT",2,-pictureHeight-3)
+    b.label:SetWidth(width-4); b.label:SetFont(b.label:GetFont(),12,"")
+    b.marker:ClearAllPoints(); b.marker:SetPoint("TOPLEFT",b,"TOPLEFT",0,2-pictureHeight)
+    b.marker:SetDrawLayer("OVERLAY"); b.marker:SetSize(width,2)
+    return b
+end
+
 local function gallery(runtime, env, parent, ui)
     local buttons = {}
     local pictureHeight = ui.compactLooks and 32 or 43
@@ -63,15 +74,8 @@ local function gallery(runtime, env, parent, ui)
     selection:SetJustifyH("RIGHT")
     for i, recipe in ipairs(recipes) do
         local id, name = recipe[1], recipe[2]
-        local b = W.Button(env, parent, name, ((i-1)%3)*105, -23-math.floor((i-1)/3)*stride, 100,
-            function() runtime.photoEditor.Recipe(id); ui.Build() end, "Apply " .. name, "quiet")
-        b:SetHeight(stride-5)
-        W.Art(b, "look-" .. id, 0, 0, 100, pictureHeight)
-        b.label:ClearAllPoints(); b.label:SetPoint("TOPLEFT", b, "TOPLEFT", 2, -pictureHeight-3)
-        b.label:SetWidth(96); b.label:SetFont(b.label:GetFont(), 12, "")
-        -- The selection stripe sits under the picture, above its caption.
-        b.marker:ClearAllPoints(); b.marker:SetPoint("TOPLEFT", b, "TOPLEFT", 0, 2-pictureHeight)
-        b.marker:SetDrawLayer("OVERLAY"); b.marker:SetSize(100, 2)
+        local b=S.Swatch(env,parent,name,((i-1)%3)*105,-23-math.floor((i-1)/3)*stride,100,pictureHeight,
+            "look-"..id,function() runtime.photoEditor.Recipe(id);ui.Build() end,"Apply "..name)
         buttons[i] = b
     end
     ui.RefreshGallery = function()

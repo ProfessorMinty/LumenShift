@@ -8,15 +8,20 @@ end
 function U.Position(runtime, env, parent, y, ui)
     local actions = runtime.cameraActions
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
-    text("Hold to move the camera. Release to keep the angle.", 34)
+    text("Hold a direction to move. Release to stop.", 24)
+    W.Art(parent,"look-neutral",0,y,188,92,.45,"BORDER")
+    W.Rule(parent,0,y-46,188,W.colors.muted,1)
+    local vertical=W.Texture(parent,"ARTWORK")
+    vertical:SetPoint("TOPLEFT",parent,"TOPLEFT",93,y);vertical:SetSize(1,92);vertical:SetColorTexture(.65,.78,.77,.6)
     local buttons = {
-        { "up", "Tilt up", 106, 0 }, { "left", "Orbit left", 0, -38 },
-        { "right", "Orbit right", 212, -38 }, { "down", "Tilt down", 106, -76 },
+        { "up", "Tilt up", 53, 0 }, { "left", "Orbit left", 0, -32 },
+        { "right", "Orbit right", 104, -32 }, { "down", "Tilt down", 53, -64 },
     }
     local missing = false
     for _, item in ipairs(buttons) do
         local direction = item[1]
-        local button = W.Button(env, parent, item[2], item[3], y + item[4], 98, function() end)
+        local button = W.Button(env, parent, item[2], item[3], y + item[4], 84, function() end)
+        button:SetHeight(27)
         W.Script(button, "OnMouseDown", function(_, which)
             if which == "LeftButton" then report(ui, actions.Orbit(direction, ui.precision)) end
         end)
@@ -32,32 +37,30 @@ function U.Position(runtime, env, parent, y, ui)
         if not actions.HasMovement(direction) then button:Disable(); missing = true
         elseif runtime.db.config.preferences.reducedMotion then button:Disable() end
     end
-    y = y - 116
-    if runtime.db.config.preferences.reducedMotion then text("Reduced motion is on. Held camera movement is off.", 48)
-    elseif missing then text("Dimmed directions are unavailable on this client.", 40) end
-    W.Toggle(env, parent, "Precision movement", 0, y, 310, function() return ui.precision end,
-        function(value) ui.precision = value end, "Slow down held movement for small adjustments."); y = y - 40
     local zoom = actions.ReadZoom()
+    W.Text(parent,zoom and ("Distance  "..string.format("%.2f",zoom)) or "Zoom unavailable",198,y,110,12,W.colors.muted)
     for i, item in ipairs({ { "Closer", -1 }, { "Farther", 1 } }) do
         local delta = item[2]
-        local b = W.Button(env, parent, item[1], (i - 1) * 160, y, 150, function() report(ui, actions.Step(delta)) end)
+        local b = W.Button(env, parent, item[1], 198, y-22-(i-1)*36, 110, function() report(ui, actions.Step(delta)) end)
         if not zoom then b:Disable() end
     end
-    y = y - 40
-    text(zoom and ("Camera distance  " .. string.format("%.2f", zoom)) or "Zoom is unavailable on this client.", 28)
+    y=y-102
+    if runtime.db.config.preferences.reducedMotion then text("Reduced motion is on.", 24)
+    elseif missing then text("Dimmed directions are unavailable on this client.", 26) end
+    W.Toggle(env,parent,"Precision movement",0,y,310,function() return ui.precision end,
+        function(value) ui.precision=value end,"Use a slower movement speed."); y=y-36
     local original = runtime.db.camera.composition.zoom
     if original then
-        W.Button(env, parent, "Return zoom", 0, y, 150, function() report(ui, actions.Restore()) end)
+        W.Button(env, parent, "Return zoom", 0, y, 150, function() report(ui, actions.Restore()) end, "Return to distance "..string.format("%.2f", original.original))
         W.Button(env, parent, "Keep current zoom", 160, y, 150, function() report(ui, actions.ForgetZoom()) end)
-        y = y - 40
-        text("Original distance  " .. string.format("%.2f", original.original), 28)
+        y = y - 38
     end
     return y
 end
 function U.Frame(runtime, env, parent, y, ui, liveSlider)
     local preview = runtime.photoPreview
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
-    W.Section(parent, "SHOULDER & DYNAMIC FRAMING", 0, y, 310); y = y - 40
+    W.Section(parent, "SHOULDER & DYNAMIC FRAMING", 0, y, 310); y = y - 29
     for _, item in ipairs({ { "test_cameraOverShoulder", "Shoulder offset" }, { "test_cameraDynamicPitchBaseFovPad", "Dynamic footroom" } }) do
         local key = item[1]; local seen = ns.ReadOnly.Read(runtime.reader, key)
         local capable, why = ns.Framing.Capability(runtime.reader, key)
@@ -71,7 +74,7 @@ function U.Frame(runtime, env, parent, y, ui, liveSlider)
         W.Toggle(env, parent, "Dynamic framing", 0, y, 310, function() return V.Number(seen.raw) == 1 end,
             function(v) preview.Begin(); local ok, why = preview.Queue("test_cameraDynamicPitch", v and 1 or 0); report(ui, ok, why) end); y = y - 46
     end
-    text("Footroom affects native dynamic framing when enabled. These controls use bounded adjustments, not a free camera.", 64)
+    text("Footroom takes effect when dynamic framing is on.", 36)
     W.Button(env, parent, "Restore all framing", 0, y, 310, function()
         preview.Finish(function()
             local ok, why = runtime.camera.RestoreFraming(function(done, code) report(ui, done, code) end)

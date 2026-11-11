@@ -2,7 +2,7 @@
   "creator": "Northern Lights Labs and credited third-party creators; see THIRD-PARTY-NOTICES.md",
   "created": "2026-11-06",
   "license": "Mixed: ASSET-LICENSE.md and THIRD-PARTY-NOTICES.md; per-file sources in theme-sources.json",
-  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1; tools/export_theme.py; tools/create_photo_assets.py; tools/create_look_swatches.py",
+  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1; tools/export_theme.py; tools/create_photo_assets.py; tools/create_look_swatches.py; tools/create_pose_swatches.py",
   "borrowed_media": "assets/theme-sources.json",
   "files": {
     "Media/cinematic.tga": "b42b211e210821e0d6c9d4d28b22f2385cddfd88b14dfbf26b878b7ce34a33ea",
@@ -70,7 +70,13 @@
     "Media/look-night.tga": "63ac356e9fefaf69991db7a5b7ac07685667d28e5ad3aec1c6bbbb509afd438f",
     "Media/look-portrait.tga": "ff59d1a926bfe95a522476d12284df0c791b01d4fe01025f0946fe739abd6bcb",
     "Media/look-sunflare.tga": "91ecedcd424b7bfee2b9e4f7d6fdc20e993358468e2c8388f4aabb3d8cd50811",
-    "Media/look-bluehour.tga": "aa4253b9050014f044e3beb68dbc918e3c6095434d09f03af1d936e264511637"
+    "Media/look-bluehour.tga": "aa4253b9050014f044e3beb68dbc918e3c6095434d09f03af1d936e264511637",
+    "Media/pose-stand.tga": "0c93c5023f259f16e98052214d9d0ef8ad9a5dc1635647a7d593b1f6347137f9",
+    "Media/pose-sit.tga": "8526e5c7192a0bc5aa19d1e90dd91dfc61c6683a536fd1719e1744192f5ec7c5",
+    "Media/pose-kneel.tga": "ae675c36ba8bb06746e11560122bcd13d917d97cdf97b790281aff1f5c72b6b2",
+    "Media/pose-wave.tga": "39778d9c4637f517bb6599bc49eb883e0a68810637ec05271472f04713e22081",
+    "Media/pose-cast.tga": "abce8e83843390293211941c92f604b34df703cbdd99f07415d6849396d2a0ea",
+    "Media/pose-run.tga": "8d31ec6c5ae707c059e8edfd465c148b9584100ac2e5317001a2b812162696f8"
   },
   "logo_source": {
     "approved": "2026-11-07",

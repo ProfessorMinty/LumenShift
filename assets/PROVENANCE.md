@@ -40,3 +40,7 @@ The complete Media directory has 37 files totaling 6,991,746 bytes. The six mode
 ## Original photo textures — beta.10
 
 On 2026-11-09, `tools/create_photo_assets.py` created 23 deterministic analytic/noise textures: `photo-vignette-0` through `photo-vignette-10` (128×128), `photo-glow-0` through `photo-glow-10` (64×64), and `photo-grain` (128×128). These original smoothstep radial alpha shapes and seeded monochrome noise contain no reference/third-party artwork. All use uncompressed power-of-two 32-bit TGA. Code is MIT; creative output follows ASSET-LICENSE.md. The manifest records all hashes; the full TGA payload remains below the 8 MiB packaging budget. Native decoding and smoothness remain owner-tested acceptance.
+
+## Original pose illustrations
+
+Northern Lights Labs created six 128×64 pose illustrations for beta.23. The joint coordinates, colors and drawing routine are in `tools/create_pose_swatches.py`. The exports depict generic figures and do not contain game screenshots or third-party models. The generator uses Pillow at build time. The original illustrations are covered by ASSET-LICENSE.md and recorded by hash in the asset manifest.

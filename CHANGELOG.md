@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.23 - 2026-11-11
+
+- Frame a world shot with a directional pad and zoom controls. In Portrait Stage, click the orbit map or choose a front, three-quarter or profile view.
+- Choose a staged actor, pick an illustrated pose, or search the full pose library. Place the actor on a map and fine-tune rotation, playback and lighting on their own pages.
+
 ## 0.2.0-beta.22 - 2026-11-11
 
 - Redesign Photo Studio with a labeled tool rail, compact mode tabs and a primary shutter action.
