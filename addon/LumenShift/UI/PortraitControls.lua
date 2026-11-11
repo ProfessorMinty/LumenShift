@@ -14,7 +14,6 @@ function U.Build(runtime, env, parent, tab, ui, startY)
                 if ui.actorTab=="Transform" then y=ns.StageLayout.Transform(runtime,env,parent,ui,y,selected)
                 elseif ui.actorTab=="Poses" then y=ns.StageLayout.Poses(runtime,env,parent,ui,y,selected)
                 else
-                    ui.libraryY=y
                     y=ns.PortraitLibraryUI.Build(runtime,env,parent,ui,y,selected)
                 end
             end

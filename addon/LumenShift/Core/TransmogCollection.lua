@@ -66,19 +66,56 @@ function T.New(runtime)
             usable=raw.isValidSourceForPlayer==true,displayable=raw.canDisplayOnPlayer==true,
             icon=icon and id(icon[1]) and icon[1] or nil}
     end
-    function self.Load(category)
-        self.Cancel(); self.rows={}; self.category=category; self.loaded=false; self.attempted=true
-        if not self.Category(category) then self.status="Choose an available collection category."; changed(); return nil end
-        local raw=tableResult(call("GetCategoryAppearances",category))
-        if not raw then self.status="Collection data is unavailable or still loading. Refresh to try again."; changed(); return nil end
-        local total=#raw
-        if total>25000 then self.status="This category exceeds the supported browser size. Choose another category."; changed(); return nil end
-        local token,index,skipped,seen=self.generation,1,0,{}
-        self.busy=true; self.status="Reading "..total.." appearances..."
+    -- Match and preview the same variant, even when several sources share an appearance or base item.
+    function self.Match(row, query, sourceType)
+        if query=="" and not sourceType then return true,row.sources and row.sources[1] end
+        local whole = query=="" or tostring(row.visualID or row.setID)==query
+        local numeric=query:match("^%d+$")~=nil
+        local best, rank
+        for _,s in ipairs(row.sources or {}) do
+            if not sourceType or s.sourceType==sourceType then
+                local name=s.name:lower()
+                local score
+                if tostring(s.sourceID)==query then score=4
+                elseif name==query or (s.itemID and tostring(s.itemID)==query) then score=3
+                elseif not numeric and query~="" and name:find(query,1,true) then score=2
+                elseif whole then score=1 end
+                if score and (not rank or score>rank) then best,rank=s,score end
+            end
+        end
+        return best~=nil or not sourceType and (whole or not numeric and row.name:lower():find(query,1,true)~=nil),best
+    end
+    function self.Load(scope, query)
+        self.Cancel(); self.rows={}; self.category=scope; self.loaded=false; self.partial=false; self.attempted=true
+        local all=scope==0
+        self.searchQuery=all and type(query)=="string" and query:lower():sub(1,80) or ""
+        if all and (self.searchQuery=="" or #self.categories==0) or not all and not self.Category(scope) then
+            self.status=all and "Enter a name or ID to search across slots." or "Choose an available collection category."
+            changed(); return nil
+        end
+        local token=self.generation
+        local category,raw,index,total,seen
+        local categoryIndex,skipped,missing=0,0,0
+        local function beginCategory()
+            categoryIndex=categoryIndex+1
+            category=all and self.categories[categoryIndex].id or scope
+            raw=tableResult(call("GetCategoryAppearances",category))
+            index,total,seen=1,raw and #raw or 0,{}
+            if not raw or total>25000 then
+                self.status=raw and "This category exceeds the supported browser size. Choose another category." or "Collection data is unavailable or still loading. Refresh to try again."
+                missing=missing+1; raw=nil; total=0
+                return false
+            end
+            self.status=all and ("Searching "..self.categories[categoryIndex].name.."…") or ("Reading "..total.." appearances...")
+            return true
+        end
+        if not beginCategory() and not all then changed(); return nil end
+        self.busy=true
         local function step()
             if token~=self.generation then return end
             for _=1,24 do
-                local a=raw[index]; if index>total then break end; index=index+1
+                if index>total then break end
+                local a=raw[index]; index=index+1
                 if access(a) and type(a)=="table" and id(a.visualID) and access(a.isCollected) and type(a.isCollected)=="boolean"
                     and access(a.isHideVisual) and not a.isHideVisual and not seen[a.visualID] then
                     seen[a.visualID]=true
@@ -96,22 +133,33 @@ function T.New(runtime)
                     end
                     table.sort(valid,function(a,b) if a.collected~=b.collected then return a.collected end; return a.sourceID<b.sourceID end)
                     local first=valid[1]
-                    self.rows[#self.rows+1]={visualID=a.visualID,collected=a.isCollected,
+                    local row={categoryID=category,visualID=a.visualID,collected=a.isCollected,
                         favorite=access(a.isFavorite) and a.isFavorite==true,name=first and first.name or "Appearance "..a.visualID,
                         icon=first and first.icon,sources=valid}
+                    if not all or self.Match(row,self.searchQuery) then self.rows[#self.rows+1]=row end
+                    if all and #self.rows>=1000 then break end
                     if not first then skipped=skipped+1 end
                 elseif not (access(a) and type(a)=="table" and
                     (access(a.isHideVisual) and a.isHideVisual or id(a.visualID) and seen[a.visualID])) then skipped=skipped+1 end
             end
-            if index<=total then
-                if not ns.ReadOnly.Call(reader,env.C_Timer and env.C_Timer.After,.01,step) then
-                    self.generation=self.generation+1; self.busy=false; self.status="Collection loading paused: timer unavailable. Refresh to retry."; changed()
-                end
-            else
+            local capped=all and #self.rows>=1000
+            if not capped and index>total and all and categoryIndex<#self.categories then
+                beginCategory()
+            elseif capped or index>total then
                 self.busy=false; self.loaded=true
-                table.sort(self.rows,function(a,b) return a.name==b.name and a.visualID<b.visualID or a.name<b.name end)
-                self.status=#self.rows.." appearances returned by WoW."..(skipped>0 and " Source details incomplete (unavailable, invalid or over the browser limit)." or "")
-                changed()
+                table.sort(self.rows,function(a,b)
+                    if a.name~=b.name then return a.name<b.name end
+                    if a.visualID~=b.visualID then return a.visualID<b.visualID end
+                    return a.categoryID<b.categoryID
+                end)
+                self.partial=capped or skipped>0 or missing>0
+                self.status=capped and "First 1,000 matches. Narrow your search to see more." or (#self.rows.." appearances returned by WoW.")
+                if skipped>0 then self.status=self.status.." Source details incomplete." end
+                if missing>0 then self.status=self.status.." Unavailable categories: "..missing.."." end
+                changed(); return
+            end
+            if not ns.ReadOnly.Call(reader,env.C_Timer and env.C_Timer.After,.01,step) then
+                self.generation=self.generation+1; self.busy=false; self.status="Collection loading paused: timer unavailable. Refresh to retry."; changed()
             end
         end
         if not ns.ReadOnly.Call(reader,env.C_Timer and env.C_Timer.After,0,step) then self.generation=self.generation+1; self.busy=false; self.status="Collection timer unavailable."; changed(); return nil end
@@ -120,14 +168,8 @@ function T.New(runtime)
     function self.Filter(rows, query, owned, favorites, sourceType)
         local result={}; query=type(query)=="string" and query:lower():sub(1,80) or ""
         for _,row in ipairs(rows) do
-            local match=query=="" or row.name:lower():find(query,1,true) or tostring(row.visualID or row.setID)==query
-            local sourceMatch=not sourceType
-            for _,s in ipairs(row.sources or {}) do
-                if not match and (s.name:lower():find(query,1,true) or tostring(s.itemID)==query or tostring(s.sourceID)==query) then match=true end
-                if s.sourceType==sourceType then sourceMatch=true end
-            end
-            if match and sourceMatch and (owned=="All" or owned==nil or owned=="Collected" and row.collected or owned=="Uncollected" and not row.collected)
-                and (not favorites or row.favorite) then result[#result+1]=row end
+            if (owned=="All" or owned==nil or owned=="Collected" and row.collected or owned=="Uncollected" and not row.collected)
+                and (not favorites or row.favorite) and self.Match(row,query,sourceType) then result[#result+1]=row end
         end
         return result
     end
@@ -165,12 +207,14 @@ function T.New(runtime)
     function self.SelectClass(classID)
         local found=false; for _,c in ipairs(self.classes) do if c.id==classID then found=true end end
         if not found then return nil end
+        -- If a setter returns an error after changing the native filter, the old results cannot be called current.
+        self.Cancel(); self.loaded=false; self.attempted=true
         local r=call("SetClassFilter",classID); local read=call("GetClassFilter")
         if not r or r.n~=0 or not read or read[1]~=classID then self.status="WoW could not change its collection class filter."; return nil end
-        self.classID=classID; return self.Load(self.category)
+        self.classID=classID; return self.Load(self.category,self.searchQuery)
     end
     function self.ResetFilters()
-        self.Cancel(); self.loaded=false
+        self.Cancel(); self.loaded=false; self.attempted=true
         -- Explicit browser action only. These are shared wardrobe display filters,
         -- never equipment/transmog application, graphics CVars or automatic setup.
         local api=env.C_TransmogCollection or {}
@@ -184,7 +228,7 @@ function T.New(runtime)
         if not r or r.n~=1 or type(r[1])~="boolean" then self.status="WoW could not clear its collection search."; return nil end
         self.status=r[1] and "WoW collection filters reset. Refresh the collection." or "WoW is updating its collection search. Refresh when ready."
         local current=call("GetClassFilter"); self.classID=current and id(current[1]) and current[1] or nil
-        if r[1] then return self.Load(self.category) end
+        if r[1] then return self.Load(self.category,self.searchQuery) end
         return true
     end
     return self

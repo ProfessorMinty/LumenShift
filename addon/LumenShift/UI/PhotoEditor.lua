@@ -5,7 +5,7 @@ function U.New(runtime, composition)
     local env, editor, db, preview = runtime.reader.env, runtime.photoEditor, runtime.db, runtime.photoPreview
     local style = ns.PhotoStyle
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
-        actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
+        actorTab = "Poses", wardrobeTab = "Collection", collectionOwned = "Collected", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
         worldLightPage = "Tone", worldPoseTab = "All emotes", outputPage = "JPEG", stageOutput = "scene", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     self.savedLibraries = {
         Looks={page=1,query=""}, Compositions={page=1,query=""}, Scenes={page=1,query=""}, Lights={page=1,query=""},
@@ -54,7 +54,7 @@ function U.New(runtime, composition)
         return { row=row, field=field, buttons=style.Pages(env,row,labels,function(page)
             self[field]=page
             if field=="worldPoseTab" then self.worldEmotePage=1 end
-            if field=="actorTab" and page=="Outfits" then runtime.portrait.wardrobe.Refresh() end
+            self.outfitFeedback=nil
             self.notice=nil; self.Build(true)
         end) }
     end
@@ -78,7 +78,6 @@ function U.New(runtime, composition)
     function self.ClearFocus()
         for _, field in ipairs(pool.frames.EditBox or {}) do field:ClearFocus() end
     end
-    composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit(); runtime.portrait.collection.Cancel() end)
     local scrollbar = env.CreateFrame("Slider", nil, panel); self.scrollbar = scrollbar
     scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -198); scrollbar:SetSize(4, 402)
     scrollbar:SetOrientation("VERTICAL"); scrollbar:SetValueStep(20); W.Fill(scrollbar, W.colors.sidebar)
@@ -161,6 +160,17 @@ function U.New(runtime, composition)
     local function collectionVisible()
         return runtime.portrait.active and self.tab == "Pose" and self.actorTab == "Outfits" and self.wardrobeTab == "Collection"
     end
+    composition.root:HookScript("OnHide",function()
+        self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit()
+        if collectionVisible() and runtime.portrait.collection.busy then self.outfitReadInterrupted=true end
+        runtime.portrait.collection.Cancel()
+    end)
+    composition.root:HookScript("OnShow",function()
+        if self.outfitReadInterrupted then
+            self.outfitReadInterrupted=nil
+            if collectionVisible() and not self.building then self.Build() end
+        end
+    end)
     function self.Build(resetScroll)
         if not collectionVisible() and runtime.portrait.collection.busy then runtime.portrait.collection.Cancel() end
         self.building = true
@@ -169,6 +179,7 @@ function U.New(runtime, composition)
         self.ClearFocus()
         self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
+        self.RefreshOutfitResults,self.OutfitStatus=nil,nil
         self.RefreshStageLight = nil
         self.RefreshWorldPose = nil
         self.RefreshCaptureTimer = nil
@@ -338,6 +349,15 @@ function U.New(runtime, composition)
             end
         elseif self.tab == "Saved" then extra = "" end
         local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and self.tab ~= "Capture" and not self.RefreshSavedLibrary and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
+        if runtime.portrait.active and self.tab=="Pose" and self.actorTab=="Outfits" then
+            local stage=runtime.portrait
+            local feedback=self.outfitFeedback
+            if feedback and feedback.actor==stage.selected and feedback.generation==stage.generation then
+                message=feedback.error or stage.failures[stage.selected] or (stage.busy and "Trying " or "Previewing ")..feedback.name
+            elseif self.OutfitStatus then
+                message=self.OutfitStatus()
+            end
+        end
         self.status:SetText(message ~= "READY" and message or "")
         if self.tab=="Look" then
             for i,b in ipairs({undo,redo}) do
@@ -354,14 +374,16 @@ function U.New(runtime, composition)
         positionMarker()
     end
     runtime.portrait.Refresh = function()
+        if self.RefreshOutfitResults and not self.building and self.panel:IsVisible() then
+            local focus=ns.ReadOnly.Call(runtime.reader,env.GetCurrentKeyBoardFocus)
+            if focus and focus[1] then self.RefreshOutfitResults(); self.Refresh(); return end
+        end
         if not self.RefreshSavedLibrary and not self.RefreshCaptureTimer and not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
         else self.Refresh() end
     end
     runtime.portrait.collection.RefreshUI = function()
         if collectionVisible() and not self.building and not self.dragging and self.panel:IsVisible() then
-            local focus = ns.ReadOnly.Call(runtime.reader, env.GetCurrentKeyBoardFocus)
-            -- A completed background read must not erase an unsubmitted search.
-            if focus and focus[1] then self.Refresh() else self.Build() end
+            if self.RefreshOutfitResults then self.RefreshOutfitResults(); self.Refresh() else self.Build() end
         end
     end
     editor.Refresh = self.Refresh

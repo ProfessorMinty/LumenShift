@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.31 - 2026-11-11
+
+- Outfits opens directly to the transmog collection with three clickable appearance cards per page. Search a category as you type, or submit a name or ID across all equipment slots.
+- Preview the matching variant on the selected stage actor, including a choice of hand for supported weapons. Collection sets, inventory, equipment sets, saved outfits and advanced filters use compact pages.
+
 ## 0.2.0-beta.30 - 2026-11-11
 
 - Aim the key light by dragging on the stage direction map. Key color, intensity and shadow fill share the same screen.
