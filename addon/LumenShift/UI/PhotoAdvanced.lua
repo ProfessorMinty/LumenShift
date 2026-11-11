@@ -5,20 +5,6 @@ local function report(ui, ok, reason)
     if not ok then ui.notice = ns.Product.Message(reason or "OPTION_UNAVAILABLE") end
     ui.Refresh()
 end
-function U.CameraTabs(env, parent, ui)
-    local buttons = {}
-    for i, label in ipairs({ "Position", "Framing", "Visibility" }) do
-        local page = label
-        local button = W.Button(env, parent, label, (i - 1) * 105, 0, 100, function()
-            ui.cameraPage = page
-            ui.notice = nil
-            ui.Build(true)
-        end)
-        buttons[page] = button
-    end
-    return buttons
-end
-
 function U.Position(runtime, env, parent, y, ui)
     local actions = runtime.cameraActions
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end

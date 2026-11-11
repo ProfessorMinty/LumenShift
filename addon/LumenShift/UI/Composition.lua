@@ -85,10 +85,11 @@ function C.New(runtime)
         local bar = env.CreateFrame("Frame", nil, root); self.bar = bar
         bar:SetSize(720, 84); bar:SetPoint("BOTTOM", root, "BOTTOM", 0, 32)
         W.Fill(bar, W.colors.bg); W.Border(bar)
-        W.Button(env, bar, "Capture screenshot", 10, -9, 224, self.Capture, "Hides these guides and controls for the capture.")
-        self.hideButton = W.Button(env, bar, "Hide controls", 248, -9, 224, self.ToggleControls,
-            "Clean view for external screenshots or recording. H shows controls again; Escape exits Camera Mode.")
-        W.Button(env, bar, "Exit Camera Mode", 486, -9, 224, function() runtime.camera.Exit() end)
+        local shutter = W.Button(env, bar, "Capture screenshot", 248, -9, 224, self.Capture, "Capture the clean scene.", "primary")
+        W.ButtonIcon(shutter, "ui-camera", 19)
+        self.hideButton = W.Button(env, bar, "Hide controls", 10, -9, 224, self.ToggleControls,
+            "Clean view for external screenshots or recording. H shows controls again; Escape exits Camera Mode.", "quiet")
+        W.Button(env, bar, "Exit Camera Mode", 486, -9, 224, function() runtime.camera.Exit() end, nil, "quiet")
         local hint = W.Text(bar, "H: hide / show controls   |   Esc: exit Camera Mode", 14, -56, 500, 12, W.colors.muted)
         self.cancelButton = W.Button(env, bar, "Cancel timer / burst", 510, -46, 200, function() runtime.captureSequence.Cancel() end)
         self.cancelButton:Hide()

@@ -1,5 +1,7 @@
 # Creative asset provenance
 
+Beta.22 adds six original filter illustrations, `Media/look-*.tga`. Each depicts the same mountain lake and observatory in a different palette. The editable geometry and palettes are in [create_look_swatches.py](../tools/create_look_swatches.py). The 128×64 uncompressed 32-bit TGA exports use Pillow 13.0.0 at build time. Their hashes are recorded in the asset manifest. The rendered illustrations use the Northern Lights Labs creative asset license.
+
 Copyright 2026 Northern Lights Labs. All Rights Reserved; see the root `ASSET-LICENSE.md`. Original technical source tools are MIT; the rendered artwork and recordings are reserved creative output.
 
 The six mode icons, vignette and synthesized sounds were created 2026-11-06 using original geometry and audio synthesis written with Codex. No historical alpha files, Blizzard artwork, stock assets or film/game sounds were copied into those assets. Their editable source recipe is `tools/create_assets.py`.

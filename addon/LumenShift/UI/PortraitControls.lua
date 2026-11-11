@@ -108,7 +108,7 @@ function U.Build(runtime, env, parent, tab, ui, startY)
         slider("letterbox", "Letterbox height", range[1], range[2], .01, function() return runtime.db.camera.editor.look.letterbox end,
             function(v) return runtime.photoEditor.Set("letterbox", v) end)
         text("H hides all controls and guides. Look filters and the staged cast remain in the image.", 60)
-    elseif tab == "Saved" then
+    elseif tab == "Saved" and ui.stageSavePage == "Scenes" then
         text("Scenes store layout, poses, light and backdrop. Loading resolves your current player, target and pet; it does not save another player's identity.", 84)
         local sceneName = W.Edit(env, parent, ui.sceneName or "My portrait", 0, y, 310, function(v) ui.sceneName = v end, 32); y = y - 40
         action("Save / replace scene", function() ui.sceneName = sceneName:GetText(); stage.Save(ui.sceneName) end)
@@ -117,6 +117,7 @@ function U.Build(runtime, env, parent, tab, ui, startY)
             W.Button(env, parent, name, 0, y, 224, function() stage.Load(saved); ui.Build() end)
             W.Button(env, parent, "Delete", 232, y, 78, function() stage.Delete(saved); ui.Build() end); y = y - 40
         end
+    elseif tab == "Saved" then
         section("SAVED LIGHTS")
         local lightName = W.Edit(env, parent, ui.lightName or "My light", 0, y, 310, function(v) ui.lightName = v end, 32); y = y - 40
         action("Save / replace light", function() ui.lightName = lightName:GetText(); stage.Save(ui.lightName, true) end)

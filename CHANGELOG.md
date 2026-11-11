@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.22 - 2026-11-11
+
+- Redesign Photo Studio with a labeled tool rail, compact mode tabs and a primary shutter action.
+- Choose a look from an illustrated gallery. Color, Vignette, Glow and Film each have a short adjustment page with live values. Capture and saved libraries have dedicated task pages.
+
 ## 0.2.0-beta.21 - 2026-11-10
 
 - Keep the stage slider at the angle the renderer accepted. A saved scene whose camera fails to load now preserves the current lighting.

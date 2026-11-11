@@ -270,16 +270,27 @@ function W.Edit(env, parent, value, x, y, width, callback, maxLetters)
     if ns.Keyboard then ns.Keyboard.Control(env, edit, true) end
     return edit
 end
-function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip, width)
+function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip, width, unit, spectrum)
     width = width or 520
-    W.Text(parent, label, x, y - 5, width - 85, 13)
+    local trackWidth = unit and width - 181 or width
+    W.Text(parent, label, x, y - 5, unit and 111 or width - 85, 13)
     local slider = env.CreateFrame("Slider", nil, parent)
-    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y - 36); slider:SetSize(width, 15)
+    slider:SetPoint("TOPLEFT", parent, "TOPLEFT", x + (unit and 115 or 0), y - (unit and 7 or 36)); slider:SetSize(trackWidth, 15)
     slider:SetOrientation("HORIZONTAL"); slider:SetMinMaxValues(minimum, maximum); slider:SetValueStep(step)
     if slider.SetObeyStepOnDrag then slider:SetObeyStepOnDrag(true) end
-    W.Rule(slider, 0, -5, width, W.colors.border, 3)
+    W.Rule(slider, 0, -5, trackWidth, W.colors.border, 3)
     local progress = W.Rule(slider, 0, -5, 1, W.colors.accent, 3)
-    local thumb = W.Texture(slider, "OVERLAY"); thumb:SetSize(8, 15); thumb:SetColorTexture(unpack(W.colors.accent)); slider:SetThumbTexture(thumb)
+    if spectrum then
+        progress:Hide()
+        for i=0,15 do
+            local t=i/15
+            local a,b=spectrum[1],spectrum[2]
+            W.Rule(slider,trackWidth*i/16,-5,trackWidth/16+.1,{
+                a[1]+(b[1]-a[1])*t,a[2]+(b[2]-a[2])*t,a[3]+(b[3]-a[3])*t,1},4)
+        end
+        W.Rule(slider,trackWidth/2,-3,1,W.colors.text,8)
+    end
+    local thumb = W.Texture(slider, "OVERLAY"); thumb:SetSize(8, 15); thumb:SetColorTexture(unpack(spectrum and W.colors.text or W.colors.accent)); slider:SetThumbTexture(thumb)
     local initialized, edit, changeHandler = false
     local function update(requested)
         local value = math.max(minimum, math.min(maximum, math.floor(requested / step + 0.5) * step))
@@ -291,10 +302,10 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
             slider:SetValue(value)
             initialized = true
         end
-        progress:SetWidth(math.max(1, width * (value - minimum) / (maximum - minimum)))
+        progress:SetWidth(math.max(1, trackWidth * (value - minimum) / (maximum - minimum)))
         edit:SetText(string.format(step < 1 and "%.2f" or "%.0f", value))
     end
-    edit = W.Edit(env, parent, get(), x + width - 64, y, 64, function(text)
+    edit = W.Edit(env, parent, get(), x + width - (unit and 59 or 64), y, unit and 40 or 64, function(text)
         local number = tonumber(text)
         if not ns.Value.Finite(number) or number < minimum or number > maximum then edit:SetText(tostring(get())); return end
         slider:SetValue(number)
@@ -302,7 +313,11 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
     W.Script(slider, "OnValueChanged", function(_, value) if initialized then update(value) end end)
     changeHandler = slider:GetScript("OnValueChanged")
     slider:SetValue(get()); initialized = true
-    progress:SetWidth(math.max(1, width * (get() - minimum) / (maximum - minimum)))
+    progress:SetWidth(math.max(1, trackWidth * (get() - minimum) / (maximum - minimum)))
+    if unit then
+        edit:SetTextInsets(3, 3, 0, 0)
+        W.Text(parent, unit, x + width - 14, y - 6, 14, 11, W.colors.muted)
+    end
     slider.edit = edit
     if tip then W.Tip(env, slider, tip) end
     return slider

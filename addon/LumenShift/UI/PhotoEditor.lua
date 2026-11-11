@@ -3,31 +3,63 @@ local U, W = {}, ns.Widgets
 ns.PhotoEditorUI = U
 function U.New(runtime, composition)
     local env, editor, db, preview = runtime.reader.env, runtime.photoEditor, runtime.db, runtime.photoPreview
-    local self = { tab = "Frame", cameraPage = "Position", precision = false, sliders = {}, drafts = {} }
+    local style = ns.PhotoStyle
+    local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
+        capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
-    W.Fill(panel, W.colors.bg); W.Border(panel); W.Window(env, panel, 42, 12)
-    W.Text(panel, "Photo Studio", 16, -15, 300, 22)
-    local subtitle = W.Text(panel, "Compose in the world", 16, -47, 300, 12, W.colors.muted)
-    local world, portrait
-    world = W.Button(env, panel, "World Photo", 12, -70, 160, function()
+    W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
+    W.Decoration(W.Art(panel,"panel-midnight",1,-1,358,44,.62,"BORDER"))
+    W.Art(panel, "logo", 10, -9, 25, 25)
+    W.Text(panel, "Photo Studio", 42, -11, 125, 18)
+    W.Rule(panel, 0, -45, 360)
+    local world = style.Tab(env, panel, "World Photo", 164, -7, 86, function()
         local ok, why = runtime.portrait.World()
         self.notice = not ok and why or nil
         if ok then self.tab, self.cameraPage = "Frame", "Position" end
         self.Build(true)
     end)
-    portrait = W.Button(env, panel, "Portrait Stage", 184, -70, 160, function()
-        local ok, why = runtime.portrait.Enter(); self.notice = not ok and why or nil
-        if ok then self.tab, self.cameraPage = "Frame", "Position" end; self.Build(true)
+    local portrait = style.Tab(env, panel, "Portrait Stage", 251, -7, 103, function()
+        local ok, why = runtime.portrait.Enter()
+        self.notice = not ok and why or nil
+        if ok then self.tab, self.cameraPage = "Frame", "Position" end
+        self.Build(true)
     end)
+    local rail = env.CreateFrame("Frame", nil, panel)
+    rail:SetPoint("TOPLEFT",panel,"TOPLEFT",1,-46); rail:SetWidth(40)
+    W.Fill(rail,W.colors.sidebar)
     local tabs = {}
-    for i, label in ipairs({ "Frame", "Look", "Light", "Pose", "Capture", "Saved" }) do
-        local button = W.Button(env, panel, label, 12 + (i - 1) % 3 * 112, -112 - math.floor((i - 1) / 3) * 40, 104, function() runtime.cameraActions.StopOrbit(); self.notice = nil; self.tab = label; self.Build(true) end)
-        tabs[label] = button
+    for i, tool in ipairs({{"Frame","Camera","ui-camera"},{"Look","Look","ui-effects"},{"Light","Light","natural"},
+        {"Pose","Pose","ui-accessibility"},{"Capture","Capture","ui-export"},{"Saved","Saved","ui-presets"}}) do
+        local key=tool[1]
+        tabs[key]=style.Tab(env,rail,tool[2],0,-5-(i-1)*54,40,function()
+            runtime.cameraActions.StopOrbit(); self.notice=nil; self.tab=key; self.Build(true)
+        end,tool[3])
     end
-    local pageRow = env.CreateFrame("Frame", nil, panel)
-    pageRow:SetSize(310, 32); pageRow:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -198)
-    local pageButtons = ns.PhotoAdvancedUI.CameraTabs(env, pageRow, self)
+    local title=W.Text(panel,"",48,-58,195,21)
+    local function history(label, redo, x)
+        local b=W.Button(env,panel,label,x,-53,48,function() editor.Undo(redo); self.Build() end,nil,"quiet")
+        b.label:ClearAllPoints(); b.label:SetPoint("TOPLEFT",b,"TOPLEFT",0,-7)
+        b.label:SetWidth(48); b.label:SetJustifyH("CENTER"); b.label:SetWordWrap(false)
+        return b
+    end
+    local undo, redo = history("Undo",false,253), history("Redo",true,305)
+    local function pages(labels, field)
+        local row=env.CreateFrame("Frame",nil,panel)
+        row:SetSize(310,30); row:SetPoint("TOPLEFT",panel,"TOPLEFT",44,-89)
+        return { row=row, field=field, buttons=style.Pages(env,row,labels,function(page)
+            self[field]=page; self.notice=nil; self.Build(true)
+        end) }
+    end
+    local groups={
+        camera=pages({"Position","Framing","Visibility"},"cameraPage"),
+        look=pages({"Color","Vignette","Glow","Film"},"lookPage"),
+        capture=pages({"Timer","Output","Combat"},"capturePage"),
+        stageCapture=pages({"Timer","Output","Pair","Combat"},"capturePage"),
+        saved=pages({"Looks","Compositions","Share"},"savedPage"),
+        stageSaved=pages({"Scenes","Lights"},"stageSavePage"),
+    }
+    self.stageSavePage="Scenes"
     local scroll = env.CreateFrame("ScrollFrame", nil, panel); self.scroll = scroll
     scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, -198); scroll:SetSize(310, 402); scroll:EnableMouseWheel(true)
     local content = env.CreateFrame("Frame", nil, scroll); content:SetSize(310, 1); scroll:SetScrollChild(content); content:SetPoint("TOPLEFT", scroll, "TOPLEFT", 0, 0)
@@ -37,16 +69,16 @@ function U.New(runtime, composition)
     end
     composition.root:HookScript("OnHide", function() self.ClearFocus(); editor.EndLookEdit(); runtime.cameraActions.StopOrbit(); runtime.portrait.collection.Cancel() end)
     local scrollbar = env.CreateFrame("Slider", nil, panel); self.scrollbar = scrollbar
-    scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -198); scrollbar:SetSize(8, 402)
+    scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -198); scrollbar:SetSize(4, 402)
     scrollbar:SetOrientation("VERTICAL"); scrollbar:SetValueStep(20); W.Fill(scrollbar, W.colors.sidebar)
-    local thumb = scrollbar:CreateTexture(nil, "OVERLAY"); thumb:SetSize(6, 32); thumb:SetColorTexture(unpack(W.colors.accent)); scrollbar:SetThumbTexture(thumb)
+    local thumb = scrollbar:CreateTexture(nil, "OVERLAY"); thumb:SetSize(4, 24); thumb:SetColorTexture(unpack(W.colors.accent)); scrollbar:SetThumbTexture(thumb)
     scrollbar:SetScript("OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
     scroll:SetScript("OnMouseWheel", function(_, delta) scrollbar:SetValue(scroll:GetVerticalScroll() - delta * 54) end)
     local footer = env.CreateFrame("Frame", nil, panel); self.footer = footer
-    footer:SetSize(332, 94); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 14, 12)
-    W.Rule(footer, 0, 0, 332)
-    self.compare = W.Button(env, footer, "Before / After", 0, -12, 160, function() preview.Finish(editor.Compare) end)
-    local resetLook = W.Button(env, footer, "Reset photo look", 172, -12, 160, function() editor.Recipe("neutral"); self.Build() end)
+    footer:SetSize(310, 60); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 44, 8)
+    W.Rule(footer, 0, 0, 310)
+    self.compare = W.Button(env, footer, "Before / After", 0, -6, 144, function() preview.Finish(editor.Compare) end)
+    local resetLook = W.Button(env, footer, "Reset photo look", 155, -6, 152, function() editor.Recipe("neutral"); self.Build() end,nil,"quiet")
     self.status = W.Text(footer, "", 0, -53, 332, 12, W.colors.muted)
     local marker = env.CreateFrame("Button", nil, composition.root); self.marker = marker
     marker:SetSize(38, 38); marker:EnableMouse(true); marker:SetMovable(true); marker:SetClampedToScreen(true); marker:RegisterForDrag("LeftButton")
@@ -64,24 +96,35 @@ function U.New(runtime, composition)
     local function positionMarker()
         local look = db.camera.editor.look
         marker:ClearAllPoints(); marker:SetPoint("CENTER", composition.root, "TOPLEFT", env.UIParent:GetWidth() * look.glowX, -env.UIParent:GetHeight() * look.glowY)
-        if self.tab == "Look" and look.glow > 0 and not editor.before then marker:Show() else marker:Hide() end
+        if self.tab == "Look" and self.lookPage == "Glow" and self.glowPage == "Shape"
+            and look.glow > 0 and not editor.before then marker:Show() else marker:Hide() end
     end
     function self.Layout()
         local h = math.min(640, env.UIParent:GetHeight() - 154)
+        if self.tab == "Look" and self.compactLooks ~= (h < 550) and not self.building then
+            self.Build()
+            return
+        end
         local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 360), math.max(.4, h / 480))
-        panel:SetScale(scale); h = math.max(480, h / scale); panel:SetHeight(h)
-        local cameraTab = self.tab == "Frame"
-        local viewport = h - (cameraTab and 304 or 314)
-        local top = cameraTab and -242 or -198
-        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 16, top)
-        scrollbar:ClearAllPoints(); scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, top)
-        footer:SetHeight(cameraTab and 40 or 94)
-        self.status:ClearAllPoints()
-        self.status:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, cameraTab and -10 or -53)
-        if cameraTab then self.compare:Hide(); resetLook:Hide() else self.compare:Show(); resetLook:Show() end
+        panel:SetScale(scale); h = math.max(480, h / scale)
+        local hasActions = self.tab == "Look" or self.tab == "Light"
+        local top = self.activePages and -126 or -96
+        local footerHeight = hasActions and 62 or 32
+        if self.tab == "Look" and self.contentHeight then
+            h = math.min(h, math.max(390, self.contentHeight - top + footerHeight + 16))
+        end
+        panel:SetHeight(h); edges[3]:SetHeight(h); edges[4]:SetHeight(h); rail:SetHeight(h-47)
+        local viewport = h + top - footerHeight - 16
+        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 44, top)
+        scrollbar:ClearAllPoints(); scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -2, top)
+        footer:SetHeight(footerHeight)
+        self.status:ClearAllPoints(); self.status:SetWidth(310)
+        self.status:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, hasActions and -40 or -6)
+        if hasActions then self.compare:Show(); resetLook:Show() else self.compare:Hide(); resetLook:Hide() end
         scroll:SetHeight(viewport); scrollbar:SetHeight(viewport)
         scrollbar:SetMinMaxValues(0, math.max(0, (self.contentHeight or 1) - scroll:GetHeight()))
         scrollbar:SetValue(math.min(scroll:GetVerticalScroll(), math.max(0, (self.contentHeight or 1) - scroll:GetHeight())))
+        if self.contentHeight and self.contentHeight > viewport then scrollbar:Show() else scrollbar:Hide() end
         positionMarker()
     end
     local function collectionVisible()
@@ -90,13 +133,25 @@ function U.New(runtime, composition)
     function self.Build(resetScroll)
         if not collectionVisible() and runtime.portrait.collection.busy then runtime.portrait.collection.Cancel() end
         self.building = true
+        self.compactLooks = env.UIParent:GetHeight() - 154 < 550
         editor.EndLookEdit()
         self.ClearFocus()
-        self.RefreshNames = nil
+        self.RefreshNames, self.RefreshGallery, self.RefreshPlacement = nil, nil, nil
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
         world.SetSelected(not staged); portrait.SetSelected(staged)
-        subtitle:SetText(staged and "Compose with staged models" or "Compose in the world")
+        title:SetText(({Frame="Camera", Look="Color & effects", Light=staged and "Model lighting" or "Scene lighting",
+            Pose=staged and "Actors" or "Poses", Capture="Capture", Saved="Library"})[self.tab])
+        if self.tab=="Look" then undo:Show(); redo:Show() else undo:Hide(); redo:Hide() end
+        if self.capturePage=="Pair" and not staged then self.capturePage="Timer" end
+        self.activePages = ({Frame=groups.camera, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
+            Saved=staged and groups.stageSaved or groups.saved})[self.tab]
+        for _, group in pairs(groups) do
+            if group==self.activePages then
+                group.row:Show()
+                for label,b in pairs(group.buttons) do b.SetSelected(self[group.field]==label) end
+            else group.row:Hide() end
+        end
         for label, button in pairs(tabs) do
             button.SetSelected(self.tab == label)
             button.label:SetText(label == "Frame" and "Camera" or staged and label == "Pose" and "Actors" or label)
@@ -129,41 +184,12 @@ function U.New(runtime, composition)
             W.Script(slider.edit, "OnEnterPressed", function(s) preview.Begin(); entered(s) end)
             self.sliders[key] = slider; y = y - 68
         end
-        if self.tab == "Frame" then
-            pageRow:Show()
-            for label, button in pairs(pageButtons) do button.SetSelected(self.cameraPage == label) end
-        else pageRow:Hide() end
         if self.tab == "Frame" and self.cameraPage == "Visibility" then
             y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
         elseif staged and (self.tab == "Light" or self.tab == "Frame" or self.tab == "Pose" or self.tab == "Saved") then
             y = ns.PortraitControls.Build(runtime, penv, content, self.tab, self, y)
         elseif self.tab == "Look" then
-            for i, recipe in ipairs({ { "neutral", "Neutral" }, { "ember", "Warm Ember" }, { "night", "Cool Night" }, { "portrait", "Soft Portrait" }, { "sunflare", "Sun Flare" }, { "bluehour", "Blue Hour" } }) do
-                local id = recipe[1]
-                W.Button(penv, content, recipe[2], (i - 1) % 2 * 160, -math.floor((i - 1) / 2) * 40, 150, function() editor.Recipe(id); self.Build() end)
-            end
-            W.Button(penv, content, "Undo look", 0, -128, 150, function() editor.Undo(); self.Build() end)
-            W.Button(penv, content, "Redo look", 160, -128, 150, function() editor.Undo(true); self.Build() end)
-            y = -172; text("Live screen treatments. Your visual modes stay unchanged.", 40)
-            lookSlider("strength", "Look strength"); lookSlider("warmth", "Warm / cool"); lookSlider("tint", "Green / rose tint")
-            section("VIGNETTE")
-            lookSlider("vignette", "Edge darkness"); lookSlider("size", "Clear center size"); lookSlider("feather", "Soft edge", .1)
-            lookSlider("centerX", "Center - horizontal"); lookSlider("centerY", "Center - vertical")
-            section("GLOW ACCENT")
-            text("Decorative screen light. Drag the + onto a fire or highlight; it does not light 3D objects.", 56)
-            lookSlider("glow", "Glow strength"); lookSlider("glowSize", "Glow size"); lookSlider("glowSoftness", "Glow softness", .1)
-            for _, color in ipairs({ { "Amber", 1, .58, .2 }, { "Ice", .3, .65, 1 }, { "White", 1, 1, 1 } }) do
-                local c = color; local x = c[1] == "Amber" and 0 or c[1] == "Ice" and 106 or 212
-                W.Button(penv, content, c[1], x, y, 98, function()
-                    editor.SetMany({ glowR = c[2], glowG = c[3], glowB = c[4] }); self.Build()
-                end)
-            end
-            y = y - 42
-            lookSlider("glowR", "Glow red"); lookSlider("glowG", "Glow green"); lookSlider("glowB", "Glow blue")
-            lookSlider("glowX", "Glow - horizontal"); lookSlider("glowY", "Glow - vertical")
-            section("EDGE LIGHT"); text("Soft light leak using your glow color. Screen artwork; it does not relight the world.", 54)
-            lookSlider("leak", "Light leak strength"); lookSlider("leakSide", "Light leak position", .1); lookSlider("leakWidth", "Light leak width", .1)
-            section("TEXTURE"); lookSlider("grain", "Film grain"); lookSlider("grainScale", "Grain size", .1)
+            y = style.Look(runtime, penv, content, self)
         elseif self.tab == "Light" then
             text("Live preview as you drag. Updates are paced; Exit returns your pre-photo values.", 56)
             for _, item in ipairs({ { "Brightness", "Brightness", 0, 100, 1 }, { "Contrast", "Contrast", 0, 100, 1 },
@@ -221,13 +247,15 @@ function U.New(runtime, composition)
             W.Slider(penv, content, "Photo quality level", 0, y, 1, 10, 1, function() return db.camera.photoLevel end,
                 function(v) db.camera.photoLevel = v; return true end, nil, 310); y = y - 70
             text("Photo quality takes effect on your next entry. Exit restores it. Your regular quality choices stay unchanged.", 70)
+        elseif self.tab == "Capture" and self.capturePage == "Output" then
+            y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self)
+        elseif self.tab == "Capture" and self.capturePage == "Pair" then
+            y = ns.PortraitControls.Capture(runtime, penv, content, y, self)
         elseif self.tab == "Pose" or self.tab == "Capture" then
             y = ns.PhotoToolsUI.Build(runtime, penv, content, self.tab, self)
-            if self.tab == "Capture" then
-                if staged then y = ns.PortraitControls.Capture(runtime, penv, content, y, self) end
-                y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self)
-            end
-        else
+        elseif self.savedPage == "Compositions" then
+            y = ns.PhotoAdvancedUI.Saved(runtime, penv, content, y, self)
+        elseif self.savedPage == "Looks" then
             text("Save styling without native graphics values. Native lighting always starts from your current scene.", 54)
             self.name = self.name or "My photo look"
             W.Edit(penv, content, self.name, 0, y, 310, function(name) self.name = name end, 32); y = y - 38
@@ -241,12 +269,12 @@ function U.New(runtime, composition)
                 W.Button(penv, content, name, 0, y, 224, function() editor.Load(selected); self.Build() end)
                 W.Button(penv, content, "Delete", 232, y, 78, function() editor.Delete(selected); self.Build() end); y = y - 40
             end
-            y = y - 12; section("SHARE A LOOK")
+        else
+            section("SHARE A LOOK")
             local transfer = W.Edit(penv, content, ns.PhotoConfig.Export(db.camera.editor.look), 0, y, 310, function() end, 512)
             transfer:SetScript("OnEditFocusGained", function(s) s:HighlightText() end); y = y - 40
             W.Button(penv, content, "Import pasted photo look", 0, y, 310, function() editor.Import(transfer:GetText()); self.Build() end); y = y - 48
             text("Click the field and copy to share, or paste a look and Import. No scripts are accepted.", 52)
-            y = ns.PhotoAdvancedUI.Saved(runtime, penv, content, y, self)
         end
         self.contentHeight = -y + 16; content:SetHeight(self.contentHeight)
         if resetScroll then scroll:SetVerticalScroll(0) end
@@ -261,7 +289,16 @@ function U.New(runtime, composition)
         if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and ns.Product.Message(runtime.cameraActions.status) or nil
         elseif self.tab == "Capture" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Saved" then extra = runtime.photoComposition.status end
-        self.status:SetText(self.notice or runtime.portrait.active and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status)
+        local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
+        self.status:SetText(message ~= "READY" and message or "")
+        if self.tab=="Look" then
+            for i,b in ipairs({undo,redo}) do
+                if #(i==1 and editor.undo or editor.redo)>0 then b:Enable(); b:SetAlpha(1)
+                else b:Disable(); b:SetAlpha(.4) end
+            end
+            if self.RefreshGallery then self.RefreshGallery() end
+            if self.RefreshPlacement then self.RefreshPlacement() end
+        end
         self.compare.label:SetText(editor.before and "Show After" or "Show Before")
         if editor.busy and not preview.busy then self.compare:Disable() else self.compare:Enable() end
         positionMarker()

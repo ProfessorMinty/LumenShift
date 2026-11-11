@@ -2,7 +2,7 @@
   "creator": "Northern Lights Labs and credited third-party creators; see THIRD-PARTY-NOTICES.md",
   "created": "2026-11-06",
   "license": "Mixed: ASSET-LICENSE.md and THIRD-PARTY-NOTICES.md; per-file sources in theme-sources.json",
-  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1; tools/export_theme.py; tools/create_photo_assets.py",
+  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1; tools/export_theme.py; tools/create_photo_assets.py; tools/create_look_swatches.py",
   "borrowed_media": "assets/theme-sources.json",
   "files": {
     "Media/cinematic.tga": "b42b211e210821e0d6c9d4d28b22f2385cddfd88b14dfbf26b878b7ce34a33ea",
@@ -64,7 +64,13 @@
     "Media/photo-glow-9.tga": "c9e47600e82e37025ac3177666b4aaa7bab9d5db12116051d2fc3d76216d18b5",
     "Media/photo-vignette-10.tga": "62e88d4055163c839fa6661763e9d019f9b6106d896a5d90fd610183f9f490ce",
     "Media/photo-glow-10.tga": "cefc3e6f8cad567cf0519501d4bfc0cfee3238bbdddbdf02104900f9df7e85a2",
-    "Media/photo-grain.tga": "7432ceff8a27e06e393079afdb134fca8917354bb22780d60ef0dbd7d4293b1e"
+    "Media/photo-grain.tga": "7432ceff8a27e06e393079afdb134fca8917354bb22780d60ef0dbd7d4293b1e",
+    "Media/look-neutral.tga": "040e433e17113421b98e3b02b17f0259b856c120b9388be8a7a39ed637f3a8fc",
+    "Media/look-ember.tga": "dba398e1f8703bba02138961aed0a6cd828697b11335d2e23555937694b66bff",
+    "Media/look-night.tga": "63ac356e9fefaf69991db7a5b7ac07685667d28e5ad3aec1c6bbbb509afd438f",
+    "Media/look-portrait.tga": "ff59d1a926bfe95a522476d12284df0c791b01d4fe01025f0946fe739abd6bcb",
+    "Media/look-sunflare.tga": "91ecedcd424b7bfee2b9e4f7d6fdc20e993358468e2c8388f4aabb3d8cd50811",
+    "Media/look-bluehour.tga": "aa4253b9050014f044e3beb68dbc918e3c6095434d09f03af1d936e264511637"
   },
   "logo_source": {
     "approved": "2026-11-07",

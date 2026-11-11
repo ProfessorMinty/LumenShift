@@ -2,7 +2,9 @@
 
 ## Identity and source of truth
 
-**Current beta.21 / camera verification.** See [camera audit and remaining photo work](docs/65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work) for the standalone axis tests, failure handling and native acceptance checklist.
+**Current beta.22 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the revised Photo Studio controls, original filter swatches, research references and owner test.
+
+**Prior beta.21 / camera verification.** See [camera audit and remaining photo work](docs/65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work) for the standalone axis tests, failure handling and native acceptance checklist.
 
 **Prior beta.20 / photo camera controls (2026-11-10).** Read [65](docs/65-PHOTO-CAMERA-CONTROLS.md) for the interface comparison, Forever API evidence, and owner test. World Photo offers held yaw and pitch with precision movement. Portrait Stage saves orbit, elevation and horizon roll. Camera groups Position, Framing and Visibility. Keep standalone support, the single graphics writer, and the existing PR #5.
 
