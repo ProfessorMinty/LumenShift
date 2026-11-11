@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.32 - 2026-11-11
+
+- Find staged spell effects by name, family or visual-kit ID. Browse six cards per page and click to preview or swap an effect on the selected actor.
+- The current effect and Clear effect stay visible across searches and pages. If WoW cannot confirm a failed change or restore the prior effect, the picker reports the uncertainty and keeps explicit clearing available.
+
 ## 0.2.0-beta.31 - 2026-11-11
 
 - Outfits opens directly to the transmog collection with three clickable appearance cards per page. Search a category as you type, or submit a name or ID across all equipment slots.

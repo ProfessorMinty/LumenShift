@@ -27,6 +27,21 @@ function S.Tab(env, parent, label, x, y, width, action, icon)
     return b
 end
 
+function S.Enable(b,on)
+    if on then b:Enable(); b:SetAlpha(1) else b:Disable(); b:SetAlpha(.48) end
+end
+
+function S.Pager(env,parent,y,turn)
+    local previous=W.Button(env,parent,"Previous",0,y,84,function() turn(-1) end,nil,"quiet")
+    local nextPage=W.Button(env,parent,"Next",226,y,84,function() turn(1) end,nil,"quiet")
+    local count=W.Text(parent,"",85,y-7,140,12,W.colors.muted); count:SetJustifyH("CENTER")
+    return function(page,size,n)
+        local first=(page-1)*size+1
+        count:SetText(n==0 and "0 results" or first.."–"..math.min(page*size,n).." of "..n)
+        S.Enable(previous,page>1); S.Enable(nextPage,page*size<n)
+    end
+end
+
 function S.Pages(env, row, labels, selectPage)
     local tabs = {}
     local width = 310 / #labels

@@ -173,6 +173,9 @@ function U.New(runtime, composition)
     end)
     function self.Build(resetScroll)
         if not collectionVisible() and runtime.portrait.collection.busy then runtime.portrait.collection.Cancel() end
+        local focus=not resetScroll and self.effectSearch and ns.ReadOnly.Call(runtime.reader,env.GetCurrentKeyBoardFocus)
+        local keepEffectFocus=focus and focus[1]==self.effectSearch
+        local caret=keepEffectFocus and ns.ReadOnly.Call(runtime.reader,self.effectSearch.GetCursorPosition,self.effectSearch)
         self.building = true
         self.compactLooks = env.UIParent:GetHeight() - 154 < 550
         editor.EndLookEdit()
@@ -180,6 +183,7 @@ function U.New(runtime, composition)
         self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         self.RefreshOutfitResults,self.OutfitStatus=nil,nil
+        self.RefreshStageEffects,self.effectSearch=nil,nil
         self.RefreshStageLight = nil
         self.RefreshWorldPose = nil
         self.RefreshCaptureTimer = nil
@@ -317,6 +321,10 @@ function U.New(runtime, composition)
         self.contentHeight = -y + 16; content:SetHeight(self.contentHeight)
         if resetScroll then scroll:SetVerticalScroll(0) end
         self.Layout(); self.Refresh(); self.building = false
+        if keepEffectFocus and self.effectSearch then
+            self.effectSearch:SetFocus()
+            if caret and ns.Value.Finite(caret[1]) and self.effectSearch.SetCursorPosition then self.effectSearch:SetCursorPosition(caret[1]) end
+        end
     end
     function self.Refresh()
         if not runtime.portrait.active and (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
@@ -358,6 +366,13 @@ function U.New(runtime, composition)
                 message=self.OutfitStatus()
             end
         end
+        if self.RefreshStageEffects then
+            local height
+            message,height=self.RefreshStageEffects()
+            if self.contentHeight~=height then
+                self.contentHeight=height; content:SetHeight(height); self.Layout()
+            end
+        end
         self.status:SetText(message ~= "READY" and message or "")
         if self.tab=="Look" then
             for i,b in ipairs({undo,redo}) do
@@ -373,7 +388,8 @@ function U.New(runtime, composition)
         else restoreLight:Disable(); restoreLight:SetAlpha(.65) end
         positionMarker()
     end
-    runtime.portrait.Refresh = function()
+    runtime.portrait.Refresh = function(control)
+        if control=="spellKit" and self.RefreshStageEffects then self.Refresh(); return end
         if self.RefreshOutfitResults and not self.building and self.panel:IsVisible() then
             local focus=ns.ReadOnly.Call(runtime.reader,env.GetCurrentKeyBoardFocus)
             if focus and focus[1] then self.RefreshOutfitResults(); self.Refresh(); return end

@@ -141,3 +141,13 @@ Open **Portrait Stage → Actors → Outfits** and choose the actor in the top r
 **In-game check.** With Narcissus disabled, choose a staged actor and open Outfits. Search for a collected appearance and click its card. Check the actor changes and your equipped gear stays the same. Choose All slots, search for a known item in another slot, then try an exact variant from Sources. For a one-handed weapon, switch the destination to Off hand. If a second actor is present, preview on that actor and check the first one keeps its outfit. Actual collection coverage, native item icons and rendering depend on the installed client.
 
 Ten standalone UI tests cover compact layouts, exact-source and off-hand previews, both renderers, interrupted search, partial results, rejected previews and wardrobe controls. A separate eight-page sweep previewed 24 appearances on each simulated renderer and checked the source on the selected model after every click. Native model rendering and available collection entries still need the in-game check.
+
+## Portrait Stage actor effects in beta.32
+
+Open **Portrait Stage → Actors → Effects** and choose the player, target or pet in the actor row. Browse the twelve curated effects six at a time, narrow the library with **Elemental**, **Lighting** or **Magic**, or type a name, family or exact visual-kit ID. Search, paging and hovering leave the actor as posed. Click a card to preview the effect on that actor, click another to swap, or click **Clear effect** to remove it. **Clear search** only resets the text filter. The top row continues to show the actor’s current choice even when it falls outside the filter.
+
+The cards use bundled family symbols. The selected staged character supplies the live preview. ModelScene actors use their native replaceable visual kit. The fallback renderer can browse the catalog and retains the scene’s saved choice. Actual particle appearance and duration depend on the client, model and kit.
+
+**In-game check.** With Narcissus disabled, open Effects on a posed character. Search for Frost and click **Frost sparkle**. Clear the search, click **Fire surge**, and check that it replaces the frost. Type an unmatched name and use **Clear effect**. If there is a second actor, give it a different effect and check that clearing the first actor leaves the second one alone. Save a scene with an effect, clear it and recall the scene to check playback on your client.
+
+Eight standalone UI tests cover browsing, live search, both layouts, native rejection and readback, failed restoration, actor isolation, scene recall, capture, combat and unsupported renderers. A separate sweep exercised 36 previews across the three staged actors. Native particle rendering remains an in-game check.

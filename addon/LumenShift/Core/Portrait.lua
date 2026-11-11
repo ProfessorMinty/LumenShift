@@ -6,9 +6,9 @@ function P.New(runtime)
     local backend = ns.PortraitBackend.New(runtime); self.backend = backend
     self.wardrobe = ns.PortraitWardrobe.New(runtime)
     self.collection = ns.TransmogCollection.New(runtime)
-    local function report(ok, why)
+    local function report(ok, why, control)
         self.status = why or "Portrait ready."
-        if self.Refresh then self.Refresh() end
+        if self.Refresh then self.Refresh(control) end
         return ok, why
     end
     local function context()
@@ -19,6 +19,7 @@ function P.New(runtime)
         return self.active and context() and not self.busy and not self.layerCapture and not runtime.composition.capturing
             and not runtime.captureSequence.active and not runtime.photoPreview.Pending() and not runtime.camera.busy
     end
+    self.CanEdit = ready
     local function busy()
         self.busy = false; for _, slot in pairs(self.slots) do if slot.pending then self.busy = true end end
     end
@@ -60,6 +61,7 @@ function P.New(runtime)
             if success then
                 backend.Clear(slot.front and backend.models[slot.front])
                 slot.front, slot.spec, slot.identity = index, V.Copy(spec), identity; model:Show()
+                slot.effectError, slot.effectUncertain = nil, nil
                 db.camera.portrait.scene.actors[slotID] = V.Copy(spec)
             else backend.Clear(model) end
             finishSceneLoad()
@@ -139,11 +141,17 @@ function P.New(runtime)
         local ok, why
         if key == "spellKit" then
             ok, why = backend.Spell(backend.models[slot.front],value)
-            if not ok then backend.Spell(backend.models[slot.front],slot.spec.spellKit); return report(nil,why) end
+            if not ok then
+                local restored = backend.Spell(backend.models[slot.front], slot.spec.spellKit)
+                slot.effectUncertain = not restored or nil
+                slot.effectError = restored and why or "Effect unconfirmed. Choose another effect or clear it."
+                return report(nil, slot.effectError, key)
+            end
+            slot.effectError, slot.effectUncertain = nil, nil
         elseif key == "paused" then ok = backend.Pause(backend.models[slot.front], spec.paused); why = "Model pause unavailable."
         else ok, why = fn(backend.models[slot.front], spec) end
         if not ok then fn(backend.models[slot.front], slot.spec); return report(nil, why) end
-        slot.spec = spec; db.camera.portrait.scene.actors[self.selected] = V.Copy(spec); return report(true)
+        slot.spec = spec; db.camera.portrait.scene.actors[self.selected] = V.Copy(spec); return report(true,nil,key)
     end
     function self.SetActor(key, value)
         return editActor(key, value)

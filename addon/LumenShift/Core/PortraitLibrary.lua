@@ -20,10 +20,13 @@ L.Poses = {
     {38,"Jump","Movement"}, {41,"Float","Movement"}, {42,"Swim","Movement"},
     {119,"Sneak","Movement"}, {120,"Stealth idle","Movement"}, {143,"Sprint","Movement"},
 }
-L.Kits = { {0,"No effect"}, {16556,"Fire surge"}, {20503,"Fire trail"}, {10650,"Frost sparkle"},
-    {16343,"Cold aura"}, {41004,"Sunlight - left"}, {41005,"Sunlight - right"},
-    {15611,"Shadow - right"}, {10715,"Shadow - left"}, {10678,"Blue radiance"},
-    {12556,"Teleport shimmer"}, {57874,"Arcane lightning"}, {25890,"Fel orbs"} }
+L.Kits = { {0,"No effect"},
+    {16556,"Fire surge","Fire"}, {20503,"Fire trail","Fire"},
+    {10650,"Frost sparkle","Frost"}, {16343,"Cold aura","Frost"},
+    {41004,"Sunlight - left","Sunlight"}, {41005,"Sunlight - right","Sunlight"},
+    {15611,"Shadow - right","Shadow"}, {10715,"Shadow - left","Shadow"},
+    {10678,"Blue radiance","Arcane"}, {12556,"Teleport shimmer","Arcane"},
+    {57874,"Arcane lightning","Arcane"}, {25890,"Fel orbs","Fel"} }
 L.Slots = { {1,"Head"}, {3,"Shoulders"}, {4,"Shirt"}, {5,"Chest"}, {6,"Waist"}, {7,"Legs"},
     {8,"Feet"}, {9,"Wrists"}, {10,"Hands"}, {15,"Back"}, {16,"Main hand"}, {17,"Off hand"}, {18,"Ranged"}, {19,"Tabard"} }
 L.EquipSlots = { INVTYPE_HEAD={1}, INVTYPE_SHOULDER={3}, INVTYPE_BODY={4}, INVTYPE_CHEST={5}, INVTYPE_ROBE={5},

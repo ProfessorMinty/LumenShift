@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.31** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.32** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Portrait Stage → Actors → Effects has a searchable 12-effect library with one-click previews and a visible clear action for the selected actor. [Effects picker](docs/66-PHOTO-STUDIO-INTERFACE.md#portrait-stage-actor-effects-in-beta32).
 
 Portrait Stage → Actors → Outfits opens a three-result collection picker with live category filtering, cross-slot search and exact-source previews on the selected actor. [Outfit browser guide](docs/66-PHOTO-STUDIO-INTERFACE.md#portrait-stage-outfits-in-beta31).
 

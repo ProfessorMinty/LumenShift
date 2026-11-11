@@ -2,10 +2,6 @@ local _,ns=...
 local P,W={},ns.Widgets
 ns.OutfitPicker=P
 
-function P.Enable(b,on)
-    if on then b:Enable(); b:SetAlpha(1) else b:Disable(); b:SetAlpha(.48) end
-end
-
 function P.Preview(stage,ui,name,fn)
     local feedback={name=name,actor=stage.selected,generation=stage.generation}
     ui.outfitFeedback=feedback
@@ -19,17 +15,6 @@ function P.State(ui,key)
     local state=ui.outfitPages[key] or {page=1,query=""}
     ui.outfitPages[key]=state
     return state
-end
-
-local function pager(env,parent,y,turn)
-    local previous=W.Button(env,parent,"Previous",0,y,84,function() turn(-1) end,nil,"quiet")
-    local nextPage=W.Button(env,parent,"Next",226,y,84,function() turn(1) end,nil,"quiet")
-    local count=W.Text(parent,"",85,y-7,140,12,W.colors.muted); count:SetJustifyH("CENTER")
-    return function(page,size,n)
-        local first=(page-1)*size+1
-        count:SetText(n==0 and "0 results" or first.."–"..math.min(page*size,n).." of "..n)
-        P.Enable(previous,page>1); P.Enable(nextPage,page*size<n)
-    end
 end
 
 function P.Header(env,parent,y,title,back)
@@ -51,7 +36,7 @@ function P.Grid(env,parent,ui,y,entries,state,choose)
         end
     end
     if pages>1 then
-        local show=pager(env,parent,y-134,function(delta)
+        local show=ns.PhotoStyle.Pager(env,parent,y-134,function(delta)
             state.page=math.max(1,math.min(pages,state.page+delta)); ui.Build(true)
         end)
         show(state.page,size,#entries)
@@ -103,7 +88,7 @@ function P.List(stage,env,parent,ui,y,state,options)
             card.more:SetHeight(36)
         end
     end
-    local count=pager(env,parent,y-118,function(delta) state.page=state.page+delta; refresh() end)
+    local count=ns.PhotoStyle.Pager(env,parent,y-118,function(delta) state.page=state.page+delta; refresh() end)
     refresh=function()
         local rows,reason=options.rows(state.query)
         local n=#rows
@@ -115,7 +100,7 @@ function P.List(stage,env,parent,ui,y,state,options)
                 local name,detail,icon,selected,tip,available=options.describe(row)
                 b.label:SetText(name); card.detail:SetText(detail); card.tip=tip or (name.."\n"..detail)
                 card.icon:SetTexture((type(icon)=="number" or type(icon)=="string") and icon or "Interface/AddOns/LumenShift/Media/ui-presets.tga")
-                b.SetSelected(selected==true); P.Enable(b,available~=false); b:Show()
+                b.SetSelected(selected==true); ns.PhotoStyle.Enable(b,available~=false); b:Show()
                 if card.more then card.more:Show() end
             else b:Hide(); if card.more then card.more:Hide() end end
         end
