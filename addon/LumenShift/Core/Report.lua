@@ -199,7 +199,7 @@ function D.Build(runtime)
             .. " pending=" .. bool(namesResult and namesResult.pending) .. " readbackOK=" .. bool(namesResult and namesResult.ok)
             .. " reason=" .. safe(namesResult and namesResult.code or "none")
             .. " unavailable=" .. D.Number(runtime.camera and #(runtime.camera.unavailableNames or {}))
-        for _, key in ipairs(ns.Framing.Keys) do
+        for _, key in ipairs(ns.Framing.AllKeys) do
             if key ~= "cameraFov" then
                 local item = ns.ReadOnly.Read(runtime.reader, key); local record = db.camera.framing.journal.entries[key]
                 local capable, why = ns.Framing.Capability(runtime.reader, key)

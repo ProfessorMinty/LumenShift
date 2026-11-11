@@ -866,7 +866,10 @@ function B.NewExperiments(runtime, cameraMode)
         local descriptors, code = catalog(seen, targets, overrides); if not descriptors then return nil, code end
         for key in pairs(targets) do
             if policy.Capability then
-                local supported, reason = policy.Capability(reader, key)
+                local entry=data.journal.entries[key]
+                local retaining=cameraMode=="framing" and entry and seen[key].raw==entry.lastVerifiedRaw
+                    and V.Number(seen[key].raw)==targets[key]
+                local supported, reason = policy.Capability(reader, key, retaining)
                 if not supported then return nil, reason end
             end
         end
@@ -888,10 +891,10 @@ function B.NewExperiments(runtime, cameraMode)
         return { plan = plan, journal = journal, source = V.Copy(data.journal), seen = seen, descriptors = descriptors,
             layer = layer, targets = V.Copy(targets), reconciliation = reconciliation, overrides = overrides }
     end
-    local function write(key, expected, target, descriptor)
+    local function write(key, expected, target, descriptor, returning)
         local ready, why = gate(); if not ready then return false, nil, why end
         if policy.Capability then
-            local supported, reason = policy.Capability(reader, key)
+            local supported, reason = policy.Capability(reader, key, returning)
             if not supported then return false, nil, reason end
         end
         local current = ns.ReadOnly.Read(reader, key)
@@ -944,7 +947,7 @@ function B.NewExperiments(runtime, cameraMode)
             if op.write then
                 tx = assert(R.Before(tx, id, i, ns.ReadOnly.Read(reader, op.key), combat()))
                 if tx.state ~= "APPLYING" then failure = tx.reason; break end
-                local ok, after, errorCode = write(op.key, op.beforeRaw, op.targetRaw, fresh.descriptors[op.key])
+                local ok, after, errorCode = write(op.key, op.beforeRaw, op.targetRaw, fresh.descriptors[op.key], op.release)
                 tx = assert(R.Observe(tx, id, i, ok, after and after.raw))
                 hold(tx)
                 if tx.state == "ROLLING_BACK" then failure = errorCode; break end
@@ -963,7 +966,7 @@ function B.NewExperiments(runtime, cameraMode)
             for _, op in ipairs(rollback.rollback) do
                 rollback = assert(R.BeforeRollback(rollback, id, op.key, ns.ReadOnly.Read(reader, op.key), combat()))
                 if rollback.pendingRollback then
-                    local ok, after = write(op.key, op.expectedRaw, op.targetRaw, fresh.descriptors[op.key])
+                    local ok, after = write(op.key, op.expectedRaw, op.targetRaw, fresh.descriptors[op.key], true)
                     rollback = assert(R.ResolveRollback(rollback, id, op.key, ok, after and after.raw))
                 end
             end
@@ -1037,6 +1040,7 @@ function B.NewExperiments(runtime, cameraMode)
     end
     function lab.Preview(key, target)
         lab.preview = nil
+        if cameraMode=="framing" and ns.Framing.IsComfort(key) then return nil,"INVALID_EXPERIMENT_TARGETS" end
         if lab.busy then return nil, "BUSY" end
         if not cameraMode and db and (db.optics.comparison or ns.Optics.Known(key) and next(db.optics.visual)) then return nil, "USE_MODE_DETAIL_CONTROLS" end
         if not data or next(data.journal.entries) then return nil, "RESTORE_EXPERIMENTS_BEFORE_CALIBRATING" end
@@ -1172,8 +1176,29 @@ function B.NewExperiments(runtime, cameraMode)
         if not proposal then return nil, code end
         return run(proposal, callback)
     end
+    -- Blizzard changes these two flags as one preference. If the player picks another
+    -- mode after a verified override, keeping only the changed bit could create a third mode on exit.
+    function lab.RespectComfortChoice()
+        if cameraMode~="framing" or lab.busy or not data then return true end
+        local entries=data.journal.entries
+        if not entries.CameraKeepCharacterCentered and not entries.CameraReduceUnexpectedMovement then return true end
+        for _,key in ipairs(ns.Framing.ComfortKeys) do
+            local entry=entries[key]
+            if entry and (entry.state~="owned" or entry.failure or entry.signature~=sessionSignature
+                or V.Number(entry.lastVerifiedRaw)~=0) then return true end
+        end
+        local state=ns.Framing.ReadComfort(reader)
+        if state.error then return nil,state.error end
+        if next(state.targets) then
+            for _,key in ipairs(ns.Framing.ComfortKeys) do entries[key],owned[key]=nil,nil end
+            if not next(entries) and not next(data.sideEffects) then lab.state,lab.lastError="BASELINE",nil end
+            record("comfort", "INFO", "EXTERNAL_CAMERA_PREFERENCE_KEPT")
+        end
+        return true
+    end
     function lab.Observe()
         if lab.busy or not data then return end
+        lab.RespectComfortChoice()
         for key, item in pairs(data.journal.entries) do
             if owned[key] then
                 local current = ns.ReadOnly.Read(reader, key)

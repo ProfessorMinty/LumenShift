@@ -112,13 +112,30 @@ function C.New(runtime)
         if not ok then return namesResult(nil, why) end
         return true
     end
-    function camera.ApplyFraming(values, onComplete)
+    local function retainedFraming(omit)
+        local kept,why=runtime.framing.RespectComfortChoice()
+        if not kept then return nil,why end
+        local targets={}
+        for key,entry in pairs(db.camera.framing.journal.entries) do
+            if key~=omit then
+                if ns.Framing.IsComfort(key) then
+                    local item=ns.ReadOnly.Read(reader,key)
+                    if item.code~="OK" then return nil,"CAMERA_COMFORT_UNAVAILABLE" end
+                    if item.raw==entry.lastVerifiedRaw then targets[key]=ns.Value.Number(entry.lastVerifiedRaw)
+                    elseif item.raw~=entry.originalRaw then return nil,"CAMERA_COMFORT_CHANGED" end
+                    -- An outside return to the exact original is released, never disabled again in passing.
+                else targets[key]=ns.Value.Number(entry.lastVerifiedRaw) end
+            end
+        end
+        return targets
+    end
+    local function applyFraming(values, onComplete)
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         if camera.busy then return report(nil, "BUSY") end
         if runtime.captureSequence and runtime.captureSequence.active and runtime.captureSequence.state ~= "WAITING_FOR_PREVIEW"
             or runtime.composition and runtime.composition.capturing then return report(nil, "BUSY") end
-        local targets = {}
-        for key, entry in pairs(db.camera.framing.journal.entries) do targets[key] = ns.Value.Number(entry.lastVerifiedRaw) end
+        local targets,reason = retainedFraming()
+        if not targets then return report(nil,reason) end
         for key, value in pairs(values) do targets[key] = value end
         local ok, why = runtime.framing.Apply("camera", targets, function(done, code)
             report(done, code); if onComplete then onComplete(done, code) end
@@ -129,22 +146,44 @@ function C.New(runtime)
         if not ok then return report(nil, why) end
         return true
     end
+    function camera.ApplyFraming(values, onComplete)
+        for key in pairs(values) do
+            if ns.Framing.IsComfort(key) then return report(nil,"INVALID_EXPERIMENT_TARGETS") end
+        end
+        return applyFraming(values,onComplete)
+    end
+    function camera.UsePhotoFraming(onComplete)
+        if not camera.active or camera.interrupted or runtime.product.IsCombat() or runtime.portrait.active
+            or runtime.composition.suspended or runtime.composition.controlsHidden or runtime.photoPreview.Pending() then
+            return report(nil,"CAMERA_NOT_READY")
+        end
+        local state=ns.Framing.ReadComfort(reader)
+        if state.error then return report(nil,state.error) end
+        if not next(state.targets) then if onComplete then onComplete(true) end; return true end
+        return applyFraming(state.targets,onComplete)
+    end
     function camera.ApplyFOV(value, callback) return camera.ApplyFraming({ cameraFov = value }, callback) end
     function camera.RestoreFOV(callback)
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
-        local targets = {}
-        for key, entry in pairs(db.camera.framing.journal.entries) do if key ~= "cameraFov" then targets[key] = ns.Value.Number(entry.lastVerifiedRaw) end end
+        local targets,reason = retainedFraming("cameraFov")
+        if not targets then return report(nil,reason) end
         if runtime.captureSequence.active or runtime.composition.capturing then return report(nil, "BUSY") end
         return runtime.framing.Apply("camera", targets, callback)
     end
-    function camera.RestoreFraming(callback)
+    function camera.RestoreFraming(callback, manual)
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         if camera.active and (runtime.captureSequence and runtime.captureSequence.active or runtime.composition and runtime.composition.capturing) then return report(nil, "BUSY") end
+        local kept,reason=runtime.framing.RespectComfortChoice()
+        if not kept then return report(nil,reason) end
         if not next(db.camera.framing.journal.entries) then if callback then callback(true) end; return true end
         -- An exit never authorizes overwriting another camera addon's adjustment.
-        local ok, why = runtime.framing.Apply("camera", {}, function(done, code)
-            report(done, code); if callback then callback(done, code) end
-        end)
+        local function finished(done,code)
+            report(done,code); if callback then callback(done,code) end
+        end
+        local ok,why=runtime.framing.Apply("camera",{},finished)
+        if not ok and manual==true and why=="EXPLICIT_RECOVERY_REQUIRED" and ns.Framing.CanRecoverComfort(reader,db.camera.framing) then
+            ok,why=runtime.framing.RestoreLayer("camera",finished)
+        end
         if not ok then return report(nil, why) end
         return true
     end

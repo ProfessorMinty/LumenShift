@@ -11,46 +11,46 @@ function U.New(runtime, composition)
         Looks={page=1,query=""}, Compositions={page=1,query=""}, Scenes={page=1,query=""}, Lights={page=1,query=""},
     }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
-    panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
+    panel:SetSize(380, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
-    W.Decoration(W.Art(panel,"panel-midnight",1,-1,358,44,.62,"BORDER"))
+    W.Decoration(W.Art(panel,"panel-midnight",1,-1,378,44,.62,"BORDER"))
     W.Art(panel, "logo", 10, -9, 25, 25)
     W.Text(panel, "Photo Studio", 42, -11, 125, 18)
-    W.Rule(panel, 0, -45, 360)
-    local world = style.Tab(env, panel, "World Photo", 164, -7, 86, function()
+    W.Rule(panel, 0, -45, 380)
+    local world = style.Tab(env, panel, "World Photo", 184, -7, 86, function()
         local ok, why = runtime.portrait.World()
         self.notice = not ok and why or nil
         if ok then self.tab, self.cameraPage = "Frame", "Position" end
         self.Build(true)
     end)
-    local portrait = style.Tab(env, panel, "Portrait Stage", 251, -7, 103, function()
+    local portrait = style.Tab(env, panel, "Portrait Stage", 271, -7, 103, function()
         local ok, why = runtime.portrait.Enter()
         self.notice = not ok and why or nil
         if ok then self.tab, self.cameraPage = "Frame", "Position" end
         self.Build(true)
     end)
     local rail = env.CreateFrame("Frame", nil, panel)
-    rail:SetPoint("TOPLEFT",panel,"TOPLEFT",1,-46); rail:SetWidth(40)
+    rail:SetPoint("TOPLEFT",panel,"TOPLEFT",1,-46); rail:SetWidth(60)
     W.Fill(rail,W.colors.sidebar)
     local tabs = {}
     for i, tool in ipairs({{"Frame","Camera","ui-camera"},{"Look","Look","ui-effects"},{"Light","Light","natural"},
         {"Pose","Pose","ui-accessibility"},{"Capture","Capture","ui-export"},{"Saved","Saved","ui-presets"}}) do
         local key=tool[1]
-        tabs[key]=style.Tab(env,rail,tool[2],0,-5-(i-1)*54,40,function()
+        tabs[key]=style.Tab(env,rail,tool[2],0,-5-(i-1)*54,60,function()
             runtime.cameraActions.StopOrbit(); self.notice=nil; self.tab=key; self.Build(true)
         end,tool[3])
     end
-    local title=W.Text(panel,"",48,-58,195,21)
+    local title=W.Text(panel,"",68,-58,195,21)
     local function history(label, redo, x)
         local b=W.Button(env,panel,label,x,-53,48,function() editor.Undo(redo); self.Build() end,nil,"quiet")
         b.label:ClearAllPoints(); b.label:SetPoint("TOPLEFT",b,"TOPLEFT",0,-7)
         b.label:SetWidth(48); b.label:SetJustifyH("CENTER"); b.label:SetWordWrap(false)
         return b
     end
-    local undo, redo = history("Undo",false,253), history("Redo",true,305)
+    local undo, redo = history("Undo",false,273), history("Redo",true,325)
     local function pages(labels, field)
         local row=env.CreateFrame("Frame",nil,panel)
-        row:SetSize(310,30); row:SetPoint("TOPLEFT",panel,"TOPLEFT",44,-89)
+        row:SetSize(310,30); row:SetPoint("TOPLEFT",panel,"TOPLEFT",64,-89)
         return { row=row, field=field, buttons=style.Pages(env,row,labels,function(page)
             self[field]=page
             if field=="worldPoseTab" then self.worldEmotePage=1 end
@@ -85,7 +85,7 @@ function U.New(runtime, composition)
     scrollbar:SetScript("OnValueChanged", function(_, value) scroll:SetVerticalScroll(value) end)
     scroll:SetScript("OnMouseWheel", function(_, delta) scrollbar:SetValue(scroll:GetVerticalScroll() - delta * 54) end)
     local footer = env.CreateFrame("Frame", nil, panel); self.footer = footer
-    footer:SetSize(310, 60); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 44, 8)
+    footer:SetSize(310, 60); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 64, 8)
     W.Rule(footer, 0, 0, 310)
     self.compare = W.Button(env, footer, "Before / After", 0, -6, 144, function()
         self.notice = nil
@@ -133,7 +133,7 @@ function U.New(runtime, composition)
             self.Build()
             return
         end
-        local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 360), math.max(.4, h / 480))
+        local scale = math.min(1, math.max(.4, (env.UIParent:GetWidth() - 32) / 380), math.max(.4, h / 480))
         panel:SetScale(scale); h = math.max(480, h / scale)
         local hasActions = self.tab == "Look" or (self.tab == "Light" and not runtime.portrait.active)
         local top = self.activePages and -126 or -96
@@ -143,7 +143,7 @@ function U.New(runtime, composition)
         end
         panel:SetHeight(h); edges[3]:SetHeight(h); edges[4]:SetHeight(h); rail:SetHeight(h-47)
         local viewport = h + top - footerHeight - 16
-        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 44, top)
+        scroll:ClearAllPoints(); scroll:SetPoint("TOPLEFT", panel, "TOPLEFT", 64, top)
         scrollbar:ClearAllPoints(); scrollbar:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -2, top)
         footer:SetHeight(footerHeight)
         self.status:ClearAllPoints(); self.status:SetWidth(310)
@@ -345,7 +345,9 @@ function U.New(runtime, composition)
         local seq = runtime.captureSequence
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
             or self.RefreshWorldPose and self.RefreshWorldPose()
-        if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and ns.Product.Message(runtime.cameraActions.status) or nil
+        if self.tab == "Frame" then
+            local motion=runtime.cameraActions.status
+            extra=(self.cameraPage=="Position" or motion=="CAMERA_STOP_FAILED") and motion~="READY" and ns.Product.Message(motion) or nil
         elseif self.RefreshCaptureTimer then extra = self.captureHint
         elseif self.tab == "Capture" and self.capturePage == "Output" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Capture" then extra = ""

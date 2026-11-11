@@ -7,7 +7,7 @@ function C.ValidPreset(p)
         or not ({ none = true, wide = true, cinema = true, square = true })[p.aspect] or type(p.framing) ~= "table" then return false end
     if p.zoom ~= nil and (not V.Finite(p.zoom) or p.zoom < 0 or p.zoom > 50) then return false end
     for key, value in pairs(p.framing) do
-        if not ns.Framing.Known(key) or not V.Finite(value) then return false end
+        if not ns.Framing.Known(key) or ns.Framing.IsComfort(key) or not V.Finite(value) then return false end
         if key == "test_cameraDynamicPitch" and value ~= 0 and value ~= 1 then return false end
         if key == "cameraFov" then if value <= 0 or value >= 180 then return false end
         else local bounds = ns.Framing.Range(nil, key); if value < bounds.min or value > bounds.max then return false end end

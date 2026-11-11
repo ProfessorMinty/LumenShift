@@ -29,7 +29,7 @@ function U.Build(runtime, ui, parent, env)
         W.Slider(env, parent, "Field of view", 0, -371, range.min, range.max, 0.1, function() return ui.fov end,
             function(n) ui.fov = n; return true end, "Uses the game's current bounds. Apply is manual; no animation or camera tracking.", 400)
         W.Button(env, parent, "Apply field of view", 430, -383, 198, function() camera.ApplyFOV(ui.fov); ui.Refresh() end)
-        W.Button(env, parent, "Restore framing", 642, -383, 194, function() camera.RestoreFOV(); ui.Refresh() end, nil, "quiet")
+        W.Button(env, parent, "Restore framing", 642, -383, 194, function() camera.RestoreFraming(nil,true); ui.Refresh() end, nil, "quiet")
     else W.Text(parent, "Field of view is unavailable on this client/configuration. Guides and HUD controls still work.", 0, -371, 820, 13, W.colors.muted) end
     W.Text(parent, "Mouse / wheel framing stays native. DynamicCam or Narcissus can keep control; an external FOV edit stops our restoration.", 0, -445, 820, 13, W.colors.muted)
     W.Text(parent, "TEMPORARY PHOTO QUALITY", 0, -514, 820, 12, W.colors.muted)

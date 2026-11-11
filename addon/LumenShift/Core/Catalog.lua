@@ -25,7 +25,7 @@ function C.Get(key)
     if ns.PhotoOutput and ns.PhotoOutput.Known(key) then return { kind = key == "MSAAQuality" and "string" or "number", layer = "camera", admitted = false } end
     if key == "screenshotFormat" then return { kind = "string", diagnosticOnly = true, admitted = false } end
     if ns.Framing and ns.Framing.Known(key) then return { kind = "number", layer = "camera", admitted = false } end
-    if key == "CameraKeepCharacterCentered" or key == "CameraReduceUnexpectedMovement" or key == "cameraZoomSpeed" or key == "cameraDistanceMaxZoomFactor" or key == "maxFPS" or key == "maxFPSBk" then return { kind = "number", diagnosticOnly = true, admitted = false } end
+    if key == "cameraZoomSpeed" or key == "cameraDistanceMaxZoomFactor" or key == "maxFPS" or key == "maxFPSBk" then return { kind = "number", diagnosticOnly = true, admitted = false } end
     if ns.NativeGraphics and ns.NativeGraphics.Known(key) then return { kind = "number", layer = "quality", admitted = false } end
     if ns.NamePolicy and ns.NamePolicy.Known(key) then return { kind = "number", layer = "camera", admitted = false } end
     if candidates[key] then return ns.Value.Copy(candidates[key]) end

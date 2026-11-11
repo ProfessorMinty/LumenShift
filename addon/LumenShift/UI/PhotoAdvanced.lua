@@ -58,31 +58,62 @@ function U.Position(runtime, env, parent, y, ui)
     return y
 end
 function U.Frame(runtime, env, parent, y, ui, liveSlider)
-    local preview = runtime.photoPreview
-    local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
-    W.Section(parent, "SHOULDER & DYNAMIC FRAMING", 0, y, 310); y = y - 29
-    for _, item in ipairs({ { "test_cameraOverShoulder", "Shoulder offset" }, { "test_cameraDynamicPitchBaseFovPad", "Dynamic footroom" } }) do
-        local key = item[1]; local seen = ns.ReadOnly.Read(runtime.reader, key)
-        local capable, why = ns.Framing.Capability(runtime.reader, key)
-        local range = capable and ns.Framing.Bounds(key, seen.raw, runtime.reader)
-        if range then y = liveSlider(key, item[2], range.min, range.max, range.step, V.Number(seen.raw), y)
-        else text(item[2] .. ": " .. (why == "CAMERA_COMFORT_SETTING_ENABLED" and "disabled by your WoW camera comfort setting." or "unavailable."), 54) end
+    local preview,framing=runtime.photoPreview,ns.Framing
+    local function text(label,height,color)
+        W.Text(parent,label,0,y,310,12,color or W.colors.muted); y=y-height
     end
-    local seen = ns.ReadOnly.Read(runtime.reader, "test_cameraDynamicPitch")
-    local capable = ns.Framing.Capability(runtime.reader, "test_cameraDynamicPitch")
-    if capable and ns.Framing.Bounds("test_cameraDynamicPitch", seen.raw, runtime.reader) then
-        W.Toggle(env, parent, "Dynamic framing", 0, y, 310, function() return V.Number(seen.raw) == 1 end,
-            function(v) preview.Begin(); local ok, why = preview.Queue("test_cameraDynamicPitch", v and 1 or 0); report(ui, ok, why) end); y = y - 46
+    local observed,ranges,blocked={},{},false
+    for _,key in ipairs({"test_cameraOverShoulder","test_cameraDynamicPitch","test_cameraDynamicPitchBaseFovPad"}) do
+        local item=ns.ReadOnly.Read(runtime.reader,key)
+        observed[key]=V.Number(item.raw)
+        local bounds=framing.Bounds(key,item.raw,runtime.reader)
+        local ok,why=framing.Capability(runtime.reader,key)
+        if ok then ranges[key]=bounds
+        elseif bounds and why=="CAMERA_COMFORT_SETTING_ENABLED" then blocked=true end
     end
-    text("Footroom takes effect when dynamic framing is on.", 36)
-    W.Button(env, parent, "Restore all framing", 0, y, 310, function()
+    local entries=runtime.db.camera.framing.journal.entries
+    if blocked then
+        local state=framing.ReadComfort(runtime.reader)
+        text("Active WoW account preferences",24,W.colors.text)
+        local labels={CameraKeepCharacterCentered="Keep character centered",CameraReduceUnexpectedMovement="Reduce unexpected camera movement"}
+        for _,key in ipairs(state.enabled) do text(labels[key],22,W.colors.accent) end
+        text("Pause these preferences to adjust shoulder offset and footroom. Exit Camera Mode or restore framing to return to your settings.",54)
+        local enable=W.Button(env,parent,"Enable photo framing",0,y,310,function()
+            local ok,why=runtime.camera.UsePhotoFraming(function(done,reason) report(ui,done,reason) end)
+            if not ok then report(ui,nil,why) end
+        end,nil,"primary")
+        ns.PhotoStyle.Enable(enable,not state.error and not runtime.framing.busy)
+        y=y-38
+        if state.error then text(ns.Product.Message(state.error),40) end
+    else
+        local function slider(key,label)
+            local range=ranges[key]
+            if range then y=liveSlider(key,label,range.min,range.max,range.step,observed[key],y)
+            else text(label.." unavailable on this client.",28) end
+        end
+        slider("test_cameraOverShoulder","Shoulder offset")
+        if ranges.test_cameraDynamicPitch then
+            W.Toggle(env,parent,"Dynamic framing",0,y,310,function() return observed.test_cameraDynamicPitch==1 end,
+                function(v) preview.Begin(); local ok,why=preview.Queue("test_cameraDynamicPitch",v and 1 or 0); report(ui,ok,why) end)
+            y=y-42
+        else text("Dynamic framing unavailable on this client.",28) end
+        slider("test_cameraDynamicPitchBaseFovPad","Footroom")
+        if ranges.test_cameraDynamicPitchBaseFovPad and observed.test_cameraDynamicPitch~=1 then
+            text("Turn on Dynamic framing to see footroom changes.",34)
+        end
+        if entries.CameraKeepCharacterCentered or entries.CameraReduceUnexpectedMovement then
+            text("Camera preferences paused for this session.",34)
+        end
+    end
+    local restore=W.Button(env,parent,"Restore all framing",0,y,310,function()
         preview.Finish(function()
-            local ok, why = runtime.camera.RestoreFraming(function(done, code) report(ui, done, code) end)
-            if not ok then report(ui, ok, why) end
-            return ok, why
+            local ok,why=runtime.camera.RestoreFraming(function(done,code) report(ui,done,code) end,true)
+            if not ok then report(ui,ok,why) end
+            return ok,why
         end)
     end)
-    return y - 48
+    ns.PhotoStyle.Enable(restore,not runtime.framing.busy and (next(entries)~=nil or preview.Pending()))
+    return y-38
 end
 function U.Capture(runtime, env, parent, y, ui)
     local output, reader = runtime.output, runtime.reader

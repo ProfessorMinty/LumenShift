@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.33 - 2026-11-11
+
+- World Photo identifies the active camera preferences and offers a reversible, explicit session override for shoulder offset and dynamic footroom. Restore all framing or exit Camera Mode to return the captured values.
+- The inspector sidebar fits the Camera and Capture labels. Orbit feedback stays on Position.
+
 ## 0.2.0-beta.32 - 2026-11-11
 
 - Find staged spell effects by name, family or visual-kit ID. Browse six cards per page and click to preview or swap an effect on the selected actor.

@@ -11,11 +11,12 @@ function P.ObservationError(item, key)
     if flags.readOnly ~= false then return "READ_ONLY_CVAR" end
     if flags.locked ~= false then return "LOCKED_CVAR" end
     if type(flags.serverAccount) ~= "boolean" or type(flags.serverCharacter) ~= "boolean" then return "UNKNOWN_STORAGE_FLAGS" end
-    -- GetCVarInfo reports storage separately from restrictions. The two admitted
-    -- friendly-name preferences may be server-stored; graphics remain local-only.
-    -- Callers must supply their actual operation key at every verification stage.
-    if (flags.serverAccount or flags.serverCharacter) and not (ns.NamePolicy and ns.NamePolicy.Known(key)) then
-        return "NONLOCAL_STORAGE"
+    -- Forever stores the two native motion preferences on the account. Preserve
+    -- their normal storage scope at every stage of a player-initiated override.
+    if flags.serverAccount or flags.serverCharacter then
+        local namePreference = ns.NamePolicy and ns.NamePolicy.Known(key)
+        local accountCameraPreference = ns.Framing and ns.Framing.IsComfort(key) and not flags.serverCharacter
+        if not namePreference and not accountCameraPreference then return "NONLOCAL_STORAGE" end
     end
 end
 local function safeObservation(item, key)
