@@ -23,6 +23,7 @@ frame:SetScript("OnEvent", runtime.log.Guard("bootstrap", "OnEvent", function(se
         return
     end
     if event == "PLAYER_LEAVING_WORLD" then
+        if runtime.camera then runtime.camera.CancelEntryFraming() end
         if runtime.portrait then runtime.portrait.Exit() end
         if runtime.photoPreview then runtime.photoPreview.Cancel("WORLD_LEAVE") end
         if runtime.photoComposition then runtime.photoComposition.Cancel() end

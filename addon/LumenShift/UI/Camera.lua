@@ -1,6 +1,12 @@
 local _, ns = ...
 local U, W = {}, ns.Widgets
 ns.CameraUI = U
+function U.FramingPreference(runtime,env,parent,x,y,width)
+    return W.Toggle(env,parent,"Enable photo framing on entry",x,y,width,
+        function() return runtime.db.camera.photoFramingOnEntry end,
+        runtime.camera.SetFramingOnEntry,
+        "Pause WoW camera comfort settings for this visit and future Camera Mode entries. Exit restores each visit’s originals.")
+end
 function U.Build(runtime, ui, parent, env)
     local db, camera = runtime.db, runtime.camera
     local function rebuild() ui.RebuildInPlace() end
@@ -13,6 +19,7 @@ function U.Build(runtime, ui, parent, env)
         function(value) db.camera.keepEffects = value; runtime.product.RefreshPresentation() end)
     W.Toggle(env, parent, "Rule of thirds guides", 0, -183, 400, function() return db.camera.thirds end,
         function(value) db.camera.thirds = value; if camera.active then runtime.composition.Show() end end)
+    U.FramingPreference(runtime,env,parent,430,-183,400)
     W.Text(parent, "Frame guide (does not crop the screenshot)", 0, -241, 820, 13)
     for i, choice in ipairs({ { "none", "No frame" }, { "wide", "16:9" }, { "cinema", "2.39:1" }, { "square", "Square" } }) do
         local id = choice[1]

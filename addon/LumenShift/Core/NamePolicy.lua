@@ -58,7 +58,7 @@ function N.ValidateTargets(targets, layer)
     return true
 end
 function N.Upgrade(data)
-    local defaults = { thirds = false, aspect = "none", photoEnabled = false, photoLevel = 7,
+    local defaults = { thirds = false, aspect = "none", photoFramingOnEntry = false, photoEnabled = false, photoLevel = 7,
         framing = ns.Framing.Defaults(), photo = ns.NativeGraphics.Defaults(), editor = ns.PhotoConfig.Defaults() }
     for key, value in pairs(defaults) do if data[key] == nil then data[key] = value end end
     N.UpgradeTools(data)
@@ -68,12 +68,12 @@ function N.Defaults()
     N.Upgrade(data); return data
 end
 function N.Validate(data)
-    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true, editor = true, tools = true, nameGroups = true, output = true, composition = true, portrait = true, keepInCombat = true, effectsInCombat = true })
+    if not V.Fields(data, { journal = true, sideEffects = true, hideWithUI = true, keepEffects = true, thirds = true, aspect = true, photoFramingOnEntry = true, photoEnabled = true, photoLevel = true, framing = true, photo = true, nameReturn = true, editor = true, tools = true, nameGroups = true, output = true, composition = true, portrait = true, keepInCombat = true, effectsInCombat = true })
         or not ns.Store.ValidateJournal(data.journal) or type(data.sideEffects) ~= "table"
         or type(data.hideWithUI) ~= "boolean" or type(data.keepEffects) ~= "boolean" then return false end
     if type(data.keepInCombat) ~= "boolean" or type(data.effectsInCombat) ~= "boolean" then return false end
     if type(data.thirds) ~= "boolean" or not ({ none = true, wide = true, cinema = true, square = true })[data.aspect]
-        or type(data.photoEnabled) ~= "boolean" or not V.Finite(data.photoLevel) or data.photoLevel % 1 ~= 0
+        or type(data.photoFramingOnEntry) ~= "boolean" or type(data.photoEnabled) ~= "boolean" or not V.Finite(data.photoLevel) or data.photoLevel % 1 ~= 0
         or data.photoLevel < 1 or data.photoLevel > 10 or not ns.Framing.Validate(data.framing)
         or not ns.NativeGraphics.Validate(data.photo) or not ns.PhotoConfig.Validate(data.editor) then return false end
     if not ns.PortraitConfig.Validate(data.portrait) or not ns.PhotoOutput.Validate(data.output) or not ns.PhotoComposition.Validate(data.composition) or not ns.PhotoTools.Validate(data.tools) or not V.Fields(data.nameGroups, { players = true, pets = true, npcs = true, focused = true, bubbles = true }) then return false end

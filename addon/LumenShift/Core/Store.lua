@@ -152,8 +152,12 @@ function S.Open(raw)
     if data.schemaVersion == 19 then
         data.schemaVersion, migrated = 20, migrated and migrated:gsub("_TO_19$", "_TO_20") or "MIGRATED_19_TO_20"
     end
+    if data.schemaVersion == 20 then
+        -- Prior visits and recovery records are not an opt-in to future visits.
+        if type(data.camera)=="table" then data.camera.photoFramingOnEntry=false end
+        data.schemaVersion, migrated = 21, migrated and migrated:gsub("_TO_20$", "_TO_21") or "MIGRATED_20_TO_21"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
-        -- Only the explicitly supported schema-1 through schema-9 migrations above are permitted.
         return nil, "UNSUPPORTED_SCHEMA"
     end
     if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true, optics = true })

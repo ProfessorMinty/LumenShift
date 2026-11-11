@@ -46,7 +46,7 @@ return function(make, eq, test)
         local f = make(); local old = f.ns.Value.Copy(f.r.db)
         old.schemaVersion, old.onboarding.completed = 11, true
         local copy, code = f.ns.Store.Open(old)
-        eq(code, "MIGRATED_11_TO_20"); eq(copy.onboarding.completed, true); eq(copy.camera.nameReturn, nil)
+        eq(code, "MIGRATED_11_TO_21"); eq(copy.onboarding.completed, true); eq(copy.camera.nameReturn, nil)
         copy.camera.nameReturn = { targets = { Gamma = 1 } }; eq(f.ns.Store.Open(copy), nil)
         copy.camera.nameReturn = { targets = { [player] = 2 } }; eq(f.ns.Store.Open(copy), nil)
         copy.camera.nameReturn = { targets = {} }; assert(f.ns.Store.Open(copy))

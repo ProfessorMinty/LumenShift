@@ -99,7 +99,7 @@ return function(make, eq, test)
         local p=old.camera.portrait; p.version=3; p.scene.version=3
         p.scene.yaw,p.scene.pitch,p.scene.roll=nil,nil,nil
         p.scene.distance=9; p.scene.height=2; p.scene.actors[1].roll=12; p.saved.Before=f.ns.Value.Copy(p.scene)
-        local db,why=f.ns.Store.Open(old); eq(why,"MIGRATED_19_TO_20")
+        local db,why=f.ns.Store.Open(old); eq(why,"MIGRATED_19_TO_21")
         for _,s in ipairs({db.camera.portrait.scene,db.camera.portrait.saved.Before}) do
             eq(s.version,4); eq(s.yaw,0); eq(s.pitch,0); eq(s.roll,0); eq(s.distance,9); eq(s.height,2); eq(s.actors[1].roll,12)
         end

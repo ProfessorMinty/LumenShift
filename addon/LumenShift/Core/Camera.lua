@@ -4,6 +4,8 @@ ns.Camera = C
 function C.New(runtime)
     local camera = { active = false, changedNames = false, busy = false }
     local reader, db, names = runtime.reader, runtime.db, runtime.names
+    local pendingEntryFraming
+    function camera.CancelEntryFraming() pendingEntryFraming=nil end
     local function report(ok, why)
         camera.error = why
         ns.Log.Record(reader, "camera", "operation", ok and "INFO" or "WARN", why or "PASS")
@@ -153,6 +155,7 @@ function C.New(runtime)
         return applyFraming(values,onComplete)
     end
     function camera.UsePhotoFraming(onComplete)
+        camera.CancelEntryFraming()
         if not camera.active or camera.interrupted or runtime.product.IsCombat() or runtime.portrait.active
             or runtime.composition.suspended or runtime.composition.controlsHidden or runtime.photoPreview.Pending() then
             return report(nil,"CAMERA_NOT_READY")
@@ -161,6 +164,40 @@ function C.New(runtime)
         if state.error then return report(nil,state.error) end
         if not next(state.targets) then if onComplete then onComplete(true) end; return true end
         return applyFraming(state.targets,onComplete)
+    end
+    local function usePreferredFraming()
+        if not db.camera.photoFramingOnEntry or not camera.active or camera.interrupted or reader.resetPending
+            or runtime.product.IsCombat() or runtime.portrait.active or runtime.composition.suspended
+            or runtime.composition.controlsHidden or camera.Visible()~=false then return end
+        -- A preference may start a new session, but must not adopt an interrupted one's originals.
+        local entries=db.camera.framing.journal.entries
+        if (entries.CameraKeepCharacterCentered or entries.CameraReduceUnexpectedMovement)
+            and (runtime.framing.state=="RECOVERY" or runtime.framing.state=="CONFLICT") then
+            return report(nil,"RESTORE_FRAMING_FIRST")
+        end
+        return camera.UsePhotoFraming(camera.FramingPreferenceResult)
+    end
+    function camera.SetFramingOnEntry(enabled)
+        if not db then return report(nil,"SAVED_DATA_QUARANTINED") end
+        if type(enabled)~="boolean" then return nil,"INVALID_FRAMING_PREFERENCE" end
+        if db.camera.photoFramingOnEntry==enabled then return true end
+        camera.CancelEntryFraming()
+        db.camera.photoFramingOnEntry=enabled
+        if enabled and camera.active and not runtime.framing.busy then usePreferredFraming() end
+        return true
+    end
+    local function enableFramingAfterEntry(afterNames)
+        if not db.camera.photoFramingOnEntry then return end
+        if not afterNames then usePreferredFraming(); return end
+        -- Leave the names writer's verification callback before starting the framing writer.
+        local ticket={}
+        pendingEntryFraming=ticket
+        local scheduled=ns.ReadOnly.Call(reader,reader.env.C_Timer and reader.env.C_Timer.After,0,function()
+            if pendingEntryFraming~=ticket then return end
+            pendingEntryFraming=nil
+            usePreferredFraming()
+        end)
+        if not scheduled then pendingEntryFraming=nil; report(nil,"FOLLOWUP_TIMER_FAILED") end
     end
     function camera.ApplyFOV(value, callback) return camera.ApplyFraming({ cameraFov = value }, callback) end
     function camera.RestoreFOV(callback)
@@ -171,6 +208,7 @@ function C.New(runtime)
         return runtime.framing.Apply("camera", targets, callback)
     end
     function camera.RestoreFraming(callback, manual)
+        camera.CancelEntryFraming()
         if not db then return report(nil, "SAVED_DATA_QUARANTINED") end
         if camera.active and (runtime.captureSequence and runtime.captureSequence.active or runtime.composition and runtime.composition.capturing) then return report(nil, "BUSY") end
         local kept,reason=runtime.framing.RespectComfortChoice()
@@ -188,6 +226,7 @@ function C.New(runtime)
         return true
     end
     function camera.Exit()
+        camera.CancelEntryFraming()
         if runtime.portrait then runtime.portrait.Exit() end
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
         local motionError
@@ -246,6 +285,7 @@ function C.New(runtime)
         return not firstError or nil, firstError
     end
     function camera.Combat()
+        camera.CancelEntryFraming()
         -- Cancel native movement/writes, not the user's screen treatment or staged art.
         if runtime.photoComposition then runtime.photoComposition.Cancel() end
         if runtime.cameraActions then runtime.cameraActions.Cancel() end
@@ -263,7 +303,7 @@ function C.New(runtime)
         if camera.active or camera.busy then visibility(true) end
     end
     function camera.Toggle()
-        if camera.busy or names.busy or runtime.framing.busy or runtime.photo.busy then return report(nil, "BUSY") end
+        if camera.busy or names.busy or runtime.photo.busy or runtime.framing.busy and not camera.active then return report(nil, "BUSY") end
         local shown, why = camera.Visible()
         if shown == nil then return report(nil, why) end
         if camera.active or not shown then return camera.Exit() end
@@ -283,20 +323,22 @@ function C.New(runtime)
             local ready, reason = runtime.photoCompatibility.Prepare(); if not ready then return report(nil, reason) end
         end
         camera.interrupted = false
-        local function hide()
+        local function hide(afterNames)
             -- Combat or an external UI change during name verification is not a new hide request.
             if camera.interrupted or runtime.product.IsCombat() or camera.Visible() ~= true then return report(nil, "CAMERA_ENTRY_INTERRUPTED") end
             local ok, reason = visibility(false)
             camera.active = ok == true
             if ok and runtime.photoEditor then runtime.photoEditor.Enter() end
             if ok and runtime.composition then runtime.composition.Show() end
-            return report(ok, reason)
+            report(ok, reason)
+            if ok then enableFramingAfterEntry(afterNames) end
+            return ok, reason
         end
         local function enter()
             if camera.interrupted or runtime.product.IsCombat() then return report(nil, "CAMERA_ENTRY_INTERRUPTED") end
             local targets, unavailable = ns.NamePolicy.Targets(reader, db.camera)
             camera.unavailableNames = unavailable
-            if next(targets) then return camera.ApplyNames(hide) end
+            if next(targets) then return camera.ApplyNames(function() hide(true) end) end
             return hide()
         end
         if db.camera.photoEnabled then

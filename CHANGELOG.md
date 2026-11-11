@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.34 - 2026-11-11
+
+- Save **Enable photo framing on entry** in Studio or Photo Studio. Normal Camera Mode entry captures fresh originals and normal exit restores them. Restore all framing can end an override before exit.
+- Existing settings migrate to schema 21 with automatic framing off. The one-session Enable photo framing button remains available.
+
 ## 0.2.0-beta.33 - 2026-11-11
 
 - World Photo identifies the active camera preferences and offers a reversible, explicit session override for shoulder offset and dynamic footroom. Restore all framing or exit Camera Mode to return the captured values.

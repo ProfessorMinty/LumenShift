@@ -2,7 +2,7 @@
 return function(make,eq,test)
     local centered,reduce="CameraKeepCharacterCentered","CameraReduceUnexpectedMovement"
     local shoulder,pitch,foot="test_cameraOverShoulder","test_cameraDynamicPitch","test_cameraDynamicPitchBaseFovPad"
-    local function open(a,b,saved)
+    local function fixture(a,b,saved)
         local f=make(saved,{[centered]=a,[reduce]=b,[shoulder]="0.00",[pitch]="0",[foot]="0.35"})
         local getInfo=f.env.C_CVar.GetCVarInfo
         f.env.C_CVar.GetCVarInfo=function(key)
@@ -11,6 +11,10 @@ return function(make,eq,test)
             end
             return getInfo(key)
         end
+        return f
+    end
+    local function open(a,b,saved)
+        local f=fixture(a,b,saved)
         assert(f.r.camera.Toggle()); f.flush()
         local ui=f.r.composition.editor
         f.mock.Click("Framing"); f.mock.Click("Offset"); assert(not ui.building)
@@ -62,7 +66,7 @@ return function(make,eq,test)
             eq(next(f.r.db.camera.framing.journal.entries),nil)
         end
     end)
-    test("CF04 no preset, slider queue or camera entry can opt into changing comfort preferences",function()
+    test("CF04 presets, slider queues and default Camera entry cannot change comfort preferences",function()
         local f=open("1","0")
         eq(f.r.camera.ApplyFraming({[centered]=0}),nil)
         eq(f.r.photoPreview.Queue(centered,0),nil)
@@ -107,4 +111,5 @@ return function(make,eq,test)
         eq(f.r.camera.active,false); eq(f.values[reduce],"1"); eq(f.values[centered],"0")
         eq(next(f.r.db.camera.framing.journal.entries),nil)
     end)
+    return fixture
 end

@@ -405,6 +405,12 @@ function U.New(runtime, composition)
         end
     end
     editor.Refresh = self.Refresh
+    runtime.camera.FramingPreferenceResult=function(ok,why)
+        if self.panel:IsVisible() and self.tab=="Frame" and self.cameraPage=="Framing" and self.framingTool=="Offset" then
+            self.notice=not ok and ns.Product.Message(why) or nil
+            self.Refresh()
+        end
+    end
     runtime.camera.NamesChanged = function() if self.RefreshNames then self.RefreshNames() end end
     preview.Refresh = self.Refresh
     runtime.photoTools.Refresh = self.Refresh

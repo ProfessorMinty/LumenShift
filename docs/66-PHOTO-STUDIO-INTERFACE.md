@@ -163,3 +163,15 @@ Only the explicit button opts into the override. Opening Photo Studio, editing o
 **In-game check.** Note the listed preference, enable photo framing, drag Shoulder offset, turn on Dynamic framing and try Footroom. Choose Restore all framing and check both the scene and the listed preference. Repeat using normal Camera Mode exit. The sidebar is 20 UI units wider so Camera and Capture have room in the game font. Check readability at your usual UI scale.
 
 Nine simulated regression cases cover the four preference combinations, no-write browsing, account-stored flags, native restrictions, exact restoration, external checkbox changes, rejected writes, reload recovery and exit during verification. Native movement, restoration and client-font appearance still need in-game acceptance.
+
+## Saved framing preference in beta.34
+
+**Enable photo framing on entry** is available in **Studio → Camera** and **World Photo → Camera → Framing → Offset**. In Studio before entry, the switch saves the choice immediately. Turning it on in an eligible active World Photo session also starts that session’s override. Turning it off changes future entries. To end the current override now, click **Restore all framing**.
+
+Each normal entry reads WoW’s current camera preferences. The existing writer captures the values it changes and restores those originals on exit. A newer external camera choice takes precedence. Manual shoulder offset, footroom, dynamic pitch and field-of-view adjustments still use their own captured originals. The switch does not save or reapply their numeric values. When name hiding or temporary quality is enabled, entry framing waits for those operations to finish.
+
+Schema 21 stores one boolean, off for fresh installs and upgrades. A reload loads the preference without changing game settings. An interrupted preference journal keeps its earlier originals for recovery. Entering during combat uses current native settings for that visit. Ending combat does not trigger a delayed override.
+
+**In-game check.** Turn on the preference in Studio, enter Camera Mode twice and check the Offset controls on each visit. Between visits, change WoW’s motion preference and confirm the second exit returns to the newer value. Try **Restore all framing** during a visit and confirm framing enables again next time. Turn the switch off, exit, then check the one-session enable button is available when a comfort preference is on.
+
+Ten simulated regression cases cover migration, persistence, exact originals across visits, manual restoration and opt-out, combined name and quality settings, stale entry callbacks, combat, native restrictions, external changes, interrupted recovery and rapid exit. Native entry timing and restoration remain part of the in-game check.

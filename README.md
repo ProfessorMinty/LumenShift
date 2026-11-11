@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.33** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.34** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Enable **photo framing on entry** in Studio → Camera or World Photo → Camera → Framing → Offset to reuse the temporary override each visit. [Saved framing preference](docs/66-PHOTO-STUDIO-INTERFACE.md#saved-framing-preference-in-beta34).
 
 World Photo → Camera → Framing → Offset identifies active WoW camera preferences and offers a temporary photo override. [Offset and restoration](docs/66-PHOTO-STUDIO-INTERFACE.md#world-camera-framing-in-beta33).
 

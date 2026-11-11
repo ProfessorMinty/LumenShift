@@ -3,6 +3,7 @@ local P = {}
 ns.Product = P
 local messages = {
     CAMERA_NOT_READY = "Finish the current camera adjustment or capture, then try again.",
+    RESTORE_FRAMING_FIRST = "An earlier framing change needs attention. Open Camera → Framing → Offset and restore all framing.",
     CAMERA_COMFORT_UNAVAILABLE = "WoW did not return both camera preferences as on or off.",
     CAMERA_COMFORT_CHANGED = "A camera preference changed outside Photo Studio. Restore framing before starting a new override.",
     CAMERA_COMFORT_SETTING_ENABLED = "Your WoW camera comfort setting disables this adjustment. Other photo tools remain available.",

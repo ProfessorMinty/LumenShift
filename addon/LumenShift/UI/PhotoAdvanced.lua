@@ -71,6 +71,8 @@ function U.Frame(runtime, env, parent, y, ui, liveSlider)
         if ok then ranges[key]=bounds
         elseif bounds and why=="CAMERA_COMFORT_SETTING_ENABLED" then blocked=true end
     end
+    ns.CameraUI.FramingPreference(runtime,env,parent,0,y,310)
+    y=y-40
     local entries=runtime.db.camera.framing.journal.entries
     if blocked then
         local state=framing.ReadComfort(runtime.reader)
@@ -98,12 +100,12 @@ function U.Frame(runtime, env, parent, y, ui, liveSlider)
             y=y-42
         else text("Dynamic framing unavailable on this client.",28) end
         slider("test_cameraDynamicPitchBaseFovPad","Footroom")
+        local hint=""
+        if entries.CameraKeepCharacterCentered or entries.CameraReduceUnexpectedMovement then hint="Camera preferences paused. " end
         if ranges.test_cameraDynamicPitchBaseFovPad and observed.test_cameraDynamicPitch~=1 then
-            text("Turn on Dynamic framing to see footroom changes.",34)
+            hint=hint.."Turn on Dynamic framing to adjust footroom."
         end
-        if entries.CameraKeepCharacterCentered or entries.CameraReduceUnexpectedMovement then
-            text("Camera preferences paused for this session.",34)
-        end
+        if hint~="" then text(hint,36) end
     end
     local restore=W.Button(env,parent,"Restore all framing",0,y,310,function()
         preview.Finish(function()
