@@ -157,6 +157,11 @@ function S.Open(raw)
         if type(data.camera)=="table" then data.camera.photoFramingOnEntry=false end
         data.schemaVersion, migrated = 21, migrated and migrated:gsub("_TO_20$", "_TO_21") or "MIGRATED_20_TO_21"
     end
+    if data.schemaVersion == 21 then
+        -- Existing recovery entries describe a visit, not a chosen photo setup.
+        if type(data.camera) == "table" then data.camera.preferredFraming = {} end
+        data.schemaVersion, migrated = 22, migrated and migrated:gsub("_TO_21$", "_TO_22") or "MIGRATED_21_TO_22"
+    end
     if data.schemaVersion ~= ns.schemaVersion then
         return nil, "UNSUPPORTED_SCHEMA"
     end

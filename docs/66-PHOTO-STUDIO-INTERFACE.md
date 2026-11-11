@@ -175,3 +175,13 @@ Schema 21 stores one boolean, off for fresh installs and upgrades. A reload load
 **In-game check.** Turn on the preference in Studio, enter Camera Mode twice and check the Offset controls on each visit. Between visits, change WoW’s motion preference and confirm the second exit returns to the newer value. Try **Restore all framing** during a visit and confirm framing enables again next time. Turn the switch off, exit, then check the one-session enable button is available when a comfort preference is on.
 
 Ten simulated regression cases cover migration, persistence, exact originals across visits, manual restoration and opt-out, combined name and quality settings, stale entry callbacks, combat, native restrictions, external changes, interrupted recovery and rapid exit. Native entry timing and restoration remain part of the in-game check.
+
+## Remembered framing values in beta.35
+
+In **World Photo → Camera → Framing → Offset**, choose **Enable photo framing on entry** and adjust Shoulder offset, Dynamic framing and Footroom. Each control saves its latest verified edit. To adopt all three displayed values at once, choose **Save current values**. Dynamic framing can be saved off. Turn it on to see how footroom changes the shot.
+
+On entry outside combat, LumenShift pauses any active camera comfort preferences and recalls the saved controls its writer can verify. An untouched control follows WoW until you edit it or choose Save current values. Exit and **Restore all framing** return the original values captured for this visit. Turning entry framing off keeps your choices for later. A named composition can change the current shot without replacing personal framing. An external change that conflicts with a pending restore is preserved for review.
+
+Schema 22 keeps the existing entry switch, compositions and recovery records. Upgrading begins with an empty set of remembered offsets. Login does not apply them.
+
+**In-game test.** Note your normal camera framing. Turn on the entry switch, move Shoulder offset, enable Dynamic framing and change Footroom. Exit with Escape and compare with your starting view. Reopen Camera Mode and check all three controls and the scene. Exit, reload the UI and repeat. If you change your normal WoW camera settings between visits, exit should return to the new originals.

@@ -59,6 +59,9 @@ function P.New(runtime)
         local function done(ok, why)
             if completed then return end
             completed, self.busy, self.currentKey, self.currentValue = true, false, nil, nil
+            if ok and ns.Framing.ValidPreference(key, value) then
+                runtime.db.camera.preferredFraming[key] = value
+            end
             if generation ~= self.generation then
                 -- A new entry may have queued input while a cancelled operation
                 -- finished. Only a fresh, still-visible context can schedule it.

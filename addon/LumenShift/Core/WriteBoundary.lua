@@ -869,7 +869,7 @@ function B.NewExperiments(runtime, cameraMode)
                 local entry=data.journal.entries[key]
                 local retaining=cameraMode=="framing" and entry and seen[key].raw==entry.lastVerifiedRaw
                     and V.Number(seen[key].raw)==targets[key]
-                local supported, reason = policy.Capability(reader, key, retaining)
+                local supported, reason = policy.Capability(reader, key, retaining, targets)
                 if not supported then return nil, reason end
             end
         end

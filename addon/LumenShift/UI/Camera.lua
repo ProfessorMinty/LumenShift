@@ -5,7 +5,7 @@ function U.FramingPreference(runtime,env,parent,x,y,width)
     return W.Toggle(env,parent,"Enable photo framing on entry",x,y,width,
         function() return runtime.db.camera.photoFramingOnEntry end,
         runtime.camera.SetFramingOnEntry,
-        "Pause WoW camera comfort settings for this visit and future Camera Mode entries. Exit restores each visit’s originals.")
+        "Recall your shoulder offset, dynamic framing and footroom on entry. Edits save automatically. Exit restores your WoW settings.")
 end
 function U.Build(runtime, ui, parent, env)
     local db, camera = runtime.db, runtime.camera

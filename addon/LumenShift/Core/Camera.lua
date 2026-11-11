@@ -154,7 +154,7 @@ function C.New(runtime)
         end
         return applyFraming(values,onComplete)
     end
-    function camera.UsePhotoFraming(onComplete)
+    local function enablePhotoFraming(preferred, onComplete)
         camera.CancelEntryFraming()
         if not camera.active or camera.interrupted or runtime.product.IsCombat() or runtime.portrait.active
             or runtime.composition.suspended or runtime.composition.controlsHidden or runtime.photoPreview.Pending() then
@@ -162,20 +162,50 @@ function C.New(runtime)
         end
         local state=ns.Framing.ReadComfort(reader)
         if state.error then return report(nil,state.error) end
+        if preferred then
+            for _, key in ipairs(ns.Framing.PreferredKeys) do
+                if preferred[key] ~= nil then
+                    local item = ns.ReadOnly.Read(reader, key)
+                    if ns.Planner.SafeObservation(item, key) and ns.Framing.Bounds(key, item.raw, reader) then
+                        state.targets[key] = preferred[key]
+                    else
+                        ns.Diagnostics.Emit(runtime, "LumenShift: Skipped unavailable photo framing control (" .. key .. ").")
+                    end
+                end
+            end
+        end
         if not next(state.targets) then if onComplete then onComplete(true) end; return true end
         return applyFraming(state.targets,onComplete)
+    end
+    function camera.UsePhotoFraming(onComplete)
+        return enablePhotoFraming(nil, onComplete)
+    end
+    function camera.SaveCurrentFraming()
+        if not camera.active or camera.interrupted or runtime.portrait.active or reader.resetPending
+            or runtime.photoPreview.Pending() or runtime.framing.busy then return nil, "CAMERA_NOT_READY" end
+        if runtime.framing.state == "RECOVERY" or runtime.framing.state == "CONFLICT" then return nil, "RESTORE_FRAMING_FIRST" end
+        if runtime.photoPreview.error then return nil, runtime.photoPreview.error end
+        local saved = {}
+        for _, key in ipairs(ns.Framing.PreferredKeys) do
+            local item = ns.ReadOnly.Read(reader, key)
+            local value = ns.Value.Number(item.raw)
+            if not ns.Planner.SafeObservation(item, key) or not ns.Framing.ValidPreference(key, value) then
+                return nil, "FRAMING_SNAPSHOT_UNAVAILABLE"
+            end
+            saved[key] = value
+        end
+        db.camera.preferredFraming = saved
+        return true
     end
     local function usePreferredFraming()
         if not db.camera.photoFramingOnEntry or not camera.active or camera.interrupted or reader.resetPending
             or runtime.product.IsCombat() or runtime.portrait.active or runtime.composition.suspended
             or runtime.composition.controlsHidden or camera.Visible()~=false then return end
         -- A preference may start a new session, but must not adopt an interrupted one's originals.
-        local entries=db.camera.framing.journal.entries
-        if (entries.CameraKeepCharacterCentered or entries.CameraReduceUnexpectedMovement)
-            and (runtime.framing.state=="RECOVERY" or runtime.framing.state=="CONFLICT") then
+        if runtime.framing.state=="RECOVERY" or runtime.framing.state=="CONFLICT" then
             return report(nil,"RESTORE_FRAMING_FIRST")
         end
-        return camera.UsePhotoFraming(camera.FramingPreferenceResult)
+        return enablePhotoFraming(db.camera.preferredFraming, camera.FramingPreferenceResult)
     end
     function camera.SetFramingOnEntry(enabled)
         if not db then return report(nil,"SAVED_DATA_QUARANTINED") end

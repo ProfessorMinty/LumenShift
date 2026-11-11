@@ -1,6 +1,8 @@
-# LumenShift 0.2.0-beta.34 — install and explore
+# LumenShift 0.2.0-beta.35 — install and explore
 
 Northern Lights Labs · World of Warcraft: Forever. The owner's dev.6 report confirms working Night Vision/restoration on 1.60.1:70862:16001. Version differences now warn once instead of locking controls. No version reconfirmation or command-based setup is needed.
+
+**Beta.35 remembered framing.** Open **World Photo → Camera → Framing → Offset** and turn on **Enable photo framing on entry**. Adjust Shoulder offset, Dynamic framing and Footroom. LumenShift remembers each verified edit. **Save current values** also keeps controls you left at their displayed values. Exit returns your current visit’s originals. [How to test](66-PHOTO-STUDIO-INTERFACE.md#remembered-framing-values-in-beta35).
 
 **Beta.34 saved framing preference.** Turn on **Enable photo framing on entry** in **Studio → Camera** or **World Photo → Camera → Framing → Offset**. Each eligible Camera Mode visit captures your current WoW camera preferences before the temporary override. Exit restores that visit’s originals. **Restore all framing** ends the override early and keeps your saved choice. [Framing preference and test steps](66-PHOTO-STUDIO-INTERFACE.md#saved-framing-preference-in-beta34).
 
@@ -68,7 +70,7 @@ Beta.4 includes the [whole-addon forensic audit fixes](48-FORENSIC-AUDIT.md): Ef
 
 1. Keep your SavedVariables and recovery originals. For this fix, you do not need to clear an active mode or resolve the old reload lock before updating. A routine update does not need a reset. Use the explicit reset button only when you want to start fresh. Restoring originals is still appropriate before uninstalling.
 2. Exit WoW and back up the old LumenShift folder. Keep SavedVariables so preferences and originals carry forward.
-3. Extract `LumenShift-0.2.0-beta.34-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
+3. Extract `LumenShift-0.2.0-beta.35-<commit>.zip`. Copy its entire **LumenShift** folder into Forever's `_forever_/Interface/AddOns`, replacing the previous addon folder.
 4. The result must be `.../_forever_/Interface/AddOns/LumenShift/LumenShift.toc`, with **Core**, **UI**, **Media** and **Bindings.xml** beside it. Install neither the ZIP nor the TOC alone; avoid nested `LumenShift/LumenShift` folders.
 5. Start WoW and enable LumenShift in AddOns. If the game itself marks the interface tag out of date after a patch, its **Load out of date AddOns** option is separate from the addon's warning policy.
 

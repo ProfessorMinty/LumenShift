@@ -2,7 +2,9 @@
 
 ## Identity and source of truth
 
-**Current beta.34 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the saved opt-in and per-session World Photo camera-preference override, Portrait Stage actor Effects, Outfits and Light, Portrait Stage and World Photo Capture and Saved tabs, World Pose, World Light, Camera and Actors controls, artwork, interface research and owner tests.
+**Current beta.35 / remembered photo framing.** See [World Photo Offset](docs/66-PHOTO-STUDIO-INTERFACE.md#remembered-framing-values-in-beta35) for automatic recall of verified framing edits and per-visit restoration.
+
+**Prior beta.34 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the saved opt-in and per-session World Photo camera-preference override, Portrait Stage actor Effects, Outfits and Light, Portrait Stage and World Photo Capture and Saved tabs, World Pose, World Light, Camera and Actors controls, artwork, interface research and owner tests.
 
 **Prior beta.21 / camera verification.** See [camera audit and remaining photo work](docs/65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work) for the standalone axis tests, failure handling and native acceptance checklist.
 

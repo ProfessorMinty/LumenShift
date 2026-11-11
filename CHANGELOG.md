@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.35 - 2026-11-11
+
+- World Photo remembers verified Shoulder offset, Dynamic framing and Footroom edits. The existing framing-on-entry switch recalls them. **Save current values** can also adopt the three displayed values together.
+- Camera exit and **Restore all framing** return the exact values captured for that visit. Schema 22 preserves previous preferences, compositions and recovery data.
+
 ## 0.2.0-beta.34 - 2026-11-11
 
 - Save **Enable photo framing on entry** in Studio or Photo Studio. Normal Camera Mode entry captures fresh originals and normal exit restores them. Restore all framing can end an override before exit.

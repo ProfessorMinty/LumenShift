@@ -3,6 +3,7 @@ local F, V = {}, ns.Value
 ns.Framing = F
 F.Keys, F.Version = { "cameraFov", "test_cameraOverShoulder", "test_cameraDynamicPitch", "test_cameraDynamicPitchBaseFovPad" }, 1
 local limits = { test_cameraOverShoulder = { -3, 3, .1 }, test_cameraDynamicPitch = { 0, 1, 1 }, test_cameraDynamicPitchBaseFovPad = { 0, 1, .01 } }
+F.PreferredKeys = { "test_cameraOverShoulder", "test_cameraDynamicPitch", "test_cameraDynamicPitchBaseFovPad" }
 F.ComfortKeys = { "CameraKeepCharacterCentered", "CameraReduceUnexpectedMovement" }
 F.AllKeys = V.Copy(F.Keys)
 for _,key in ipairs(F.ComfortKeys) do
@@ -11,6 +12,20 @@ for _,key in ipairs(F.ComfortKeys) do
 end
 function F.IsComfort(key) return key==F.ComfortKeys[1] or key==F.ComfortKeys[2] end
 function F.Known(key) return key == "cameraFov" or limits[key] ~= nil end
+
+function F.ValidPreference(key, value)
+    local range = limits[key]
+    if not range or F.IsComfort(key) or not V.Finite(value) or value < range[1] or value > range[2] then return false end
+    local steps = value / range[3]
+    return math.abs(steps - math.floor(steps + 0.5)) <= 0.000001
+end
+function F.ValidPreferences(values)
+    if type(values) ~= "table" then return false end
+    for key, value in pairs(values) do
+        if not F.ValidPreference(key, value) then return false end
+    end
+    return true
+end
 
 function F.ReadComfort(reader)
     local state={targets={}, enabled={}}
@@ -51,13 +66,16 @@ function F.Bounds(key, original, reader)
     if not bounds or not value or value < bounds.min or value > bounds.max then return nil, why or "FOV_OUTSIDE_NATIVE_BOUNDS" end
     return bounds
 end
-function F.Capability(reader, key, returning)
+function F.Capability(reader, key, returning, plannedTargets)
     if key and key ~= "cameraFov" then
         local item = ns.ReadOnly.Read(reader, key)
         if not ns.Planner.SafeObservation(item, key) then return nil, "FRAMING_UNAVAILABLE" end
         -- Returning a captured original does not request a new photo composition.
-        if not F.IsComfort(key) and not returning and next(F.ReadComfort(reader).targets) then
-            return nil, "CAMERA_COMFORT_SETTING_ENABLED"
+        if not F.IsComfort(key) and not returning then
+            -- Preflight may include a comfort override. The writer rechecks without planned targets.
+            for flag in pairs(F.ReadComfort(reader).targets) do
+                if not plannedTargets or plannedTargets[flag] ~= 0 then return nil, "CAMERA_COMFORT_SETTING_ENABLED" end
+            end
         end
     end
     local bounds, why = F.Range(reader, key); return bounds ~= nil, why

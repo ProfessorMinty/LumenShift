@@ -41,7 +41,7 @@ return function(cameraFixture, eq, test)
         local f = make(); local data = f.ns.Value.Copy(f.r.db); data.schemaVersion = 14; data.camera.editor.version = 1
         data.camera.editor.look.leak, data.camera.editor.look.leakSide, data.camera.editor.look.leakWidth = nil, nil, nil
         data.camera.editor.saved.Old = f.ns.Value.Copy(data.camera.editor.look); data.camera.output, data.camera.composition = nil, nil
-        local updated, code = f.ns.Store.Open(data); eq(code, "MIGRATED_14_TO_21"); eq(updated.camera.editor.saved.Old.leak, 0)
+        local updated, code = f.ns.Store.Open(data); eq(code, "MIGRATED_14_TO_22"); eq(updated.camera.editor.saved.Old.leak, 0)
         eq(data.camera.editor.look.leak, nil); eq(updated.camera.editor.look.warmth, data.camera.editor.look.warmth)
         local exported = f.ns.PhotoConfig.Export(updated.camera.editor.look)
         local old = exported:gsub("LSPHOTO2", "LSPHOTO1"):gsub(";[^;]*;[^;]*;[^;]*$", "")

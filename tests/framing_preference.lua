@@ -15,7 +15,7 @@ return function(make,eq,test)
         assert(f.r.camera.UsePhotoFraming()); f.flush()
         local old=f.ns.Value.Copy(f.r.db); old.schemaVersion=20; old.camera.photoFramingOnEntry=nil
         old.onboarding.completed=true
-        local copy,code=f.ns.Store.Open(old); eq(code,"MIGRATED_20_TO_21"); eq(copy.schemaVersion,21)
+        local copy,code=f.ns.Store.Open(old); eq(code,"MIGRATED_20_TO_22"); eq(copy.schemaVersion,22)
         eq(copy.camera.photoFramingOnEntry,false); eq(copy.camera.framing.journal.entries[centered].originalRaw,"1")
         eq(copy.onboarding.completed,true); eq(old.camera.photoFramingOnEntry,nil)
         copy.camera.photoFramingOnEntry="on"; eq(f.ns.Store.Open(copy),nil)

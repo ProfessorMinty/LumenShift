@@ -7,6 +7,7 @@ local messages = {
     CAMERA_COMFORT_UNAVAILABLE = "WoW did not return both camera preferences as on or off.",
     CAMERA_COMFORT_CHANGED = "A camera preference changed outside Photo Studio. Restore framing before starting a new override.",
     CAMERA_COMFORT_SETTING_ENABLED = "Your WoW camera comfort setting disables this adjustment. Other photo tools remain available.",
+    FRAMING_SNAPSHOT_UNAVAILABLE = "WoW could not provide three usable framing values. Your saved framing was kept.",
     FRAMING_UNAVAILABLE = "This camera adjustment is unavailable on the current client.",
     ZOOM_UNAVAILABLE = "This client could not provide usable camera zoom controls.",
     ZOOM_EXTERNAL_CHANGE_KEPT = "Camera distance changed outside LumenShift. Your current distance was kept.",

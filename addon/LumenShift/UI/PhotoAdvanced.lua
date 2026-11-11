@@ -63,7 +63,7 @@ function U.Frame(runtime, env, parent, y, ui, liveSlider)
         W.Text(parent,label,0,y,310,12,color or W.colors.muted); y=y-height
     end
     local observed,ranges,blocked={},{},false
-    for _,key in ipairs({"test_cameraOverShoulder","test_cameraDynamicPitch","test_cameraDynamicPitchBaseFovPad"}) do
+    for _,key in ipairs(framing.PreferredKeys) do
         local item=ns.ReadOnly.Read(runtime.reader,key)
         observed[key]=V.Number(item.raw)
         local bounds=framing.Bounds(key,item.raw,runtime.reader)
@@ -107,13 +107,22 @@ function U.Frame(runtime, env, parent, y, ui, liveSlider)
         end
         if hint~="" then text(hint,36) end
     end
-    local restore=W.Button(env,parent,"Restore all framing",0,y,310,function()
+    local restore=W.Button(env,parent,"Restore all framing",0,y,blocked and 310 or 152,function()
         preview.Finish(function()
             local ok,why=runtime.camera.RestoreFraming(function(done,code) report(ui,done,code) end,true)
             if not ok then report(ui,ok,why) end
             return ok,why
         end)
     end)
+    if not blocked then
+        W.Button(env,parent,"Save current values",158,y,152,function()
+            preview.Finish(function()
+                local ok, why = runtime.camera.SaveCurrentFraming()
+                ui.notice = ok and "Photo framing saved." or ns.Product.Message(why)
+                ui.Refresh()
+            end)
+        end,"Remember all three displayed values. Enable framing on entry to reuse them.")
+    end
     ns.PhotoStyle.Enable(restore,not runtime.framing.busy and (next(entries)~=nil or preview.Pending()))
     return y-38
 end
