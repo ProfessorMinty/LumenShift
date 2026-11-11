@@ -48,7 +48,7 @@ local function sceneCard(row, scene)
     return detail, #cast>0 and (detail.."\nSlots · "..table.concat(cast,", ")) or detail
 end
 
-local function initLight(row)
+function S.InitLightCard(row)
     row.fillSphere = W.Texture(row,"ARTWORK")
     W.Asset(row.fillSphere,"Interface/AddOns/LumenShift/Media/switch-knob.tga")
     row.fillSphere:SetSize(26,26); row.fillSphere:SetPoint("CENTER",row.picture,"CENTER")
@@ -56,7 +56,7 @@ local function initLight(row)
     W.Asset(row.keyLight,"Interface/AddOns/LumenShift/Media/photo-glow-5.tga")
 end
 
-local function lightCard(row, light)
+function S.DrawLightCard(row, light)
     local fill = .10+.55*light.ambient
     row.picture:SetColorTexture(.08,.10,.12,1)
     row.fillSphere:SetVertexColor(fill,fill,fill)
@@ -77,7 +77,7 @@ function S.Build(runtime, env, parent, ui)
         unit = lights and "lighting setup" or "scene",
         description = lights and "Stage light direction, color, key and fill." or "Cast, poses, outfits, stage camera, light and backdrop.",
         bank = lights and data.lights or data.saved, limit=C.BankLimit, validName=C.Name, worker=stage,
-        initCard = lights and initLight or initScene, card = lights and lightCard or sceneCard,
+        initCard = lights and S.InitLightCard or initScene, card = lights and S.DrawLightCard or sceneCard,
         savedMessage = lights and "Lighting setup saved." or "Scene saved.",
         deletedMessage = lights and "Lighting setup deleted." or "Scene deleted.",
     }

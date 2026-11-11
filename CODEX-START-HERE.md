@@ -2,7 +2,7 @@
 
 ## Identity and source of truth
 
-**Current beta.29 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the Portrait Stage and World Photo Capture and Saved tabs, World Pose, World Light, Camera and Actors controls, artwork, interface research and owner tests.
+**Current beta.30 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the Portrait Stage Light tab, Portrait Stage and World Photo Capture and Saved tabs, World Pose, World Light, Camera and Actors controls, artwork, interface research and owner tests.
 
 **Prior beta.21 / camera verification.** See [camera audit and remaining photo work](docs/65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work) for the standalone axis tests, failure handling and native acceptance checklist.
 

@@ -13,8 +13,8 @@ function S.Choices(env, parent, y, labels, current, choose)
     return y - 36
 end
 
-function S.Slider(env, parent, ui, y, key, label, limits, step, unit, get, set)
-    local slider = W.Slider(env, parent, label, 0, y, limits[1], limits[2], step, get, set, nil, 310, unit)
+function S.Slider(env, parent, ui, y, key, label, limits, step, unit, get, set, spectrum)
+    local slider = W.Slider(env, parent, label, 0, y, limits[1], limits[2], step, get, set, nil, 310, unit, spectrum)
     ui.sliders[key] = slider
     W.Script(slider, "OnMouseDown", function() ui.dragging = slider end)
     W.Script(slider, "OnMouseUp", function()

@@ -231,7 +231,7 @@ return function(cameraFixture, eq, test)
         local f=make(); f.mock.Click("Portrait Stage"); f.flush(); eq(f.p.active,true)
         for _,tab in ipairs({"Pose","Light","Frame","Saved","Capture","Look"}) do f.ui.tab=tab; f.ui.Build(true) end
         f.ui.tab="Light"; f.ui.Build(); local s=f.ui.sliders.light_ambient
-        s.scripts.OnMouseDown(s); s:SetValue(.7); assert(math.abs(f.r.db.camera.portrait.scene.light.ambient-.7)<1e-9); s.scripts.OnMouseUp(s)
+        s.scripts.OnMouseDown(s); s:SetValue(70); assert(math.abs(f.r.db.camera.portrait.scene.light.ambient-.7)<1e-9); s.scripts.OnMouseUp(s)
         f.mock.Click("World Photo"); eq(f.p.active,false); eq(#f.calls,0); eq(f.env.Narci,nil)
     end)
     test("PC24 repeated stage entries reuse six models and no hidden native animation survives exit", function()

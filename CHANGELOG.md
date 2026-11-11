@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.30 - 2026-11-11
+
+- Aim the key light by dragging on the stage direction map. Key color, intensity and shadow fill share the same screen.
+- Mix custom RGB live, enter precise angles, or choose an illustrated Neutral, Softbox, Firelight or Moon rim rig. Existing saved lights work with these controls.
+
 ## 0.2.0-beta.29 - 2026-11-11
 
 - Choose Full scene, Background, Cast or Pair alongside the Portrait Stage timer and burst controls. Both shutters on Timer use the selected output.

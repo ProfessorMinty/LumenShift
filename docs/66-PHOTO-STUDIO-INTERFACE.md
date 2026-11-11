@@ -119,3 +119,13 @@ Either shutter on Timer starts the displayed sequence. The counter advances on W
 **In-game check.** Disable Narcissus, stage a playing character, choose a distinctive backdrop and add a photo look. Try a single Background shot and a Cast shot. Then select Pair, choose a three-second timer and start a two-pair burst. Check that the four files alternate between the backdrop and green cast, omit controls and filters, and that the original stage and playback return afterward. Repeat and stop between pairs to check cancellation.
 
 Eight simulated stage tests cover both renderers, framing, paired poses, timing, cancellation, partial captures and restoration errors. A separate UI sweep exercised all 20 output and shot-count combinations, checking the contents of 75 simulated captures. The timer and burst controls fit both tested panel sizes. Native screenshot rendering and file output still need the in-game check.
+
+## Portrait Stage Light in beta.30
+
+Open **Portrait Stage → Light → Rig**. Drag the dot horizontally to move the key light around the cast, and vertically to raise or lower it. The center is the front of the stage and both outer edges are the back. These directions are relative to the stage, including when its camera is turned. The angle readout follows the gesture. Clicking a named gel changes the key color. **Key intensity** (0–200%) controls directional illumination, and **Shadow fill** (0–100%) adds neutral ambient light.
+
+For fine control, **Direction** offers four compass points and typed azimuth and elevation. **Color** has live red, green and blue tracks with percentage entry. **Presets** shows four illustrated complete rigs. Use **Saved → Lights** to keep a custom rig. The existing lighting format works on both native stage renderers.
+
+**In-game check.** Open Portrait Stage with a character posed and Narcissus disabled. Watch the character’s face while you drag from Left to Right and then upward. Click Amber, lower Shadow fill and drag Key intensity. Check the lighting changes before you release. Try a custom blue mix under Color, save it under Saved → Lights, apply Softbox, then recall your saved light. Take a Full scene screenshot to check the result. World Photo lighting and camera settings should stay as you left them.
+
+Eight standalone mock tests exercise live input, both renderers, rejected edits, saved rigs and gesture cleanup. An additional sweep compared the direction, color and intensity received by the renderer for 108 combinations. All four pages fit at both tested panel sizes. The native rendering and input feel still need the in-game check.

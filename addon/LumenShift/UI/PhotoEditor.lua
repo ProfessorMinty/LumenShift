@@ -63,7 +63,7 @@ function U.New(runtime, composition)
         stageCamera=pages({"Position","Lens","Framing","Visibility"},"cameraPage"),
         actors=pages({"Cast","Transform","Poses","Outfits","Effects"},"actorTab"),
         worldPose=pages({"All emotes","Favorites"},"worldPoseTab"),
-        stageLight=pages({"Rig","Direction","Color"},"lightPage"),
+        stageLight=pages({"Rig","Direction","Color","Presets"},"lightPage"),
         worldLight=pages({"Tone","Detail","Originals"},"worldLightPage"),
         look=pages({"Color","Vignette","Glow","Film"},"lookPage"),
         capture=pages({"Timer","Output","Combat"},"capturePage"),
@@ -169,6 +169,7 @@ function U.New(runtime, composition)
         self.ClearFocus()
         self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
+        self.RefreshStageLight = nil
         self.RefreshWorldPose = nil
         self.RefreshCaptureTimer = nil
         self.RefreshSavedLibrary = nil
@@ -319,6 +320,7 @@ function U.New(runtime, composition)
             end
             if not editing then self.Build(); return end
         end
+        if self.RefreshStageLight then self.RefreshStageLight() end
         if self.RefreshStageMap then self.RefreshStageMap() end
         if self.RefreshCaptureTimer and self.RefreshCaptureTimer() and not self.building then self.Build(true); return end
         local seq = runtime.captureSequence

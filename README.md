@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.29** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.30** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Portrait Stage → Light → Rig puts a live direction map, six key colors, key intensity and shadow fill in one panel. [Portrait lighting guide](docs/66-PHOTO-STUDIO-INTERFACE.md#portrait-stage-light-in-beta30).
 
 Portrait Stage → Capture → Timer combines single-shot and burst timing with full-scene, background-only, green-screen cast and paired captures. [Stage capture guide](docs/66-PHOTO-STUDIO-INTERFACE.md#portrait-stage-capture-in-beta29).
 

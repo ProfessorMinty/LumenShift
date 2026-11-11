@@ -71,7 +71,7 @@ function W.CreatePool(env, root)
                 if owner.lumenNavigation and owner.lumenNavigation.current == owner then owner.lumenNavigation.Clear() end
                 if owner.lumenEdit then owner:ClearFocus() end
                 owner:Hide(); owner:ClearAllPoints()
-                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnValueChanged", "OnEnterPressed", "OnEscapePressed", "OnEditFocusGained", "OnEditFocusLost", "OnTabPressed", "OnTextChanged" }) do
+                for _, script in ipairs({ "OnClick", "OnEnter", "OnLeave", "OnMouseDown", "OnMouseUp", "OnHide", "OnValueChanged", "OnEnterPressed", "OnEscapePressed", "OnEditFocusGained", "OnEditFocusLost", "OnTabPressed", "OnTextChanged" }) do
                     -- Native frames reject unsupported script names, so clear only installed scripts.
                     local ok, fn = pcall(owner.GetScript, owner, script)
                     if ok and fn then W.Script(owner, script, nil) end
