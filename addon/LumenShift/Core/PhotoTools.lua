@@ -23,7 +23,8 @@ function T.New(runtime)
     local reader, env = runtime.reader, runtime.reader.env
     local self = { status = "READY" }
     local function ready()
-        return runtime.camera.active and not runtime.product.IsCombat() and not reader.resetPending
+        return runtime.camera.active and not reader.resetPending and not runtime.composition.suspended
+            and not (runtime.portrait and runtime.portrait.active)
             and not runtime.camera.interrupted and not runtime.composition.capturing
             and not runtime.captureSequence.active
     end
@@ -35,9 +36,23 @@ function T.New(runtime)
     function self.Available()
         return type(env.C_ChatInfo) == "table" and type(env.C_ChatInfo.PerformEmote) == "function" or type(env.DoEmote) == "function"
     end
-    function self.Perform(token)
+    local function oneShot(delay)
+        local prefs = V.Copy(runtime.db.camera.tools)
+        prefs.shots, prefs.delay = 1, delay
+        return runtime.captureSequence.Start(prefs)
+    end
+    function self.TakeShot()
+        return oneShot(0)
+    end
+    function self.Perform(token, takeShot)
         if not T.Known(token) then return result(nil, "INVALID_POSE") end
+        if runtime.product.IsCombat() then return result(nil, "COMBAT_OR_RESTRICTION") end
         if not ready() then return result(nil, "CAMERA_NOT_READY") end
+        if takeShot == nil then takeShot = runtime.db.camera.tools.autoPose end
+        if takeShot then
+            local ok, why = runtime.captureSequence.CanStart()
+            if not ok then return result(nil, why) end
+        end
         local modern = type(env.C_ChatInfo) == "table" and type(env.C_ChatInfo.PerformEmote) == "function"
         local fn = modern and env.C_ChatInfo.PerformEmote or env.DoEmote
         if type(fn) ~= "function" then return result(nil, "POSE_UNAVAILABLE") end
@@ -46,10 +61,7 @@ function T.New(runtime)
             return result(nil, "POSE_REJECTED") -- never retry through another API
         end
         result(true, "POSE_REQUESTED")
-        if runtime.db.camera.tools.autoPose then
-            local prefs = V.Copy(runtime.db.camera.tools); prefs.shots = 1
-            return runtime.captureSequence.Start(prefs)
-        end
+        if takeShot then return oneShot(runtime.db.camera.tools.delay) end
         return true
     end
     function self.Stop()
@@ -61,9 +73,9 @@ function T.New(runtime)
             return result(call and call[1] ~= false or nil, call and call[1] ~= false and "POSE_STOP_REQUESTED" or "POSE_REJECTED")
         end
         -- Explicit Stop uses the ordinary Stand emote on clients without CancelEmote.
-        local saved = runtime.db.camera.tools.autoPose; runtime.db.camera.tools.autoPose = false
-        local ok, why = self.Perform("STAND"); runtime.db.camera.tools.autoPose = saved
-        return ok, why
+        local ok, why = self.Perform("STAND", false)
+        if not ok then return nil, why end
+        return result(true, "POSE_STOP_REQUESTED")
     end
     function self.Favorite(token)
         if not T.Known(token) or not runtime.db or reader.resetPending then return nil end

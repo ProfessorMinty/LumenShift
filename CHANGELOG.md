@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.25 - 2026-11-11
+
+- Find a World Photo emote with live search, a six-card picker and pinned favorites.
+- Try the selected emote on your character. Take shot captures the current frame. The optional pose timer replays the emote and takes one shot after the chosen delay.
+- Show the countdown, confirmation or capture error in the Pose tab.
+
 ## 0.2.0-beta.24 - 2026-11-11
 
 - Preview World Photo brightness and contrast by dragging the illustrated Tone strips. Detail groups sharpening and world bloom.

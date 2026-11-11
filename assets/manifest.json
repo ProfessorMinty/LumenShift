@@ -2,7 +2,7 @@
   "creator": "Northern Lights Labs and credited third-party creators; see THIRD-PARTY-NOTICES.md",
   "created": "2026-11-06",
   "license": "Mixed: ASSET-LICENSE.md and THIRD-PARTY-NOTICES.md; per-file sources in theme-sources.json",
-  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1; tools/export_theme.py; tools/create_photo_assets.py; tools/create_look_swatches.py; tools/create_pose_swatches.py; tools/create_light_strips.py",
+  "source_recipe": "tools/create_assets.py; tools/export_logo.ps1; tools/export_theme.py; tools/create_photo_assets.py; tools/create_look_swatches.py; tools/create_pose_swatches.py; tools/create_light_strips.py; tools/create_emote_icons.py",
   "borrowed_media": "assets/theme-sources.json",
   "files": {
     "Media/cinematic.tga": "b42b211e210821e0d6c9d4d28b22f2385cddfd88b14dfbf26b878b7ce34a33ea",
@@ -80,7 +80,15 @@
     "Media/light-brightness.tga": "bd2f0e065db2bf72135150065eafce65eba63f29ac96f4fc96658106f863e9d7",
     "Media/light-contrast.tga": "13ae0c5c3fabf685cc2b9cbae3511d46cf16a55d28c115e734d3eec869bd3151",
     "Media/light-sharpness.tga": "81c343cd70c0f0cda23a6a529a2be815fc5dda7282a4afcc9b1703a16424a839",
-    "Media/light-bloom.tga": "641147b5a8336b07743251fad9dea78eaf5a5b13b8f898d25b9693400ecdfc0e"
+    "Media/light-bloom.tga": "641147b5a8336b07743251fad9dea78eaf5a5b13b8f898d25b9693400ecdfc0e",
+    "Media/emote-bow.tga": "7afc060aa4c89284097d1dd402b2a4a49b0f8df64680c1befdbea23842f5faa3",
+    "Media/emote-cheer.tga": "02e03ffecde5154f38389956b3b9ec6a1186414fc94f6190e8c241640b6bd54c",
+    "Media/emote-dance.tga": "2ac8cee862785c03a83a905e9d18c9fdde43c1388c753fd2073512699e10692c",
+    "Media/emote-flex.tga": "3646c232e1f5bd781c7ccb0ebba0083eefde3dc77abe1063d1035bfa09eed1ff",
+    "Media/emote-laugh.tga": "bc1e0ed0969ef81ac119e2382d647d9675c9782ef7d9a6872d89ac6ef9b9e2cc",
+    "Media/emote-point.tga": "0ec55bbb9b2ba6a06fedfac751419c9b404cb42fc3ec708cfad6da3b6dc60469",
+    "Media/emote-read.tga": "d36c3039c84d6ca2f367f60115960ca4c5a4a033e560b4c8755fea555a7462f2",
+    "Media/emote-salute.tga": "b627d9822647196b64bb38b268f2fe1a2abcf770d8bb3daeb9ef3bd17278389c"
   },
   "logo_source": {
     "approved": "2026-11-07",

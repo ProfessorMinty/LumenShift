@@ -52,3 +52,15 @@ Originals shows each captured game value alongside its current reading. A dash m
 **In-game check.** Open Camera → World Photo → Light. Drag Brightness slowly, hold the pointer down, and move it again. Check that the world changes before release and settles at the displayed value. Try Contrast, then any available Detail controls. Open Originals, compare Show Before and Show After, and choose Restore lighting. Verify your original values and look at the scene before exiting Camera Mode.
 
 All 724 simulated Lua 5.1 tests and 10 packaging tests passed. Seven Light tests cover live changes before release, both layout sizes, queued page changes, exact restoration, restricted settings, numeric input and an external-change conflict. Off-client renders were inspected at 360 UI units wide. Actual renderer response and drag feel await in-game testing.
+
+## World Photo Pose in beta.25
+
+**Find an emote.** Open World Photo → Pose. Type part of a name or paste an emote such as `/salute` in the search field. Results update as you type. All emotes shows six cards per page. Select a card and click Pin to keep it in Favorites. Searching, paging and pinning only change the picker.
+
+**Try it on your character.** Choose Try followed by the emote's name. This requests a world emote that nearby players may see or hear. Animation depends on the character and client. Stop pose uses WoW's cancel action or requests Stand on clients with the legacy API.
+
+**Take one shot.** With Pose timer off, Take shot captures your current frame through the clean screenshot path. With the timer on, choose a delay of 0–10 seconds and press Pose & shoot to replay the selected emote and take one shot. Try always previews, including when the timer is on. The timer uses the saved after-pose preference and delay. The Capture tab retains its separate burst count. Cancel during the countdown stops the pending shot. WoW's screenshot event supplies the completion message.
+
+**In-game check.** With Narcissus disabled, search for Dance, click Try Dance, and click Take shot during the animation. Confirm that WoW's Screenshots folder contains one image with the controls hidden. Pin Dance, open Favorites and turn on Pose timer. Try a short delay, then start a second countdown and cancel it. Check that the cancelled shot adds no file.
+
+All 732 simulated Lua 5.1 tests and 10 packaging tests passed. Eight picker tests cover search and focus, page bounds, favorites, preview-only emotes, immediate and timed single shots, cancellation, missing APIs and separation from Portrait Stage. The 360-unit layouts were inspected off-client. Native animation timing and the resulting screenshot files still need an in-game check.

@@ -59,7 +59,7 @@ function W.CreatePool(env, root)
             frame = env.CreateFrame(kind, name, parent, template)
             pool.frames[kind][index] = frame; pool.owners[#pool.owners + 1] = frame
             frame.lumenPool = pool
-        else frame:SetParent(parent) end
+        else frame:SetParent(parent); frame:SetAlpha(1) end
         if kind == "EditBox" then frame:SetMultiLine(false) end
         if kind == "Button" and frame.Enable then frame:Enable() end
         frame:Show(); return frame

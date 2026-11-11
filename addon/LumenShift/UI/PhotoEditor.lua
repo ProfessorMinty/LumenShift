@@ -6,7 +6,7 @@ function U.New(runtime, composition)
     local style = ns.PhotoStyle
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
         actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
-        worldLightPage = "Tone", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
+        worldLightPage = "Tone", worldPoseTab = "All emotes", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
@@ -50,6 +50,7 @@ function U.New(runtime, composition)
         row:SetSize(310,30); row:SetPoint("TOPLEFT",panel,"TOPLEFT",44,-89)
         return { row=row, field=field, buttons=style.Pages(env,row,labels,function(page)
             self[field]=page
+            if field=="worldPoseTab" then self.worldEmotePage=1 end
             if field=="actorTab" and page=="Outfits" then runtime.portrait.wardrobe.Refresh() end
             self.notice=nil; self.Build(true)
         end) }
@@ -58,6 +59,7 @@ function U.New(runtime, composition)
         camera=pages({"Position","Framing","Visibility"},"cameraPage"),
         stageCamera=pages({"Position","Lens","Framing","Visibility"},"cameraPage"),
         actors=pages({"Cast","Transform","Poses","Outfits","Effects"},"actorTab"),
+        worldPose=pages({"All emotes","Favorites"},"worldPoseTab"),
         stageLight=pages({"Rig","Direction","Color"},"lightPage"),
         worldLight=pages({"Tone","Detail","Originals"},"worldLightPage"),
         look=pages({"Color","Vignette","Glow","Film"},"lookPage"),
@@ -165,14 +167,15 @@ function U.New(runtime, composition)
         self.ClearFocus()
         self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
+        self.RefreshWorldPose = nil
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
         world.SetSelected(not staged); portrait.SetSelected(staged)
         title:SetText(({Frame="Camera", Look="Color & effects", Light=staged and "Model lighting" or "Scene lighting",
-            Pose=staged and "Actors" or "Poses", Capture="Capture", Saved="Library"})[self.tab])
+            Pose=staged and "Actors" or "World emotes", Capture="Capture", Saved="Library"})[self.tab])
         if self.tab=="Look" then undo:Show(); redo:Show() else undo:Hide(); redo:Hide() end
         if self.capturePage=="Pair" and not staged then self.capturePage="Timer" end
-        self.activePages = ({Frame=staged and groups.stageCamera or groups.camera, Pose=staged and groups.actors,
+        self.activePages = ({Frame=staged and groups.stageCamera or groups.camera, Pose=staged and groups.actors or groups.worldPose,
             Light=staged and groups.stageLight or groups.worldLight, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
             Saved=staged and groups.stageSaved or groups.saved})[self.tab]
         for _, group in pairs(groups) do
@@ -275,8 +278,10 @@ function U.New(runtime, composition)
             y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self)
         elseif self.tab == "Capture" and self.capturePage == "Pair" then
             y = ns.PortraitControls.Capture(runtime, penv, content, y, self)
-        elseif self.tab == "Pose" or self.tab == "Capture" then
-            y = ns.PhotoToolsUI.Build(runtime, penv, content, self.tab, self)
+        elseif self.tab == "Pose" then
+            y = ns.WorldPoseUI.Build(runtime, penv, content, self)
+        elseif self.tab == "Capture" then
+            y = ns.PhotoToolsUI.Capture(runtime, penv, content, self)
         elseif self.savedPage == "Compositions" then
             y = ns.PhotoAdvancedUI.Saved(runtime, penv, content, y, self)
         elseif self.savedPage == "Looks" then
@@ -318,9 +323,9 @@ function U.New(runtime, composition)
             if not editing then self.Build(); return end
         end
         if self.RefreshStageMap then self.RefreshStageMap() end
-        local seq, pose = runtime.captureSequence, runtime.photoTools
+        local seq = runtime.captureSequence
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
-            or self.tab == "Pose" and ns.PhotoToolsUI.Status(pose.status)
+            or self.RefreshWorldPose and self.RefreshWorldPose()
         if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and ns.Product.Message(runtime.cameraActions.status) or nil
         elseif self.tab == "Capture" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Saved" then extra = runtime.photoComposition.status end

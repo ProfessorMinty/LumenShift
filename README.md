@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.24** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.25** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+World Photo → Pose now lets you search 12 illustrated character emotes, pin favorites, try an emote, and take a clean shot. The optional pose timer replays the emote for one timed screenshot. [Pose controls](docs/66-PHOTO-STUDIO-INTERFACE.md#world-photo-pose-in-beta25).
 
 World Photo → Light now has illustrated, draggable Tone and Detail controls. Open Originals to compare the game values or use Restore lighting to return to your pre-edit lighting. [Photo Studio controls](docs/66-PHOTO-STUDIO-INTERFACE.md#world-photo-light-in-beta24).
 

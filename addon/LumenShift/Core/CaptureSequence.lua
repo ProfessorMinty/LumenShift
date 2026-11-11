@@ -25,14 +25,23 @@ function S.New(runtime)
         if not call then finish("CAPTURE_TIMER_FAILED"); return nil end
         return true
     end
-    function self.Start(options)
+    function self.CanStart()
         if runtime.portrait and (runtime.portrait.busy or runtime.portrait.layerCapture) then return nil, "PORTRAIT_NOT_READY" end
         if self.active or runtime.composition.capturing or not context() then return nil, "CAMERA_NOT_READY" end
+        if runtime.photoPreview.action then return nil, "PHOTO_ACTION_WAITING" end
+        if type(env.Screenshot) ~= "function" or type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then
+            return nil, "SCREENSHOT_UNAVAILABLE"
+        end
+        return true
+    end
+    function self.Start(options)
+        local ok, why = self.CanStart()
+        if not ok then
+            if why == "SCREENSHOT_UNAVAILABLE" then self.state = why; refresh() end
+            return nil, why
+        end
         local prefs = ns.Value.Copy(options or runtime.db.camera.tools)
         if not ns.PhotoTools.Validate(prefs) then return nil, "INVALID_CAPTURE_OPTIONS" end
-        if type(env.Screenshot) ~= "function" or type(env.C_Timer) ~= "table" or type(env.C_Timer.After) ~= "function" then
-            self.state = "SCREENSHOT_UNAVAILABLE"; refresh(); return nil, self.state
-        end
         self.generation = self.generation + 1
         local id = self.generation
         self.active, self.completed, self.total, self.state = true, 0, prefs.shots, "WAITING_FOR_PREVIEW"

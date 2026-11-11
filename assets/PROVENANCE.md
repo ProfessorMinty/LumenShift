@@ -48,3 +48,7 @@ Northern Lights Labs created six 128×64 pose illustrations for beta.23. The joi
 ## World Light control strips
 
 For beta.24, `tools/create_light_strips.py` derives four illustrated tracks from LumenShift's original neutral landscape. Each 128×32 TGA contains four tonal or detail variations. They are directional guides. The game world supplies the live lighting preview. Original art is covered by ASSET-LICENSE.md. Pillow is used only to export the images. The manifest records their hashes.
+
+## World emote illustrations
+
+The World Photo picker crops the four existing Wave, Sit, Stand and Kneel illustrations. The other eight illustrate Bow, Cheer, Dance, Flex, Laugh, Point, Read and Salute. `tools/create_emote_icons.py` uses original joint coordinates and the Portrait Stage drawing routine to export the new 16×32 TGA files. The asset manifest records each hash. Northern Lights Labs' original art follows ASSET-LICENSE.md. Pillow is a build-time dependency.
