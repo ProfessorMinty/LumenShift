@@ -100,3 +100,22 @@ Scene cards diagram the saved cast positions from the front. Light cards illustr
 **In-game check.** With Narcissus disabled, pose your character, add a target, choose a backdrop and save a scene. Save a different light under the same name in Lights. Move an actor, then search for and apply the light. Check that the rig changes and your actor stays put. Apply the scene and check the original placement, poses, backdrop and lighting. Reload the UI and find both names again.
 
 Nine simulated portrait library tests cover full banks after reload, search focus, replacement, deletion, cast and light previews, pending model loads, missing units, renderer limits and switching modes. A separate check saved, found and applied all 16 entries using the visible controls. Both libraries and their naming forms fit the standard and compact test layouts. Native model appearance, lighting and installed-client persistence still need the in-game check.
+
+## Portrait Stage Capture in beta.29
+
+Open **Portrait Stage → Capture → Timer**. Choose the output from the row above Single shot and Burst.
+
+| Output | What WoW captures |
+|---|---|
+| Full scene | Staged cast and current backdrop with the active photo look. |
+| Background | Current backdrop with the staged models hidden. A world backdrop still includes objects and units in the live world. |
+| Cast | Staged models against solid chroma green. |
+| Pair | A background screenshot followed by a cast screenshot on green, with the same staged pose held across both passes. |
+
+Select a first-shot delay of 0–10 seconds. Burst takes 2–5 shots, or 2–5 pairs, with 1–5 seconds between shots or pairs. A three-pair burst produces six ordinary screenshot files when all six captures succeed. WoW writes them to its Screenshots folder. The layer passes omit the photo filters and mode overlays. For an external editor, key the green cast over the corresponding backdrop.
+
+Either shutter on Timer starts the displayed sequence. The counter advances on WoW's screenshot event. The second pass follows confirmation of the background. Between pairs LumenShift returns the backdrop, filters and each actor’s previous playback setting. Cancel capture stops the initial countdown and Stop burst cancels remaining work between captures. A native request already issued can still finish. If a pass fails or times out, the panel shows how many files were confirmed.
+
+**In-game check.** Disable Narcissus, stage a playing character, choose a distinctive backdrop and add a photo look. Try a single Background shot and a Cast shot. Then select Pair, choose a three-second timer and start a two-pair burst. Check that the four files alternate between the backdrop and green cast, omit controls and filters, and that the original stage and playback return afterward. Repeat and stop between pairs to check cancellation.
+
+Eight simulated stage tests cover both renderers, framing, paired poses, timing, cancellation, partial captures and restoration errors. A separate UI sweep exercised all 20 output and shot-count combinations, checking the contents of 75 simulated captures. The timer and burst controls fit both tested panel sizes. Native screenshot rendering and file output still need the in-game check.

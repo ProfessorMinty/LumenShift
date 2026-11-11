@@ -33,6 +33,8 @@ function P.New(runtime)
         result.status = #issues == 0 and "Scene applied." or "Partial scene · "..table.concat(issues," · ")
     end
     function self.Exit()
+        local seq = runtime.captureSequence
+        if self.active and seq and seq.active and seq.stageGeneration==self.generation then seq.Cancel() end
         self.collection.Cancel()
         self.active, self.busy, self.layerCapture = false, false, nil
         self.generation = self.generation + 1; self.slots = {}; self.failures = {}; self.frozen = nil; self.sceneLoad = nil
@@ -300,49 +302,60 @@ function P.New(runtime)
     end
     function self.Thaw()
         local frozen = self.frozen; self.frozen = nil
+        local restored = true
         if frozen and self.active and context() then
-            for _, item in ipairs(frozen) do if not backend.Pause(item.model, item.paused) then report(nil, "Could not resume a staged actor. Select its pose again.") end end
+            for _, item in ipairs(frozen) do if not backend.Pause(item.model, item.paused) then restored=false end end
         end
+        if not restored then return report(nil, "Could not restore actor playback. Select its pose again.") end
+        return true
     end
     function self.CaptureFinished()
-        if not self.layerCapture then self.Thaw() end
+        if not self.layerCapture then return self.Thaw() end
+        return true
     end
     local function layer(showActors, background)
-        backend.Background(background)
+        local ok = pcall(backend.Background,background)
         for _, slot in pairs(self.slots) do if slot.front then
-            local model = backend.models[slot.front]; if showActors then model:Show() else model:Hide() end
+            local model=backend.models[slot.front]
+            local change=ns.ReadOnly.Call(reader,showActors and model.Show or model.Hide,model)
+            if not change or change.n~=0 then ok=false end
         end end
+        return ok
+    end
+    function self.PrepareLayer(pass)
+        local seq=runtime.captureSequence
+        if not seq.active or seq.stageGeneration~=self.generation or not self.active or not context()
+            or self.busy or (pass ~= "background" and pass ~= "cast") then
+            return nil, "PORTRAIT_NOT_READY"
+        end
+        local ok, why = self.Freeze()
+        if not ok then return nil, why end
+        self.layerCapture = pass
+        runtime.photoEditor.Render()
+        if not layer(pass=="cast", pass=="cast" and "green" or db.camera.portrait.scene.background) then
+            return nil, "Could not prepare the selected layer."
+        end
+        return true
+    end
+    function self.RestoreLayers()
+        if not self.layerCapture then return true end
+        self.layerCapture = nil
+        local visible = not self.active or layer(true, db.camera.portrait.scene.background)
+        local restored, why = self.Thaw()
+        runtime.photoEditor.Render()
+        if not visible then return nil, "Could not restore the stage backdrop or cast visibility." end
+        return restored, why
     end
     function self.CancelLayers()
-        if not self.layerCapture then return end
-        self.layerCapture = nil
-        runtime.composition.CancelPendingCapture()
-        if self.active then layer(true, db.camera.portrait.scene.background) end
-        self.Thaw(); runtime.photoEditor.Render(); report(true, "Layer capture stopped.")
+        local sequence = runtime.captureSequence
+        if sequence.active and sequence.output ~= "scene" then sequence.Cancel() end
     end
     function self.CaptureLayers()
+        -- The original pair action still requests exactly two files immediately.
         if not ready() then return report(nil, "Portrait not ready.") end
-        local ok, why = self.Freeze(); if not ok then return nil, why end
-        local token = {}; self.layerCapture = token
-        runtime.photoEditor.Render()
-        layer(false, db.camera.portrait.scene.background)
-        local function finish(success, reason)
-            if self.layerCapture ~= token then return end
-            self.CancelLayers(); report(success, success and "Two separate images saved: background, then green-screen cast." or reason)
-        end
-        local function shoot(second)
-            if self.layerCapture ~= token or not self.active then return end
-            local called = false
-            local started, code = runtime.composition.Capture(function(success, reason)
-                called = true
-                if self.layerCapture ~= token then return end
-                if not success or second then finish(success, reason); return end
-                layer(true, "green"); shoot(true)
-            end)
-            if not started and not called then finish(false, code) end
-            return started, code
-        end
-        return shoot(false)
+        local options = V.Copy(db.camera.tools)
+        options.shots, options.delay = 1, 0
+        return runtime.captureSequence.Start(options,"pair")
     end
     return self
 end

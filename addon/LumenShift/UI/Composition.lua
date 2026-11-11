@@ -54,10 +54,14 @@ function C.New(runtime)
     local function complete(ok, code)
         self.capturing, self.requested, self.status = false, false, code
         local callback = self.captureCallback; self.captureCallback = nil
-        if runtime.portrait then runtime.portrait.CaptureFinished() end
+        local restoreError
+        if runtime.portrait then
+            local restored,why=runtime.portrait.CaptureFinished()
+            if not restored then restoreError=why end
+        end
         sync()
-        if callback then callback(ok, code)
-        elseif self.editor and self.editor.RefreshWorldCapture then self.editor.Refresh() end
+        if callback then callback(ok, code, restoreError)
+        elseif self.editor and self.editor.RefreshCaptureTimer then self.editor.Refresh() end
     end
     function self.CancelPendingCapture()
         if self.capturing and not self.requested then
@@ -112,7 +116,7 @@ function C.New(runtime)
                 local shot = (seq.completed+1).." of "..seq.total
                 if seq.state == "WAITING_FOR_PREVIEW" then hint:SetText("Finishing photo edits…")
                 elseif seq.state == "CAPTURING" then hint:SetText("Capturing shot "..shot)
-                else hint:SetText("Shot "..shot.." in "..seq.remaining.." s") end
+                else hint:SetText((seq.output=="pair" and "File " or "Shot ")..shot.." in "..seq.remaining.." s") end
             else
                 hint:SetText("H: hide / show controls   |   Esc: exit Camera Mode")
             end

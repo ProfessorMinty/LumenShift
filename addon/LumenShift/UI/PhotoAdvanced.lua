@@ -87,15 +87,10 @@ end
 function U.Capture(runtime, env, parent, y, ui)
     local output, reader = runtime.output, runtime.reader
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
-    local function section(label) W.Section(parent, label, 0, y, 310); y = y - 40 end
-    local grouped = not runtime.portrait.active
-    if grouped then
-        y = ns.StageLayout.Choices(env, parent, y, {"JPEG","Antialiasing","Shadows"}, ui.worldOutputPage, function(page)
-            ui.worldOutputPage=page; ui.notice=nil; ui.Build(true)
-        end)
-    end
-    if not grouped or ui.worldOutputPage=="JPEG" then
-        if not grouped then section("SCREENSHOT OUTPUT") end
+    y = ns.StageLayout.Choices(env, parent, y, {"JPEG","Antialiasing","Shadows"}, ui.outputPage, function(page)
+        ui.outputPage=page; ui.notice=nil; ui.Build(true)
+    end)
+    if ui.outputPage=="JPEG" then
         local seen, format = ns.ReadOnly.Read(reader, "screenshotQuality"), ns.ReadOnly.Read(reader, "screenshotFormat")
         if format.code == "OK" and format.raw == "jpeg" and ns.PhotoOutput.Safe(seen, "screenshotQuality") then
             ui.jpeg = ui.jpeg or V.Number(seen.raw)
@@ -104,9 +99,7 @@ function U.Capture(runtime, env, parent, y, ui)
             W.Button(env, parent, "Restore JPEG quality", 160, y, 150, function() report(ui, output.Restore("jpeg")) end); y = y - 44
             text("Higher JPEG quality reduces compression. Exit restores your previous setting.", 74)
         else text("JPEG quality is unavailable or WoW is using a different output format. Capture still works; the format is unchanged.", 74) end
-    end
-    if not grouped or ui.worldOutputPage=="Antialiasing" then
-        if not grouped then section("ANTIALIASING") end
+    elseif ui.outputPage=="Antialiasing" then
         local observed = ns.PhotoOutput.Read(reader, "aa"); local safe = true
         for _, key in ipairs(ns.PhotoOutput.Groups.aa) do if not ns.PhotoOutput.Safe(observed[key], key) then safe = false end end
         if safe then
@@ -115,7 +108,7 @@ function U.Capture(runtime, env, parent, y, ui)
             local function choice(key, label, options)
                 local current, index = "Current", 0
                 for i, opt in ipairs(options) do if ns.PhotoOutput.Equal(key, tostring(opt.value), ui.aa[key]) then current, index = opt.label, i end end
-                local inline = grouped and key == "ffxAntiAliasingMode"
+                local inline = key == "ffxAntiAliasingMode"
                 W.Text(parent, label, 0, y - (inline and 6 or 0), inline and 150 or 310, 12, W.colors.muted)
                 if not inline then y = y - 24 end
                 W.Button(env, parent, current .. "  >", inline and 156 or 0, y, inline and 154 or 310, function()
@@ -129,9 +122,7 @@ function U.Capture(runtime, env, parent, y, ui)
             W.Button(env, parent, "Restore antialiasing", 160, y, 150, function() report(ui, output.Restore("aa")) end); y = y - 44
             text("Higher sample counts can reduce frame rate. Exit restores your previous settings.", 48)
         else text("Native AA values are unavailable or restricted here. Other photo controls remain available.", 60) end
-    end
-    if not grouped or ui.worldOutputPage=="Shadows" then
-        if not grouped then section("RAY-TRACED SHADOWS") end
+    elseif ui.outputPage=="Shadows" then
         local count = 0
         for level = 0, 3 do
             local value = level

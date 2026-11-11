@@ -71,11 +71,3 @@ function U.Build(runtime, env, parent, tab, ui, startY)
     end
     return y
 end
-function U.Capture(runtime, env, parent, y, ui)
-    local W = ns.Widgets
-    W.Section(parent, "COMPOSITING PAIR", 0, y, 310); y = y - 40
-    W.Text(parent, "Two separate screenshots: backdrop without actors, then the cast on green. Filters are omitted from this pair. These are not transparent images or a layered file.", 0, y, 310, 12, W.colors.muted); y = y - 94
-    W.Button(env, parent, "Capture background + cast", 0, y, 310, function() runtime.portrait.CaptureLayers(); ui.Refresh() end); y = y - 40
-    W.Button(env, parent, "Cancel compositing pair", 0, y, 310, function() runtime.portrait.CancelLayers(); ui.Refresh() end)
-    return y - 48
-end

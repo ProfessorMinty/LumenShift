@@ -1,28 +1,13 @@
 local _, ns = ...
 local U, W = {}, ns.Widgets; ns.PhotoToolsUI = U
-function U.Capture(runtime, env, parent, ui)
-    local prefs, sequence = runtime.db.camera.tools, runtime.captureSequence
+function U.Combat(runtime, env, parent)
     local y = 0
-    local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
-    if ui.capturePage == "Combat" then
-        W.Section(parent,"COMBAT BEHAVIOR",0,y,310); y=y-40
-        W.Toggle(env,parent,"Stay in Photo Studio in combat",0,y,310,function() return runtime.db.camera.keepInCombat end,
-            function(v) runtime.db.camera.keepInCombat=v; if not v and runtime.product.IsCombat() then runtime.camera.Combat() end end); y=y-46
-        W.Toggle(env,parent,"Keep filters during combat",0,y,310,function() return runtime.db.camera.effectsInCombat end,
-            function(v) runtime.db.camera.effectsInCombat=v; runtime.product.RefreshPresentation(true); runtime.photoEditor.Render() end); y=y-46
-        text("Both on by default. Off: return to the game UI, or temporarily hide filters. Native graphics/name edits and orbit pause in combat; they are never queued.",90)
-    else
-        text("Set up a single timed shot or a short burst. Controls disappear before every screenshot.", 56)
-        for _, item in ipairs({ { "delay", "Delay before first shot", 0, 10 }, { "shots", "Number of shots", 1, 5 }, { "interval", "Seconds between shots", 1, 5 } }) do
-            local key = item[1]
-            W.Slider(env, parent, item[2], 0, y, item[3], item[4], 1, function() return prefs[key] end,
-                function(v) if sequence.active then return nil end; prefs[key] = v; return true end, nil, 310); y = y - 72
-        end
-        W.Button(env, parent, "Start timed capture", 0, y, 310, function() sequence.Start() end); y = y - 40
-        W.Button(env, parent, "Cancel timer / burst", 0, y, 310, sequence.Cancel); y = y - 48
-        text("H hides all controls for your own screenshot program. Escape exits Camera Mode and cancels remaining shots.", 66)
-        text("Screenshots are saved by WoW in its Screenshots folder. A shot already requested cannot be recalled.", 60)
-    end
+    W.Section(parent,"COMBAT BEHAVIOR",0,y,310); y=y-40
+    W.Toggle(env,parent,"Stay in Photo Studio in combat",0,y,310,function() return runtime.db.camera.keepInCombat end,
+        function(v) runtime.db.camera.keepInCombat=v; if not v and runtime.product.IsCombat() then runtime.camera.Combat() end end); y=y-46
+    W.Toggle(env,parent,"Keep filters during combat",0,y,310,function() return runtime.db.camera.effectsInCombat end,
+        function(v) runtime.db.camera.effectsInCombat=v; runtime.product.RefreshPresentation(true); runtime.photoEditor.Render() end); y=y-46
+    W.Text(parent,"Native graphics and name changes, plus camera orbit, pause during combat.",0,y,310,12,W.colors.muted); y=y-56
     return y
 end
 function U.Names(runtime, env, parent, y, ui)

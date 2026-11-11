@@ -6,7 +6,7 @@ function U.New(runtime, composition)
     local style = ns.PhotoStyle
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
         actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
-        worldLightPage = "Tone", worldPoseTab = "All emotes", worldOutputPage = "JPEG", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
+        worldLightPage = "Tone", worldPoseTab = "All emotes", outputPage = "JPEG", stageOutput = "scene", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     self.savedLibraries = {
         Looks={page=1,query=""}, Compositions={page=1,query=""}, Scenes={page=1,query=""}, Lights={page=1,query=""},
     }
@@ -67,7 +67,6 @@ function U.New(runtime, composition)
         worldLight=pages({"Tone","Detail","Originals"},"worldLightPage"),
         look=pages({"Color","Vignette","Glow","Film"},"lookPage"),
         capture=pages({"Timer","Output","Combat"},"capturePage"),
-        stageCapture=pages({"Timer","Output","Pair","Combat"},"capturePage"),
         saved=pages({"Looks","Compositions","Share"},"savedPage"),
         stageSaved=pages({"Scenes","Lights"},"stageSavePage"),
     }
@@ -171,7 +170,7 @@ function U.New(runtime, composition)
         self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         self.RefreshWorldPose = nil
-        self.RefreshWorldCapture = nil
+        self.RefreshCaptureTimer = nil
         self.RefreshSavedLibrary = nil
         composition.SetTimerShutter()
         pool.Reset(); self.sliders = {}
@@ -180,9 +179,8 @@ function U.New(runtime, composition)
         title:SetText(({Frame="Camera", Look="Color & effects", Light=staged and "Model lighting" or "Scene lighting",
             Pose=staged and "Actors" or "World emotes", Capture="Capture", Saved="Library"})[self.tab])
         if self.tab=="Look" then undo:Show(); redo:Show() else undo:Hide(); redo:Hide() end
-        if self.capturePage=="Pair" and not staged then self.capturePage="Timer" end
         self.activePages = ({Frame=staged and groups.stageCamera or groups.camera, Pose=staged and groups.actors or groups.worldPose,
-            Light=staged and groups.stageLight or groups.worldLight, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
+            Light=staged and groups.stageLight or groups.worldLight, Look=groups.look, Capture=groups.capture,
             Saved=staged and groups.stageSaved or groups.saved})[self.tab]
         for _, group in pairs(groups) do
             if group==self.activePages then
@@ -284,14 +282,12 @@ function U.New(runtime, composition)
             end
         elseif self.tab == "Capture" and self.capturePage == "Output" then
             y = ns.PhotoAdvancedUI.Capture(runtime, penv, content, y, self)
-        elseif self.tab == "Capture" and self.capturePage == "Pair" then
-            y = ns.PortraitControls.Capture(runtime, penv, content, y, self)
         elseif self.tab == "Pose" then
             y = ns.WorldPoseUI.Build(runtime, penv, content, self)
-        elseif self.tab == "Capture" and self.capturePage == "Timer" and not staged then
-            y = ns.WorldCaptureUI.Timer(runtime, penv, content, self)
+        elseif self.tab == "Capture" and self.capturePage == "Timer" then
+            y = ns.PhotoCaptureUI.Timer(runtime, penv, content, self)
         elseif self.tab == "Capture" then
-            y = ns.PhotoToolsUI.Capture(runtime, penv, content, self)
+            y = ns.PhotoToolsUI.Combat(runtime, penv, content)
         elseif self.savedPage ~= "Share" then
             y = ns.WorldSavedUI.Build(runtime, penv, content, self)
         else
@@ -324,14 +320,14 @@ function U.New(runtime, composition)
             if not editing then self.Build(); return end
         end
         if self.RefreshStageMap then self.RefreshStageMap() end
-        if self.RefreshWorldCapture and self.RefreshWorldCapture() and not self.building then self.Build(true); return end
+        if self.RefreshCaptureTimer and self.RefreshCaptureTimer() and not self.building then self.Build(true); return end
         local seq = runtime.captureSequence
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
             or self.RefreshWorldPose and self.RefreshWorldPose()
         if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and ns.Product.Message(runtime.cameraActions.status) or nil
-        elseif self.RefreshWorldCapture then extra = self.captureHint
+        elseif self.RefreshCaptureTimer then extra = self.captureHint
         elseif self.tab == "Capture" and self.capturePage == "Output" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
-        elseif self.tab == "Capture" and not runtime.portrait.active then extra = ""
+        elseif self.tab == "Capture" then extra = ""
         elseif self.RefreshSavedLibrary then
             local height
             extra,height = self.RefreshSavedLibrary()
@@ -339,7 +335,7 @@ function U.New(runtime, composition)
                 self.contentHeight=height+16; content:SetHeight(self.contentHeight); self.Layout()
             end
         elseif self.tab == "Saved" then extra = "" end
-        local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and not self.RefreshSavedLibrary and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
+        local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and self.tab ~= "Capture" and not self.RefreshSavedLibrary and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
         self.status:SetText(message ~= "READY" and message or "")
         if self.tab=="Look" then
             for i,b in ipairs({undo,redo}) do
@@ -356,7 +352,7 @@ function U.New(runtime, composition)
         positionMarker()
     end
     runtime.portrait.Refresh = function()
-        if not self.RefreshSavedLibrary and not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
+        if not self.RefreshSavedLibrary and not self.RefreshCaptureTimer and not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
         else self.Refresh() end
     end
     runtime.portrait.collection.RefreshUI = function()

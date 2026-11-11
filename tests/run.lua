@@ -1069,6 +1069,7 @@ local portraitFixture = assert(loadfile("tests/portrait.lua"))()(cameraFixture, 
 assert(loadfile("tests/world_light.lua"))()(portraitFixture, eq, test)
 assert(loadfile("tests/world_pose.lua"))()(portraitFixture, eq, test)
 assert(loadfile("tests/world_capture.lua"))()(portraitFixture, eq, test)
+assert(loadfile("tests/stage_capture.lua"))()(portraitFixture, eq, test)
 assert(loadfile("tests/world_saved.lua"))()(portraitFixture, eq, test)
 assert(loadfile("tests/stage_saved.lua"))()(portraitFixture, eq, test)
 assert(loadfile("tests/photo_look_ui.lua"))()(portraitFixture, eq, test)

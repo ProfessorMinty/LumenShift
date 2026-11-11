@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.29 - 2026-11-11
+
+- Choose Full scene, Background, Cast or Pair alongside the Portrait Stage timer and burst controls. Both shutters on Timer use the selected output.
+- Save one layer independently or capture the backdrop and green-screen cast as a matched pair. Pair bursts report individual file confirmations.
+- Portrait Stage output settings now use the compact JPEG, Antialiasing and Shadows pages.
+
 ## 0.2.0-beta.28 - 2026-11-11
 
 - Find, save, replace and apply Portrait Stage scenes and lighting setups from a three-card searchable library.
