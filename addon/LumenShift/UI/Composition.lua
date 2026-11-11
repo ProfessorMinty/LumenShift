@@ -56,7 +56,8 @@ function C.New(runtime)
         local callback = self.captureCallback; self.captureCallback = nil
         if runtime.portrait then runtime.portrait.CaptureFinished() end
         sync()
-        if callback then callback(ok, code) end
+        if callback then callback(ok, code)
+        elseif self.editor and self.editor.RefreshWorldCapture then self.editor.Refresh() end
     end
     function self.CancelPendingCapture()
         if self.capturing and not self.requested then
@@ -85,8 +86,20 @@ function C.New(runtime)
         local bar = env.CreateFrame("Frame", nil, root); self.bar = bar
         bar:SetSize(720, 84); bar:SetPoint("BOTTOM", root, "BOTTOM", 0, 32)
         W.Fill(bar, W.colors.bg); W.Border(bar)
-        local shutter = W.Button(env, bar, "Capture screenshot", 248, -9, 224, self.Capture, "Capture the clean scene.", "primary")
+        local timerAction
+        local shutter = W.Button(env, bar, "Capture screenshot", 248, -9, 224, function()
+            if timerAction then return timerAction() end
+            return self.Capture()
+        end, nil, "primary")
         W.ButtonIcon(shutter, "ui-camera", 19)
+        function self.SetTimerShutter(action, label, available)
+            timerAction = action
+            shutter.label:SetText(label or "Capture screenshot")
+            local separateCancel = runtime.captureSequence.active and not action
+            if separateCancel then self.cancelButton:Show() else self.cancelButton:Hide() end
+            if separateCancel or available == false then shutter:Disable(); shutter:SetAlpha(.55)
+            else shutter:Enable(); shutter:SetAlpha(1) end
+        end
         self.hideButton = W.Button(env, bar, "Hide controls", 10, -9, 224, self.ToggleControls,
             "Clean view for external screenshots or recording. H shows controls again; Escape exits Camera Mode.", "quiet")
         W.Button(env, bar, "Exit Camera Mode", 486, -9, 224, function() runtime.camera.Exit() end, nil, "quiet")
@@ -96,14 +109,14 @@ function C.New(runtime)
         local function sequenceStatus()
             local seq = runtime.captureSequence
             if seq.active then
-                hint:SetText(seq.state == "WAITING_FOR_PREVIEW" and "Finishing slider changes..." or
-                    "Shot " .. math.min(seq.total, seq.completed + 1) .. " / " .. seq.total .. "  |  " .. seq.state ..
-                    (seq.remaining > 0 and " " .. seq.remaining .. "s" or ""))
-                self.cancelButton:Show()
+                local shot = (seq.completed+1).." of "..seq.total
+                if seq.state == "WAITING_FOR_PREVIEW" then hint:SetText("Finishing photo edits…")
+                elseif seq.state == "CAPTURING" then hint:SetText("Capturing shot "..shot)
+                else hint:SetText("Shot "..shot.." in "..seq.remaining.." s") end
             else
                 hint:SetText("H: hide / show controls   |   Esc: exit Camera Mode")
-                self.cancelButton:Hide()
             end
+            if not timerAction then self.SetTimerShutter() end
             if self.editor then self.editor.Refresh() end
         end
         runtime.captureSequence.Refresh = sequenceStatus

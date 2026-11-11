@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.26 - 2026-11-11
+
+- Choose a single screenshot or a 2–5 shot burst from World Photo → Capture → Timer. Set the first-shot delay and burst spacing on the same page.
+- See the live countdown, the upcoming shot number and confirmed progress. Both shutter buttons on Timer start or cancel that sequence.
+- World Photo output settings have separate JPEG, antialiasing and shadow pages.
+
 ## 0.2.0-beta.25 - 2026-11-11
 
 - Find a World Photo emote with live search, a six-card picker and pinned favorites.

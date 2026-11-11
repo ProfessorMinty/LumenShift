@@ -64,3 +64,15 @@ All 724 simulated Lua 5.1 tests and 10 packaging tests passed. Seven Light tests
 **In-game check.** With Narcissus disabled, search for Dance, click Try Dance, and click Take shot during the animation. Confirm that WoW's Screenshots folder contains one image with the controls hidden. Pin Dance, open Favorites and turn on Pose timer. Try a short delay, then start a second countdown and cancel it. Check that the cancelled shot adds no file.
 
 All 732 simulated Lua 5.1 tests and 10 packaging tests passed. Eight picker tests cover search and focus, page bounds, favorites, preview-only emotes, immediate and timed single shots, cancellation, missing APIs and separation from Portrait Stage. The 360-unit layouts were inspected off-client. Native animation timing and the resulting screenshot files still need an in-game check.
+
+## World Photo Capture in beta.26
+
+Choose **World Photo → Capture → Timer**. Single shot uses a 0–10 second delay. Choose Burst for 2–5 shots with 1–5 seconds between them. Both the panel action and the bottom shutter follow these choices while Timer is open. The current count, delay and spacing use the existing saved preferences. Switching to Single shot remembers the previous burst count for the current session.
+
+The countdown shows seconds to the next shot. Each confirmed screenshot fills one segment. The inter-shot countdown begins when WoW confirms the preceding capture. If WoW rejects a screenshot or sends no result, the burst stops and the panel reports the confirmed count. Cancel capture stops the initial countdown. Stop burst cancels the remaining shots between captures. Escape exits Camera Mode. A screenshot already requested from WoW can still finish.
+
+The existing event-driven sequence handles the shutter, clean frame and screenshot events. Adjusting the timer and switching capture pages only edit preferences or navigation. Under Output, JPEG, Antialiasing and Shadows expose their own controls. Their existing Apply and Restore actions remain explicit.
+
+**In-game check.** With Narcissus disabled, try Single shot with a three-second delay. Check the countdown, wait for WoW's confirmation and inspect the new file in Screenshots. Then try a three-shot burst with two seconds between shots. After the first confirmation, click Stop burst before the next shot. Verify the confirmed count against the new files and check that the capture controls are absent from the images.
+
+The Lua 5.1 suite has 740 passing simulated tests, including eight World Capture cases. All 10 packaging tests passed. An additional timing check covered the 11 first-shot delays at each of the five shot counts, yielding the expected 165 simulated screenshots. Timer, Output and Combat fit without scrolling in the tested standard and compact layouts. Actual frame timing, game fonts and saved files need the in-game check above.

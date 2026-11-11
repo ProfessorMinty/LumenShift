@@ -6,7 +6,7 @@ function U.New(runtime, composition)
     local style = ns.PhotoStyle
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
         actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
-        worldLightPage = "Tone", worldPoseTab = "All emotes", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
+        worldLightPage = "Tone", worldPoseTab = "All emotes", worldOutputPage = "JPEG", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
@@ -168,6 +168,8 @@ function U.New(runtime, composition)
         self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         self.RefreshWorldPose = nil
+        self.RefreshWorldCapture = nil
+        composition.SetTimerShutter()
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
         world.SetSelected(not staged); portrait.SetSelected(staged)
@@ -280,6 +282,8 @@ function U.New(runtime, composition)
             y = ns.PortraitControls.Capture(runtime, penv, content, y, self)
         elseif self.tab == "Pose" then
             y = ns.WorldPoseUI.Build(runtime, penv, content, self)
+        elseif self.tab == "Capture" and self.capturePage == "Timer" and not staged then
+            y = ns.WorldCaptureUI.Timer(runtime, penv, content, self)
         elseif self.tab == "Capture" then
             y = ns.PhotoToolsUI.Capture(runtime, penv, content, self)
         elseif self.savedPage == "Compositions" then
@@ -323,11 +327,14 @@ function U.New(runtime, composition)
             if not editing then self.Build(); return end
         end
         if self.RefreshStageMap then self.RefreshStageMap() end
+        if self.RefreshWorldCapture and self.RefreshWorldCapture() and not self.building then self.Build(true); return end
         local seq = runtime.captureSequence
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
             or self.RefreshWorldPose and self.RefreshWorldPose()
         if self.tab == "Frame" then extra = runtime.cameraActions.status ~= "READY" and ns.Product.Message(runtime.cameraActions.status) or nil
-        elseif self.tab == "Capture" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
+        elseif self.RefreshWorldCapture then extra = self.captureHint
+        elseif self.tab == "Capture" and self.capturePage == "Output" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
+        elseif self.tab == "Capture" and not runtime.portrait.active then extra = ""
         elseif self.tab == "Saved" then extra = runtime.photoComposition.status end
         local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
         self.status:SetText(message ~= "READY" and message or "")

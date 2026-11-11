@@ -45,6 +45,7 @@ function S.New(runtime)
         self.generation = self.generation + 1
         local id = self.generation
         self.active, self.completed, self.total, self.state = true, 0, prefs.shots, "WAITING_FOR_PREVIEW"
+        self.delay, self.interval = prefs.delay, prefs.interval
         local shot, countdown
         shot = function()
             if not self.active or id ~= self.generation then return end
@@ -53,7 +54,7 @@ function S.New(runtime)
             local called = false
             local ok, why = runtime.composition.Capture(function(success, code)
                 called = true
-                if not self.active or id ~= self.generation then return end
+                if not self.active or id ~= self.generation then refresh(); return end
                 if not success then finish(code or "SCREENSHOT_FAILED"); return end
                 self.completed = self.completed + 1
                 if self.completed >= prefs.shots then finish("COMPLETE")

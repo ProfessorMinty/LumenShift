@@ -88,49 +88,63 @@ function U.Capture(runtime, env, parent, y, ui)
     local output, reader = runtime.output, runtime.reader
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
     local function section(label) W.Section(parent, label, 0, y, 310); y = y - 40 end
-    section("SCREENSHOT OUTPUT")
-    local seen, format = ns.ReadOnly.Read(reader, "screenshotQuality"), ns.ReadOnly.Read(reader, "screenshotFormat")
-    if format.code == "OK" and format.raw == "jpeg" and ns.PhotoOutput.Safe(seen, "screenshotQuality") then
-        ui.jpeg = ui.jpeg or V.Number(seen.raw)
-        W.Slider(env, parent, "JPEG quality", 0, y, 1, 10, 1, function() return ui.jpeg end, function(v) ui.jpeg = v; return true end, nil, 310); y = y - 70
-        W.Button(env, parent, "Apply JPEG quality", 0, y, 150, function() report(ui, output.Apply("jpeg", { screenshotQuality = tostring(ui.jpeg) })) end)
-        W.Button(env, parent, "Restore JPEG quality", 160, y, 150, function() report(ui, output.Restore("jpeg")) end); y = y - 44
-        text("WoW is saving JPEG images. Higher quality reduces compression; it does not add scene detail. Exit restores the previous value.", 74)
-    else text("JPEG quality is unavailable or WoW is using a different output format. Capture still works; the format is unchanged.", 74) end
-    section("ANTIALIASING")
-    local observed = ns.PhotoOutput.Read(reader, "aa"); local safe = true
-    for _, key in ipairs(ns.PhotoOutput.Groups.aa) do if not ns.PhotoOutput.Safe(observed[key], key) then safe = false end end
-    if safe then
-        local image, samples = ns.PhotoOutput.Options(reader)
-        ui.aa = ui.aa or { ffxAntiAliasingMode = observed.ffxAntiAliasingMode.raw, MSAAQuality = observed.MSAAQuality.raw, MSAAAlphaTest = observed.MSAAAlphaTest.raw }
-        local function choice(key, label, options)
-            local current, index = "Current", 0
-            for i, opt in ipairs(options) do if ns.PhotoOutput.Equal(key, tostring(opt.value), ui.aa[key]) then current, index = opt.label, i end end
-            W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - 24
-            W.Button(env, parent, current .. "  >", 0, y, 310, function()
-                ui.aa[key] = tostring(options[index % #options + 1].value); ui.Build()
-            end); y = y - 44
-        end
-        choice("ffxAntiAliasingMode", "Image antialiasing", image); choice("MSAAQuality", "Multisample antialiasing", samples)
-        W.Toggle(env, parent, "Alpha-tested edges", 0, y, 310, function() return V.Number(ui.aa.MSAAAlphaTest) == 1 end,
-            function(v) ui.aa.MSAAAlphaTest = v and "1" or "0" end); y = y - 46
-        W.Button(env, parent, "Apply antialiasing", 0, y, 150, function() report(ui, output.Apply("aa", V.Copy(ui.aa))) end)
-        W.Button(env, parent, "Restore antialiasing", 160, y, 150, function() report(ui, output.Restore("aa")) end); y = y - 44
-        text("Choices come from WoW's supported options. Apply verifies the full AA group; Exit restores it. Higher samples can reduce frame rate.", 76)
-    else text("Native AA values are unavailable or restricted here. Other photo controls remain available.", 60) end
-    section("RAY-TRACED SHADOWS")
-    local count = 0
-    for level = 0, 3 do
-        local value = level
-        if ns.NativeGraphics.RaySupport(reader, value) then
-            W.Button(env, parent, ({ "Off", "Fair", "Good", "High" })[value + 1], count % 2 * 160, y - math.floor(count / 2) * 40, 150,
-                function() report(ui, runtime.photo.ApplyRay(value, function(ok, why) report(ui, ok, why) end)) end); count = count + 1
-        end
+    local grouped = not runtime.portrait.active
+    if grouped then
+        y = ns.StageLayout.Choices(env, parent, y, {"JPEG","Antialiasing","Shadows"}, ui.worldOutputPage, function(page)
+            ui.worldOutputPage=page; ui.notice=nil; ui.Build(true)
+        end)
     end
-    if count > 0 then y = y - math.ceil(count / 2) * 40 - 8
-        W.Button(env, parent, "Restore photo quality", 0, y, 310, function() report(ui, runtime.photo.RestorePhoto(function(ok, why) report(ui, ok, why) end)) end); y = y - 44
-        text("Only choices supported by your renderer are shown. Uses the photo-quality original; no driver restart is requested.", 68)
-    else text("Ray-traced shadows are unavailable on this renderer. No graphics restart or renderer change is attempted.", 68) end
+    if not grouped or ui.worldOutputPage=="JPEG" then
+        if not grouped then section("SCREENSHOT OUTPUT") end
+        local seen, format = ns.ReadOnly.Read(reader, "screenshotQuality"), ns.ReadOnly.Read(reader, "screenshotFormat")
+        if format.code == "OK" and format.raw == "jpeg" and ns.PhotoOutput.Safe(seen, "screenshotQuality") then
+            ui.jpeg = ui.jpeg or V.Number(seen.raw)
+            W.Slider(env, parent, "JPEG quality", 0, y, 1, 10, 1, function() return ui.jpeg end, function(v) ui.jpeg = v; return true end, nil, 310); y = y - 70
+            W.Button(env, parent, "Apply JPEG quality", 0, y, 150, function() report(ui, output.Apply("jpeg", { screenshotQuality = tostring(ui.jpeg) })) end)
+            W.Button(env, parent, "Restore JPEG quality", 160, y, 150, function() report(ui, output.Restore("jpeg")) end); y = y - 44
+            text("Higher JPEG quality reduces compression. Exit restores your previous setting.", 74)
+        else text("JPEG quality is unavailable or WoW is using a different output format. Capture still works; the format is unchanged.", 74) end
+    end
+    if not grouped or ui.worldOutputPage=="Antialiasing" then
+        if not grouped then section("ANTIALIASING") end
+        local observed = ns.PhotoOutput.Read(reader, "aa"); local safe = true
+        for _, key in ipairs(ns.PhotoOutput.Groups.aa) do if not ns.PhotoOutput.Safe(observed[key], key) then safe = false end end
+        if safe then
+            local image, samples = ns.PhotoOutput.Options(reader)
+            ui.aa = ui.aa or { ffxAntiAliasingMode = observed.ffxAntiAliasingMode.raw, MSAAQuality = observed.MSAAQuality.raw, MSAAAlphaTest = observed.MSAAAlphaTest.raw }
+            local function choice(key, label, options)
+                local current, index = "Current", 0
+                for i, opt in ipairs(options) do if ns.PhotoOutput.Equal(key, tostring(opt.value), ui.aa[key]) then current, index = opt.label, i end end
+                local inline = grouped and key == "ffxAntiAliasingMode"
+                W.Text(parent, label, 0, y - (inline and 6 or 0), inline and 150 or 310, 12, W.colors.muted)
+                if not inline then y = y - 24 end
+                W.Button(env, parent, current .. "  >", inline and 156 or 0, y, inline and 154 or 310, function()
+                    ui.aa[key] = tostring(options[index % #options + 1].value); ui.Build()
+                end); y = y - 44
+            end
+            choice("ffxAntiAliasingMode", "Image antialiasing", image); choice("MSAAQuality", "Multisample antialiasing", samples)
+            W.Toggle(env, parent, "Alpha-tested edges", 0, y, 310, function() return V.Number(ui.aa.MSAAAlphaTest) == 1 end,
+                function(v) ui.aa.MSAAAlphaTest = v and "1" or "0" end); y = y - 46
+            W.Button(env, parent, "Apply antialiasing", 0, y, 150, function() report(ui, output.Apply("aa", V.Copy(ui.aa))) end)
+            W.Button(env, parent, "Restore antialiasing", 160, y, 150, function() report(ui, output.Restore("aa")) end); y = y - 44
+            text("Higher sample counts can reduce frame rate. Exit restores your previous settings.", 48)
+        else text("Native AA values are unavailable or restricted here. Other photo controls remain available.", 60) end
+    end
+    if not grouped or ui.worldOutputPage=="Shadows" then
+        if not grouped then section("RAY-TRACED SHADOWS") end
+        local count = 0
+        for level = 0, 3 do
+            local value = level
+            if ns.NativeGraphics.RaySupport(reader, value) then
+                W.Button(env, parent, ({ "Off", "Fair", "Good", "High" })[value + 1], count % 2 * 160, y - math.floor(count / 2) * 40, 150,
+                    function() report(ui, runtime.photo.ApplyRay(value, function(ok, why) report(ui, ok, why) end)) end); count = count + 1
+            end
+        end
+        if count > 0 then y = y - math.ceil(count / 2) * 40 - 8
+            W.Button(env, parent, "Restore photo quality", 0, y, 310, function() report(ui, runtime.photo.RestorePhoto(function(ok, why) report(ui, ok, why) end)) end); y = y - 44
+            text("These levels are available on your renderer. Exit restores your previous photo quality.", 68)
+        else text("Ray-traced shadows are unavailable on this renderer. No graphics restart or renderer change is attempted.", 68) end
+    end
     return y
 end
 function U.Saved(runtime, env, parent, y, ui)
