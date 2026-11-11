@@ -6,7 +6,7 @@ function U.New(runtime, composition)
     local style = ns.PhotoStyle
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
         actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
-        capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
+        worldLightPage = "Tone", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
@@ -59,6 +59,7 @@ function U.New(runtime, composition)
         stageCamera=pages({"Position","Lens","Framing","Visibility"},"cameraPage"),
         actors=pages({"Cast","Transform","Poses","Outfits","Effects"},"actorTab"),
         stageLight=pages({"Rig","Direction","Color"},"lightPage"),
+        worldLight=pages({"Tone","Detail","Originals"},"worldLightPage"),
         look=pages({"Color","Vignette","Glow","Film"},"lookPage"),
         capture=pages({"Timer","Output","Combat"},"capturePage"),
         stageCapture=pages({"Timer","Output","Pair","Combat"},"capturePage"),
@@ -83,8 +84,26 @@ function U.New(runtime, composition)
     local footer = env.CreateFrame("Frame", nil, panel); self.footer = footer
     footer:SetSize(310, 60); footer:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 44, 8)
     W.Rule(footer, 0, 0, 310)
-    self.compare = W.Button(env, footer, "Before / After", 0, -6, 144, function() preview.Finish(editor.Compare) end)
+    self.compare = W.Button(env, footer, "Before / After", 0, -6, 144, function()
+        self.notice = nil
+        if preview.error == "SHOW_AFTER_FIRST" then preview.Begin() end
+        preview.Finish(editor.Compare)
+    end)
     local resetLook = W.Button(env, footer, "Reset photo look", 155, -6, 152, function() editor.Recipe("neutral"); self.Build() end,nil,"quiet")
+    local restoreLight = W.Button(env, footer, "Restore lighting", 155, -6, 152, function()
+        preview.Finish(function()
+            local reported = false
+            local function result(ok, why)
+                if reported then return end
+                reported = true
+                self.notice = not ok and ns.Product.Message(why) or nil
+                if ok then preview.Begin() end
+                self.Refresh()
+            end
+            local ok, why = editor.Restore(result)
+            if not ok then result(nil, why) end
+        end)
+    end, "Return lighting to the values captured before your photo edits.", "quiet")
     self.status = W.Text(footer, "", 0, -53, 332, 12, W.colors.muted)
     local marker = env.CreateFrame("Button", nil, composition.root); self.marker = marker
     marker:SetSize(38, 38); marker:EnableMouse(true); marker:SetMovable(true); marker:SetClampedToScreen(true); marker:RegisterForDrag("LeftButton")
@@ -126,7 +145,9 @@ function U.New(runtime, composition)
         footer:SetHeight(footerHeight)
         self.status:ClearAllPoints(); self.status:SetWidth(310)
         self.status:SetPoint("TOPLEFT", footer, "TOPLEFT", 0, hasActions and -40 or -6)
-        if hasActions then self.compare:Show(); resetLook:Show() else self.compare:Hide(); resetLook:Hide() end
+        if hasActions then self.compare:Show() else self.compare:Hide() end
+        if self.tab == "Look" then resetLook:Show() else resetLook:Hide() end
+        if self.tab == "Light" and not runtime.portrait.active then restoreLight:Show() else restoreLight:Hide() end
         scroll:SetHeight(viewport); scrollbar:SetHeight(viewport)
         scrollbar:SetMinMaxValues(0, math.max(0, (self.contentHeight or 1) - scroll:GetHeight()))
         scrollbar:SetValue(math.min(scroll:GetVerticalScroll(), math.max(0, (self.contentHeight or 1) - scroll:GetHeight())))
@@ -142,6 +163,7 @@ function U.New(runtime, composition)
         self.compactLooks = env.UIParent:GetHeight() - 154 < 550
         editor.EndLookEdit()
         self.ClearFocus()
+        self.dragging = nil
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
@@ -151,7 +173,7 @@ function U.New(runtime, composition)
         if self.tab=="Look" then undo:Show(); redo:Show() else undo:Hide(); redo:Hide() end
         if self.capturePage=="Pair" and not staged then self.capturePage="Timer" end
         self.activePages = ({Frame=staged and groups.stageCamera or groups.camera, Pose=staged and groups.actors,
-            Light=staged and groups.stageLight, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
+            Light=staged and groups.stageLight or groups.worldLight, Look=groups.look, Capture=staged and groups.stageCapture or groups.capture,
             Saved=staged and groups.stageSaved or groups.saved})[self.tab]
         for _, group in pairs(groups) do
             if group==self.activePages then
@@ -177,18 +199,23 @@ function U.New(runtime, composition)
             W.Script(self.sliders[key], "OnMouseUp", function() editor.EndLookEdit(); self.Refresh() end)
             y = y - (unit and 36 or 68)
         end
-        local function liveSlider(key, label, minimum, maximum, step, current, unit)
-            local draft = math.max(minimum, math.min(maximum, current))
+        local function liveSlider(key, label, minimum, maximum, step, current, unit, illustration)
+            local requested = preview.pending[key] or (preview.currentKey == key and preview.currentValue)
+            local draft = math.max(minimum, math.min(maximum, requested or current))
+            local help
+            if not illustration then help = "Drag for live preview, or type a value and press Enter." end
             local slider = W.Slider(penv, content, label, 0, y, minimum, maximum, step, function() return draft end,
                 function(n)
-                    local ok = preview.Queue(key, n)
-                    if ok then draft = n end
+                    local ok, why = preview.Queue(key, n)
+                    if ok then draft = n
+                    else self.notice = ns.Product.Message(why); self.status:SetText(self.notice) end
                     return ok
-                end, "Live preview while dragging. Changes are paced and verified; the latest value wins. You can also type a value and press Enter.", 310, unit)
-            W.Script(slider, "OnMouseDown", function() self.dragging = slider; preview.Begin() end)
+                end, help, 310, unit, nil, illustration)
+            local function begin() self.notice = nil; preview.Begin() end
+            W.Script(slider, "OnMouseDown", function() self.dragging = slider; begin() end)
             W.Script(slider, "OnMouseUp", function() self.dragging = nil; self.Refresh() end)
             local entered = slider.edit:GetScript("OnEnterPressed")
-            W.Script(slider.edit, "OnEnterPressed", function(s) preview.Begin(); entered(s) end)
+            W.Script(slider.edit, "OnEnterPressed", function(s) begin(); entered(s) end)
             self.sliders[key] = slider; y = y - (unit and 36 or 68)
         end
         if self.tab == "Frame" and self.cameraPage == "Visibility" then
@@ -198,25 +225,10 @@ function U.New(runtime, composition)
         elseif self.tab == "Look" then
             y = style.Look(runtime, penv, content, self)
         elseif self.tab == "Light" then
-            text("Live preview as you drag. Updates are paced; Exit returns your pre-photo values.", 56)
-            for _, item in ipairs({ { "Brightness", "Brightness", 0, 100, 1 }, { "Contrast", "Contrast", 0, 100, 1 },
-                { "ResampleSharpness", "Sharpness", 0, 100, 5 }, { "bloomUserMult", "Native bloom", 0, 1, .2 } }) do
-                local key = item[1]; local value, why = editor.Read(key)
-                if key == "ResampleSharpness" and value then
-                    local enabled, reason = editor.Read("ResampleAlwaysSharpen"); if enabled == nil then value, why = nil, reason end
-                end
-                if value then
-                    if key == "ResampleSharpness" then value = 100 - value * 50 end
-                    liveSlider(key, item[2], item[3], item[4], item[5], value)
-                else text(item[2] .. ": " .. (why or "Unavailable"), 64) end
-            end
-            text("Bloom is renderer-dependent and affects the scene globally. Glow accent on Look is a separate screen effect.", 62)
-            W.Button(penv, content, "Restore photo lighting", 0, y, 310, function() preview.Finish(editor.Restore) end); y = y - 48
-            local s = db.camera.editor.session
-            if s then
-                section("PRE-PHOTO VALUES")
-                for _, key in ipairs(ns.Value.Keys(s.before)) do text(key .. " = " .. s.before[key], 30) end
-            end
+            y = ns.WorldLightUI.Build(runtime, content, self.worldLightPage, function(spec, value, at)
+                y = at
+                liveSlider(spec.key, spec.label, 0, spec.maximum, spec.step, value, nil, spec.image)
+            end)
         elseif self.tab == "Frame" and self.cameraPage == "Position" then
             y = ns.PhotoAdvancedUI.Position(runtime, penv, content, y, self)
             local range = ns.Framing.Range(runtime.reader); local seen = ns.ReadOnly.Read(runtime.reader, "cameraFov")
@@ -294,7 +306,17 @@ function U.New(runtime, composition)
     end
     function self.Refresh()
         if not runtime.portrait.active and (self.tab == "Light" or self.tab == "Frame") and not self.building and not self.dragging
-            and not preview.Pending() and not runtime.cameraActions.orbit and not runtime.cameraActions.busy and self.panel:IsVisible() then self.Build(); return end
+            and not preview.Pending() and not runtime.cameraActions.orbit and not runtime.cameraActions.busy and self.panel:IsVisible() then
+            -- A verified drag can finish while the photographer types the next adjustment.
+            local focus = self.tab == "Light" and ns.ReadOnly.Call(runtime.reader, env.GetCurrentKeyBoardFocus)
+            local editing = false
+            if focus and focus[1] then
+                for _, slider in pairs(self.sliders) do
+                    if slider.edit == focus[1] then editing = true; break end
+                end
+            end
+            if not editing then self.Build(); return end
+        end
         if self.RefreshStageMap then self.RefreshStageMap() end
         local seq, pose = runtime.captureSequence, runtime.photoTools
         local extra = self.tab == "Capture" and (seq.state .. (seq.total and " | " .. seq.completed .. " / " .. seq.total .. " captured" or ""))
@@ -314,6 +336,8 @@ function U.New(runtime, composition)
         end
         self.compare.label:SetText(editor.before and "Show After" or "Show Before")
         if editor.busy and not preview.busy then self.compare:Disable() else self.compare:Enable() end
+        if db.camera.editor.session or preview.Pending() then restoreLight:Enable(); restoreLight:SetAlpha(1)
+        else restoreLight:Disable(); restoreLight:SetAlpha(.65) end
         positionMarker()
     end
     runtime.portrait.Refresh = function()

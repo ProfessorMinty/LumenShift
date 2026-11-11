@@ -44,3 +44,7 @@ On 2026-11-09, `tools/create_photo_assets.py` created 23 deterministic analytic/
 ## Original pose illustrations
 
 Northern Lights Labs created six 128×64 pose illustrations for beta.23. The joint coordinates, colors and drawing routine are in `tools/create_pose_swatches.py`. The exports depict generic figures and do not contain game screenshots or third-party models. The generator uses Pillow at build time. The original illustrations are covered by ASSET-LICENSE.md and recorded by hash in the asset manifest.
+
+## World Light control strips
+
+For beta.24, `tools/create_light_strips.py` derives four illustrated tracks from LumenShift's original neutral landscape. Each 128×32 TGA contains four tonal or detail variations. They are directional guides. The game world supplies the live lighting preview. Original art is covered by ASSET-LICENSE.md. Pillow is used only to export the images. The manifest records their hashes.

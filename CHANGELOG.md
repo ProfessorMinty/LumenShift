@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0-beta.24 - 2026-11-11
+
+- Preview World Photo brightness and contrast by dragging the illustrated Tone strips. Detail groups sharpening and world bloom.
+- The Light footer offers Before/After and Restore lighting. Originals shows captured values beside current game readings.
+
 ## 0.2.0-beta.23 - 2026-11-11
 
 - Frame a world shot with a directional pad and zoom controls. In Portrait Stage, click the orbit map or choose a front, three-quarter or profile view.

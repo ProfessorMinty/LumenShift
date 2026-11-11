@@ -270,7 +270,7 @@ function W.Edit(env, parent, value, x, y, width, callback, maxLetters)
     if ns.Keyboard then ns.Keyboard.Control(env, edit, true) end
     return edit
 end
-function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip, width, unit, spectrum)
+function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, tip, width, unit, spectrum, illustration)
     width = width or 520
     local trackWidth = unit and width - 181 or width
     W.Text(parent, label, x, y - 5, unit and 111 or width - 85, 13)
@@ -290,7 +290,17 @@ function W.Slider(env, parent, label, x, y, minimum, maximum, step, get, set, ti
         end
         W.Rule(slider,trackWidth/2,-3,1,W.colors.text,8)
     end
+    if illustration then
+        slider:SetHeight(34)
+        W.Art(slider, illustration, 0, 0, trackWidth, 34)
+    end
     local thumb = W.Texture(slider, "OVERLAY"); thumb:SetSize(8, 15); thumb:SetColorTexture(unpack(spectrum and W.colors.text or W.colors.accent)); slider:SetThumbTexture(thumb)
+    if illustration then
+        thumb:SetSize(6, 38); thumb:SetColorTexture(unpack(W.colors.sidebar))
+        local index = W.Texture(slider, "OVERLAY")
+        index:SetSize(2, 38); index:SetPoint("CENTER", thumb, "CENTER")
+        index:SetColorTexture(unpack(W.colors.accent))
+    end
     local initialized, edit, changeHandler = false
     local function update(requested)
         local value = math.max(minimum, math.min(maximum, math.floor(requested / step + 0.5) * step))

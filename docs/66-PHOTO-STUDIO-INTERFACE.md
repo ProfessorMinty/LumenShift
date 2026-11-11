@@ -42,3 +42,13 @@ All 711 simulated Lua 5.1 tests and 10 packaging tests passed. Seven interface c
 4. With a unit targeted, use Cast → Add target. Select the target in Transform → Place and click Right. Check that only the target moves. Hide controls, inspect the frame and press Escape to exit.
 
 All 717 Lua 5.1 mock tests and 10 packaging tests passed. The six new interface tests cover compact layouts, scaled map clicks, rejected edits, cast selection, animation browsing and the fallback model renderer. Layouts were inspected off-client at 360 UI units wide. Verify the native render, game fonts, pose playback and pointer feel at your usual UI scale.
+
+## World Photo Light in beta.24
+
+Tone pairs Brightness and Contrast. Detail pairs Sharpness and World bloom. Drag anywhere along an illustrated track or type a value and press Enter. The four samples show the direction of adjustment. The live world is the preview, and native bloom depends on the current renderer and scene. Sharpness uses the existing 0–100 scale, which the controller converts to WoW's inverse sharpening value.
+
+Originals shows each captured game value alongside its current reading. A dash marks an original that has yet to be captured. Show Before and Show After compare the whole photo. Restore lighting returns only the native lighting edits, keeping the selected photo look. The existing preview queue combines rapid inputs, verifies each native transaction and drains the final requested value before comparison, restoration or capture.
+
+**In-game check.** Open Camera → World Photo → Light. Drag Brightness slowly, hold the pointer down, and move it again. Check that the world changes before release and settles at the displayed value. Try Contrast, then any available Detail controls. Open Originals, compare Show Before and Show After, and choose Restore lighting. Verify your original values and look at the scene before exiting Camera Mode.
+
+All 724 simulated Lua 5.1 tests and 10 packaging tests passed. Seven Light tests cover live changes before release, both layout sizes, queued page changes, exact restoration, restricted settings, numeric input and an external-change conflict. Off-client renders were inspected at 360 UI units wide. Actual renderer response and drag feel await in-game testing.

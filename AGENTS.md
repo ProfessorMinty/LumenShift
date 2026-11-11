@@ -7,7 +7,7 @@ LumenShift is intended for public publication on **CurseForge for World of Warcr
 
 ## Current authorization
 
-**Current beta.23 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the Camera and Actors pages, original pose and filter artwork, interface research and owner tests.
+**Current beta.24 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the World Light, Camera and Actors controls, artwork, interface research and owner tests.
 
 **Prior beta.21 / camera verification.** See [camera audit and remaining photo work](docs/65-PHOTO-CAMERA-CONTROLS.md#beta21-verification-and-remaining-work) for the standalone axis tests, failure handling and native acceptance checklist.
 
