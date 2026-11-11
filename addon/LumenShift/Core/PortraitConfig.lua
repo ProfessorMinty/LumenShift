@@ -1,5 +1,6 @@
 local _, ns = ...
 local P, V = {}, ns.Value; ns.PortraitConfig = P
+P.BankLimit = 8
 P.Animations = ns.PortraitLibrary.Poses
 P.Backgrounds = { { "world", "World" }, { "charcoal", "Charcoal" }, { "gray", "Gray" }, { "green", "Chroma green" }, { "blue", "Chroma blue" } }
 P.Colors = { charcoal = { .025, .03, .04 }, gray = { .35, .35, .35 }, green = { 0, 1, 0 }, blue = { 0, 0, 1 } }
@@ -55,7 +56,7 @@ function P.Name(name) return type(name) == "string" and #name > 0 and #name <= 3
 local function bank(data, validate)
     if type(data) ~= "table" then return false end
     local n = 0
-    for name, value in pairs(data) do n = n + 1; if n > 8 or not P.Name(name) or not validate(value) then return false end end
+    for name, value in pairs(data) do n = n + 1; if n > P.BankLimit or not P.Name(name) or not validate(value) then return false end end
     return true
 end
 function P.Validate(p)
@@ -64,7 +65,7 @@ function P.Validate(p)
 end
 function P.Save(bankValue, name, value, validator)
     if not P.Name(name) or not validator(value) then return nil, "Invalid scene or name (1-32 characters)." end
-    if not bankValue[name] and #V.Keys(bankValue) >= 8 then return nil, "Eight saved entries maximum. Delete one first." end
+    if not bankValue[name] and #V.Keys(bankValue) >= P.BankLimit then return nil, "Eight saved entries maximum. Delete one first." end
     local copy = V.Copy(value); if not copy then return nil, "Invalid scene data." end
     bankValue[name] = copy; return true
 end

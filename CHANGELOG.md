@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.28 - 2026-11-11
+
+- Find, save, replace and apply Portrait Stage scenes and lighting setups from a three-card searchable library.
+- Scene previews show the backdrop, cast positions and field of view. Lighting previews illustrate color and direction with key and fill values.
+- The scene result tracks outstanding actor loads and reports partial cast, lens or lighting support.
+
 ## 0.2.0-beta.27 - 2026-11-11
 
 - Save and find World Photo looks and compositions in separate searchable libraries. Each page shows up to three cards with effect or framing details.

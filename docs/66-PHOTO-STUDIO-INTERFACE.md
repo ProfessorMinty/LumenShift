@@ -88,3 +88,15 @@ Search by part of a name or use Previous and Next. Each page holds three cards. 
 **In-game check.** With Narcissus disabled, save a warm look, change to a cool look, then search for the saved name and apply it. Save a different composition with a square guide, move the camera, and apply that composition. Check the framing, available zoom and field of view, and confirm the warm look is still active. Reload the UI and find both entries again.
 
 Nine simulated library tests cover existing full banks after reload, literal search and keyboard focus, replacement at capacity, deletion, asynchronous camera failures, guide-only clients, look sharing and Before/After. A separate sweep saved, searched and applied all 20 entries through the visible controls. The library and save forms fit both tested panel sizes. Native rendering and persistence on the installed client remain part of the in-game check.
+
+## Portrait Stage Saved in beta.28
+
+Choose **Portrait Stage → Saved → Scenes** to save the cast, poses, outfits, stage camera, backdrop and model light together. **Lights** stores the direction, color and intensity of the model light. Applying a light changes the rig while preserving the current cast and camera. Each library holds eight entries and reads earlier saves in place.
+
+Click **Save current**, type a name and save. Search by part of the name or page through three cards at a time. Select a card and click **Apply scene** or **Apply lighting setup**. To replace an entry, select it and choose **Save current → Use selected name**. The action displays **Replace** when the typed name already exists in the current library. Delete acts on the selected entry. Each library keeps its own search and selection.
+
+Scene cards diagram the saved cast positions from the front. Light cards illustrate key color and direction on an ambient swatch. Selecting a card only changes the library selection. On Apply, scene slots resolve the current player, target or pet. The status reports completion after the actors finish loading. A partial result identifies cast, light or lens issues. **Actors → Cast** shows per-slot failures.
+
+**In-game check.** With Narcissus disabled, pose your character, add a target, choose a backdrop and save a scene. Save a different light under the same name in Lights. Move an actor, then search for and apply the light. Check that the rig changes and your actor stays put. Apply the scene and check the original placement, poses, backdrop and lighting. Reload the UI and find both names again.
+
+Nine simulated portrait library tests cover full banks after reload, search focus, replacement, deletion, cast and light previews, pending model loads, missing units, renderer limits and switching modes. A separate check saved, found and applied all 16 entries using the visible controls. Both libraries and their naming forms fit the standard and compact test layouts. Native model appearance, lighting and installed-client persistence still need the in-game check.

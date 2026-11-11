@@ -22,10 +22,20 @@ function P.New(runtime)
     local function busy()
         self.busy = false; for _, slot in pairs(self.slots) do if slot.pending then self.busy = true end end
     end
+    local function finishSceneLoad()
+        local result = self.sceneLoad
+        if not result or not result.pending or self.busy then return end
+        local issues = {}
+        if next(self.failures) then issues[#issues+1] = "Check cast" end
+        if self.notice then issues[#issues+1] = "Lighting unavailable" end
+        if backend.kind ~= "ModelScene" then issues[#issues+1] = "Stage lens unavailable" end
+        result.pending = false
+        result.status = #issues == 0 and "Scene applied." or "Partial scene · "..table.concat(issues," · ")
+    end
     function self.Exit()
         self.collection.Cancel()
         self.active, self.busy, self.layerCapture = false, false, nil
-        self.generation = self.generation + 1; self.slots = {}; self.failures = {}; self.frozen = nil
+        self.generation = self.generation + 1; self.slots = {}; self.failures = {}; self.frozen = nil; self.sceneLoad = nil
         backend.Hide(); self.status = "World Photo"
         if runtime.photoEditor then runtime.photoEditor.Render() end
     end
@@ -50,6 +60,7 @@ function P.New(runtime)
                 slot.front, slot.spec, slot.identity = index, V.Copy(spec), identity; model:Show()
                 db.camera.portrait.scene.actors[slotID] = V.Copy(spec)
             else backend.Clear(model) end
+            finishSceneLoad()
             report(success, reason)
         end
         local poll
@@ -269,6 +280,10 @@ function P.New(runtime)
                 self.slots[id], data.scene.actors[id], self.failures[id] = nil, nil, nil
             end
         end
+        -- All slots have been dispatched. A later successful slot must not mask an earlier failure.
+        self.sceneLoad = {pending=true, status="Applying scene…"}
+        finishSceneLoad()
+        if self.Refresh then self.Refresh() end
         return true
     end
     function self.Freeze()

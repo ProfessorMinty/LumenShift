@@ -4,9 +4,6 @@ function U.Build(runtime, env, parent, tab, ui, startY)
     local stage, data, y = runtime.portrait, runtime.db.camera.portrait, startY or 0
     local function text(value, height) W.Text(parent, value, 0, y, 310, 12, W.colors.muted); y = y - (height or 48) end
     local function section(value) W.Section(parent, value, 0, y, 310); y = y - 40 end
-    local function action(label, fn)
-        W.Button(env, parent, label, 0, y, 310, function() fn(); ui.Build() end); y = y - 40
-    end
     if tab == "Pose" then
         if ui.actorTab == "Cast" then
             y=ns.StageLayout.Cast(runtime,env,parent,ui,y)
@@ -67,24 +64,6 @@ function U.Build(runtime, env, parent, tab, ui, startY)
         y=ns.StageLayout.Slider(env,parent,ui,y,"letterbox","Letterbox height",range,.01,"", function() return runtime.db.camera.editor.look.letterbox end,
             function(v) return runtime.photoEditor.Set("letterbox", v) end)
         text("H hides the guides. Letterbox bars stay in the shot.", 36)
-    elseif tab == "Saved" and ui.stageSavePage == "Scenes" then
-        text("Scenes store layout, poses, light and backdrop. Loading resolves your current player, target and pet; it does not save another player's identity.", 84)
-        local sceneName = W.Edit(env, parent, ui.sceneName or "My portrait", 0, y, 310, function(v) ui.sceneName = v end, 32); y = y - 40
-        action("Save / replace scene", function() ui.sceneName = sceneName:GetText(); stage.Save(ui.sceneName) end)
-        for _, name in ipairs(V.Keys(data.saved)) do
-            local saved = name
-            W.Button(env, parent, name, 0, y, 224, function() stage.Load(saved); ui.Build() end)
-            W.Button(env, parent, "Delete", 232, y, 78, function() stage.Delete(saved); ui.Build() end); y = y - 40
-        end
-    elseif tab == "Saved" then
-        section("SAVED LIGHTS")
-        local lightName = W.Edit(env, parent, ui.lightName or "My light", 0, y, 310, function(v) ui.lightName = v end, 32); y = y - 40
-        action("Save / replace light", function() ui.lightName = lightName:GetText(); stage.Save(ui.lightName, true) end)
-        for _, name in ipairs(V.Keys(data.lights)) do
-            local saved = name
-            W.Button(env, parent, name, 0, y, 224, function() stage.Load(saved, true); ui.Build() end)
-            W.Button(env, parent, "Delete", 232, y, 78, function() stage.Delete(saved, true); ui.Build() end); y = y - 40
-        end
     end
     if tab == "Pose" and ui.actorTab == "Cast" then
         for _, id in ipairs(V.Keys(stage.failures)) do text("Actor " .. id .. ": " .. stage.failures[id], 48) end

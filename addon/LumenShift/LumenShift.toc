@@ -2,7 +2,7 @@
 ## Title: LumenShift
 ## Notes: Visual modes, optional effects and diagnostics. Button-based setup and controls; no startup writes.
 ## Author: Northern Lights Labs
-## Version: 0.2.0-beta.27
+## Version: 0.2.0-beta.28
 ## SavedVariables: LumenShiftDB
 ## X-Website: https://github.com/ProfessorMinty/LumenShift
 ## X-LumenShift-Phase: INTERACTIVE_DIAGNOSTIC_DEVELOPMENT
@@ -59,7 +59,9 @@ UI/PhotoStyle.lua
 UI/WorldLight.lua
 UI/WorldPose.lua
 UI/WorldCapture.lua
+UI/SavedLibrary.lua
 UI/WorldSaved.lua
+UI/StageSaved.lua
 UI/StageLayout.lua
 UI/PhotoEditor.lua
 UI/PortraitBackend.lua

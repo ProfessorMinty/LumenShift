@@ -7,7 +7,9 @@ function U.New(runtime, composition)
     local self = { tab = "Frame", cameraPage = "Position", lookPage = "Color", glowPage = "Shape",
         actorTab = "Poses", poseTool = "Quick picks", transformPage = "Place", lightPage = "Rig", framingTool = "Guides",
         worldLightPage = "Tone", worldPoseTab = "All emotes", worldOutputPage = "JPEG", capturePage = "Timer", savedPage = "Looks", precision = false, sliders = {}, drafts = {} }
-    self.savedLibraries = {Looks={page=1,query=""}, Compositions={page=1,query=""}}
+    self.savedLibraries = {
+        Looks={page=1,query=""}, Compositions={page=1,query=""}, Scenes={page=1,query=""}, Lights={page=1,query=""},
+    }
     local panel = env.CreateFrame("Frame", nil, composition.root); self.panel = panel
     panel:SetSize(360, 640); panel:SetPoint("TOPRIGHT", composition.root, "TOPRIGHT", -24, -24)
     W.Fill(panel, W.colors.bg); local edges = W.Border(panel); W.Window(env, panel, 29, 201)
@@ -170,7 +172,7 @@ function U.New(runtime, composition)
         self.RefreshNames, self.RefreshGallery, self.RefreshPlacement, self.RefreshStageMap = nil, nil, nil, nil
         self.RefreshWorldPose = nil
         self.RefreshWorldCapture = nil
-        self.RefreshWorldSaved = nil
+        self.RefreshSavedLibrary = nil
         composition.SetTimerShutter()
         pool.Reset(); self.sliders = {}
         local staged = runtime.portrait.active
@@ -227,7 +229,9 @@ function U.New(runtime, composition)
         end
         if self.tab == "Frame" and self.cameraPage == "Visibility" then
             y = ns.PhotoToolsUI.Names(runtime, penv, content, y, self)
-        elseif staged and (self.tab == "Light" or self.tab == "Frame" or self.tab == "Pose" or self.tab == "Saved") then
+        elseif staged and self.tab == "Saved" then
+            y = ns.StageSavedUI.Build(runtime, penv, content, self)
+        elseif staged and (self.tab == "Light" or self.tab == "Frame" or self.tab == "Pose") then
             y = ns.PortraitControls.Build(runtime, penv, content, self.tab, self, y)
         elseif self.tab == "Look" then
             y = style.Look(runtime, penv, content, self)
@@ -328,14 +332,14 @@ function U.New(runtime, composition)
         elseif self.RefreshWorldCapture then extra = self.captureHint
         elseif self.tab == "Capture" and self.capturePage == "Output" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Capture" and not runtime.portrait.active then extra = ""
-        elseif self.RefreshWorldSaved then
+        elseif self.RefreshSavedLibrary then
             local height
-            extra,height = self.RefreshWorldSaved()
+            extra,height = self.RefreshSavedLibrary()
             if height and self.contentHeight~=height+16 then
                 self.contentHeight=height+16; content:SetHeight(self.contentHeight); self.Layout()
             end
         elseif self.tab == "Saved" then extra = "" end
-        local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
+        local message = self.notice or runtime.portrait.active and self.tab ~= "Look" and not self.RefreshSavedLibrary and runtime.portrait.status or extra or preview.error and ns.Product.Message(preview.error) or preview.Pending() and "Updating live preview..." or editor.status
         self.status:SetText(message ~= "READY" and message or "")
         if self.tab=="Look" then
             for i,b in ipairs({undo,redo}) do
@@ -352,7 +356,7 @@ function U.New(runtime, composition)
         positionMarker()
     end
     runtime.portrait.Refresh = function()
-        if not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
+        if not self.RefreshSavedLibrary and not self.building and not self.dragging and self.panel:IsVisible() and not runtime.portrait.busy then self.Build()
         else self.Refresh() end
     end
     runtime.portrait.collection.RefreshUI = function()
