@@ -233,6 +233,7 @@ function P.New(runtime)
             return nil, why
         end
         for key in pairs(C.CameraRanges) do current[key] = scene[key] end
+        current.trackAim = scene.trackAim
         return true
     end
     function self.ResetCamera()
@@ -246,9 +247,23 @@ function P.New(runtime)
         if not C.ValidScene(scene) then return report(nil, "Invalid orbit angles.") end
         return report(setLens(scene))
     end
+    function self.SetTrack(side, lift)
+        if not ready() then return report(nil, "Portrait not ready.") end
+        local scene = V.Copy(db.camera.portrait.scene)
+        scene.trackSide, scene.trackLift = side, lift
+        if not C.ValidScene(scene) then return report(nil, "Invalid track position.") end
+        return report(setLens(scene))
+    end
+    function self.VerticalView(above)
+        if not ready() then return report(nil, "Portrait not ready.") end
+        local scene = V.Copy(db.camera.portrait.scene)
+        scene.pitch = above and 90 or -90
+        scene.trackSide, scene.trackLift = 0, 0
+        return report(setLens(scene))
+    end
     function self.SetScene(key, value)
         if not ready() then return report(nil, "Portrait not ready.") end
-        if key ~= "background" and not C.CameraRanges[key] then return report(nil, "Unknown stage control.") end
+        if key ~= "background" and key ~= "trackAim" and not C.CameraRanges[key] then return report(nil, "Unknown stage control.") end
         local scene = V.Copy(db.camera.portrait.scene); scene[key] = value
         if not C.ValidScene(scene) then return report(nil, "Invalid stage value.") end
         if key ~= "background" then return report(setLens(scene)) end
@@ -278,6 +293,7 @@ function P.New(runtime)
             local ok, why = setLens(value); if not ok then return report(nil, why) end
         else
             for key in pairs(C.CameraRanges) do data.scene[key] = value[key] end
+            data.scene.trackAim = value.trackAim
         end
         -- Commit the lens first so a rejected angle leaves the current lighting intact.
         local lit, reason = self.SetLight(value.light)

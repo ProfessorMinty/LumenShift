@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.0-beta.36 - 2026-11-13
+
+- Portrait Stage gains a horizontal camera rail, vertical lift, optional aiming at the stage center, and overhead and underside views. Scene saves include the rail position and aiming choice. Existing shots open at their previous coordinates.
+- World Photo puts the supported shoulder offset, held vertical orbit and distance controls on one Camera → Track page. Precision movement offers quarter-step distance changes.
+- The Forever APIs reviewed do not expose a verified photographic focus distance or aperture. See the user guide for the foreground-flame editing workflow.
+
 ## 0.2.0-beta.35 - 2026-11-11
 
 - World Photo remembers verified Shoulder offset, Dynamic framing and Footroom edits. The existing framing-on-entry switch recalls them. **Save current values** can also adopt the three displayed values together.

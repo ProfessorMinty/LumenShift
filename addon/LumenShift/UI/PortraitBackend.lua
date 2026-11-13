@@ -203,9 +203,22 @@ function B.New(runtime)
         -- Orbit around the framing height. Positive pitch places the lens above the cast.
         local yaw, pitch = math.rad(scene.yaw), math.rad(scene.pitch)
         local radius = scene.distance * math.cos(pitch)
-        local a = call(self.scene, "SetCameraPosition", radius * math.cos(yaw), radius * math.sin(yaw),
-            scene.height + scene.distance * math.sin(pitch))
-        local b = call(self.scene, "SetCameraOrientationByYawPitchRoll", math.pi + yaw, pitch, math.rad(scene.roll))
+        -- Truck across the horizontal rail and pedestal along stage Z. Roll affects the lens only.
+        local x = radius * math.cos(yaw) - scene.trackSide * math.sin(yaw)
+        local y = radius * math.sin(yaw) + scene.trackSide * math.cos(yaw)
+        local z = scene.distance * math.sin(pitch) + scene.trackLift
+        local heading = math.pi + yaw
+        if scene.trackAim and (scene.trackSide ~= 0 or scene.trackLift ~= 0) then
+            local horizontal = math.sqrt(x * x + y * y)
+            if horizontal < 0.000001 and math.abs(z) < 0.000001 then
+                return nil, "Move the lens away from its aim point."
+            end
+            -- At either pole the old heading keeps the horizon stable.
+            if horizontal >= 0.000001 then heading = math.atan2(-y, -x) end
+            pitch = math.atan2(z, horizontal)
+        end
+        local a = call(self.scene, "SetCameraPosition", x, y, scene.height + z)
+        local b = call(self.scene, "SetCameraOrientationByYawPitchRoll", heading, pitch, math.rad(scene.roll))
         local c = call(self.scene, "SetCameraFieldOfView", math.rad(scene.fov))
         return a and b and c, "Stage camera unavailable."
     end

@@ -109,7 +109,7 @@ function A.New(runtime)
     function self.Zoom(target, callback) return move(target, false, callback) end
     function self.Step(delta)
         local current = self.ReadZoom()
-        if current == nil or (delta ~= -1 and delta ~= 1) then return nil, "ZOOM_UNAVAILABLE" end
+        if current == nil or (delta ~= -1 and delta ~= 1 and delta ~= -.25 and delta ~= .25) then return nil, "ZOOM_UNAVAILABLE" end
         return self.Zoom(math.max(0, math.min(50, current + delta)))
     end
     function self.Restore(callback)

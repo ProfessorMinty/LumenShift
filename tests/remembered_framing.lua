@@ -49,7 +49,7 @@ return function(make, eq, test)
         local f=make("1","0"); enter(f); assert(f.r.camera.SetFramingOnEntry(true)); f.flush()
         assert(f.r.camera.ApplyFraming({[shoulder]=1.5})); f.flush()
         local old=f.ns.Value.Copy(f.r.db); old.schemaVersion=21; old.camera.preferredFraming=nil
-        local db,code=f.ns.Store.Open(old); eq(code,"MIGRATED_21_TO_22")
+        local db,code=f.ns.Store.Open(old); eq(code,"MIGRATED_21_TO_23")
         eq(db.camera.photoFramingOnEntry,true); eq(next(db.camera.preferredFraming),nil)
         eq(db.camera.framing.journal.entries[shoulder].originalRaw,"0.00")
         for _,invalid in ipairs({{[center]=0},{cameraFov=75},{[dynamic]=.5},{[foot]=.275},{[shoulder]=-3.1},{[foot]="0"}}) do

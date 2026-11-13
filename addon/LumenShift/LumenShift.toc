@@ -2,7 +2,7 @@
 ## Title: LumenShift
 ## Notes: Visual modes, optional effects and diagnostics. Button-based setup and controls; no startup writes.
 ## Author: Northern Lights Labs
-## Version: 0.2.0-beta.35
+## Version: 0.2.0-beta.36
 ## SavedVariables: LumenShiftDB
 ## X-Website: https://github.com/ProfessorMinty/LumenShift
 ## X-LumenShift-Phase: INTERACTIVE_DIAGNOSTIC_DEVELOPMENT

@@ -2,7 +2,9 @@
 
 **Northern Lights Labs · Visual modes for World of Warcraft: Forever**
 
-**0.2.0-beta.35** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+**0.2.0-beta.36** provides six editable visual modes, an icon wheel, Studio, optional screen effects and original Night Vision sounds, personal presets, independent graphics profiles and diagnostics. This is a local beta candidate for owner acceptance, not an approved public release.
+
+Use **Portrait Stage → Camera → Track** to move the staged lens sideways or vertically and shoot from directly above or below. **World Photo → Camera → Track** groups the live-world offset, orbit and distance controls. [Camera track and focus](docs/68-CAMERA-TRACK.md).
 
 Turn on **Enable photo framing on entry** in **World Photo → Camera → Framing → Offset** to recall your shoulder offset, dynamic framing and footroom. Edits save automatically. Exit returns the WoW settings captured for that visit. [Framing guide](docs/66-PHOTO-STUDIO-INTERFACE.md#remembered-framing-values-in-beta35).
 

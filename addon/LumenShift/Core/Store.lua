@@ -54,7 +54,7 @@ function S.Open(raw)
     end
     if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 16
         and type(data.camera) == "table" then ns.NamePolicy.UpgradeTools(data.camera) end
-    if type(data.schemaVersion) == "number" and data.schemaVersion <= 19 and type(data.camera) == "table" then
+    if type(data.schemaVersion) == "number" and data.schemaVersion <= 22 and type(data.camera) == "table" then
         ns.PortraitConfig.Upgrade(data.camera.portrait)
     end
     local migrated = false
@@ -161,6 +161,9 @@ function S.Open(raw)
         -- Existing recovery entries describe a visit, not a chosen photo setup.
         if type(data.camera) == "table" then data.camera.preferredFraming = {} end
         data.schemaVersion, migrated = 22, migrated and migrated:gsub("_TO_21$", "_TO_22") or "MIGRATED_21_TO_22"
+    end
+    if data.schemaVersion == 22 then
+        data.schemaVersion, migrated = 23, migrated and migrated:gsub("_TO_22$", "_TO_23") or "MIGRATED_22_TO_23"
     end
     if data.schemaVersion ~= ns.schemaVersion then
         return nil, "UNSUPPORTED_SCHEMA"

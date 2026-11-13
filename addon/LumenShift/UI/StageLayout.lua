@@ -64,7 +64,9 @@ local function plane(runtime, env, parent, ui, y, label, horizontal, vertical, g
     ui.RefreshStageMap()
     for i, preset in ipairs(presets) do
         local choice=preset
-        local b=W.Button(env,parent,choice[1],194,y-(i-1)*30,116,function() apply(choice[2],choice[3]) end)
+        local b=W.Button(env,parent,choice[1],194,y-(i-1)*30,116,function()
+            if choice.action then choice.action() else apply(choice[2],choice[3]) end
+        end)
         b:SetHeight(26)
     end
     return y-height-8
@@ -81,7 +83,20 @@ function S.Lens(runtime,env,parent,ui,y)
         y=S.Slider(env,parent,ui,y,"stage_"..key,label,C.CameraRanges[key],step,unit,
             function() return scene()[key] end,function(v) return stage.SetScene(key,v) end)
     end
-    if ui.cameraPage=="Lens" then
+    if ui.cameraPage=="Track" then
+        y=plane(runtime,env,parent,ui,y,"Place the lens on the track",C.CameraRanges.trackSide,C.CameraRanges.trackLift,
+            function() return scene().trackSide,scene().trackLift end,stage.SetTrack,
+            {{"Center track",0,0},{"Overhead",action=function() stage.VerticalView(true) end},
+                {"From below",action=function() stage.VerticalView(false) end}})
+        slider("trackSide","Left / right",.05,"")
+        slider("trackLift","Lower / raise",.05,"")
+        W.Toggle(env,parent,"Keep aim on stage center",0,y,310,function() return scene().trackAim end,
+            function(value) return stage.SetScene("trackAim",value) end,
+            "Turn on to aim at the stage center at the lens aim height. Turn off for parallel camera moves.")
+        y=y-40
+        W.Text(parent,"Track moves the lens. Overhead and From below look straight at the stage center.",0,y,310,12,W.colors.muted)
+        return y-44
+    elseif ui.cameraPage=="Lens" then
         W.Text(parent,"STAGE LENS",0,y,310,11,W.colors.muted);y=y-26
         slider("distance","Distance",.1,"");slider("height","Aim height",.1,"");slider("fov","Field of view",.1,"°")
     else

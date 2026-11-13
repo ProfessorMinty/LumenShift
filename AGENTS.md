@@ -7,7 +7,9 @@ LumenShift is intended for public publication on **CurseForge for World of Warcr
 
 ## Current authorization
 
-**Current beta.35 / remembered photo framing.** See [World Photo Offset](docs/66-PHOTO-STUDIO-INTERFACE.md#remembered-framing-values-in-beta35) for automatic recall of verified framing edits and per-visit restoration.
+**Current beta.36 / camera track.** See [68](docs/68-CAMERA-TRACK.md) for standalone stage translation, world camera limits, focus research and the campfire acceptance shot.
+
+**Prior beta.35 / remembered photo framing.** See [World Photo Offset](docs/66-PHOTO-STUDIO-INTERFACE.md#remembered-framing-values-in-beta35) for automatic recall of verified framing edits and per-visit restoration.
 
 **Prior beta.34 / photo interface.** Read [66](docs/66-PHOTO-STUDIO-INTERFACE.md) for the saved opt-in and per-session World Photo camera-preference override, Portrait Stage actor Effects, Outfits and Light, Portrait Stage and World Photo Capture and Saved tabs, World Pose, World Light, Camera and Actors controls, artwork, interface research and owner tests.
 

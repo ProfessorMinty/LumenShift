@@ -47,7 +47,7 @@ return function(make, eq, test)
             count=count+1; apply(s, ...)
         end
         moveOnMap(f, "Click to orbit the cast", .75, .25)
-        eq(count, 1); eq(scene.yaw, 90); eq(scene.pitch, -40)
+        eq(count, 1); eq(scene.yaw, 90); eq(scene.pitch, -45)
         for _, view in ipairs({{"Three-quarter",45,12},{"Profile",90,0},{"Front",0,0}}) do
             click(f, view[1]); eq(scene.yaw, view[2]); eq(scene.pitch, view[3])
             eq(scene.roll, 22); eq(scene.distance, 8); eq(f.scene.cameraAngles[2], math.rad(view[3]))

@@ -5,6 +5,24 @@ local function report(ui, ok, reason)
     if not ok then ui.notice = ns.Product.Message(reason or "OPTION_UNAVAILABLE") end
     ui.Refresh()
 end
+local function bindOrbit(runtime, ui, button, direction)
+    local actions = runtime.cameraActions
+    W.Script(button, "OnMouseDown", function(_, which)
+        if which == "LeftButton" then report(ui, actions.Orbit(direction, ui.precision)) end
+    end)
+    local function stop()
+        if actions.orbit == direction then
+            actions.StopOrbit(direction)
+            ui.status:SetText(ns.Product.Message(actions.status))
+        end
+    end
+    W.Script(button, "OnMouseUp", stop)
+    W.Script(button, "OnHide", stop)
+    W.Script(button, "OnLeave", stop)
+    local available = actions.HasMovement(direction)
+    if not available or runtime.db.config.preferences.reducedMotion then button:Disable() end
+    return available
+end
 function U.Position(runtime, env, parent, y, ui)
     local actions = runtime.cameraActions
     local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
@@ -22,33 +40,20 @@ function U.Position(runtime, env, parent, y, ui)
         local direction = item[1]
         local button = W.Button(env, parent, item[2], item[3], y + item[4], 84, function() end)
         button:SetHeight(27)
-        W.Script(button, "OnMouseDown", function(_, which)
-            if which == "LeftButton" then report(ui, actions.Orbit(direction, ui.precision)) end
-        end)
-        local function stop()
-            if actions.orbit == direction then
-                actions.StopOrbit(direction)
-                ui.status:SetText(ns.Product.Message(actions.status))
-            end
-        end
-        W.Script(button, "OnMouseUp", stop)
-        W.Script(button, "OnHide", stop)
-        W.Script(button, "OnLeave", stop)
-        if not actions.HasMovement(direction) then button:Disable(); missing = true
-        elseif runtime.db.config.preferences.reducedMotion then button:Disable() end
+        if not bindOrbit(runtime, ui, button, direction) then missing = true end
     end
     local zoom = actions.ReadZoom()
     W.Text(parent,zoom and ("Distance  "..string.format("%.2f",zoom)) or "Zoom unavailable",198,y,110,12,W.colors.muted)
     for i, item in ipairs({ { "Closer", -1 }, { "Farther", 1 } }) do
         local delta = item[2]
-        local b = W.Button(env, parent, item[1], 198, y-22-(i-1)*36, 110, function() report(ui, actions.Step(delta)) end)
+        local b = W.Button(env, parent, item[1], 198, y-22-(i-1)*36, 110, function() report(ui, actions.Step(ui.precision and delta*.25 or delta)) end)
         if not zoom then b:Disable() end
     end
     y=y-102
     if runtime.db.config.preferences.reducedMotion then text("Reduced motion is on.", 24)
     elseif missing then text("Dimmed directions are unavailable on this client.", 26) end
     W.Toggle(env,parent,"Precision movement",0,y,310,function() return ui.precision end,
-        function(value) ui.precision=value end,"Use a slower movement speed."); y=y-36
+        function(value) ui.precision=value end,"Slow the orbit and take smaller distance steps."); y=y-36
     local original = runtime.db.camera.composition.zoom
     if original then
         W.Button(env, parent, "Return zoom", 0, y, 150, function() report(ui, actions.Restore()) end, "Return to distance "..string.format("%.2f", original.original))
@@ -57,6 +62,44 @@ function U.Position(runtime, env, parent, y, ui)
     end
     return y
 end
+function U.WorldTrack(runtime, env, parent, y, ui, sideSlider)
+    local actions, key = runtime.cameraActions, "test_cameraOverShoulder"
+    W.Text(parent,"Move sideways with shoulder offset. For high and low shots, hold a vertical orbit. The world camera follows an arc around you.",0,y,310,12,W.colors.muted)
+    y = y - 58
+    local item = ns.ReadOnly.Read(runtime.reader,key)
+    local range = ns.Framing.Bounds(key,item.raw,runtime.reader)
+    local supported, why = ns.Framing.Capability(runtime.reader,key)
+    if supported and range then
+        y = sideSlider(range,V.Number(item.raw),y)
+    elseif range and why == "CAMERA_COMFORT_SETTING_ENABLED" then
+        local enable = W.Button(env,parent,"Enable photo framing",0,y,310,function()
+            local ok, code = runtime.camera.UsePhotoFraming(function(done,reason) report(ui,done,reason) end)
+            if not ok then report(ui,nil,code) end
+        end,"Temporarily pause WoW camera comfort settings for this visit.")
+        ns.PhotoStyle.Enable(enable,not ns.Framing.ReadComfort(runtime.reader).error and not runtime.framing.busy)
+        y = y - 38
+    else
+        W.Text(parent,"Side offset unavailable on this client.",0,y,310,12,W.colors.muted)
+        y = y - 30
+    end
+    for i, axis in ipairs({{"up","Tilt up"},{"down","Tilt down"}}) do
+        local b=W.Button(env,parent,axis[2],(i-1)*158,y,152,function() end)
+        bindOrbit(runtime,ui,b,axis[1])
+    end
+    y=y-38
+    W.Toggle(env,parent,"Precision movement",0,y,310,function() return ui.precision end,
+        function(value) ui.precision=value end,"Slow the vertical orbit and take smaller distance steps.")
+    y=y-38
+    for i, choice in ipairs({{"Closer",-1},{"Farther",1}}) do
+        local delta=choice[2]
+        local b=W.Button(env,parent,choice[1],(i-1)*158,y,152,function()
+            report(ui,actions.Step(ui.precision and delta*.25 or delta))
+        end)
+        ns.PhotoStyle.Enable(b,actions.ReadZoom()~=nil and not actions.busy)
+    end
+    return y-38
+end
+
 function U.Frame(runtime, env, parent, y, ui, liveSlider)
     local preview,framing=runtime.photoPreview,ns.Framing
     local function text(label,height,color)

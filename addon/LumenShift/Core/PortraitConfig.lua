@@ -26,12 +26,13 @@ function P.LightPreset(id)
     return l
 end
 P.CameraRanges = { distance = { 3, 12 }, height = { -1, 4 }, fov = { 20, 70 },
-    yaw = { -180, 180 }, pitch = { -80, 80 }, roll = { -90, 90 } }
+    yaw = { -180, 180 }, pitch = { -90, 90 }, roll = { -90, 90 },
+    trackSide = { -6, 6 }, trackLift = { -8, 8 } }
 function P.Scene()
-    return { version = 4, actors = { P.Actor() }, light = P.Light(), background = "charcoal",
+    return { version = 5, trackSide = 0, trackLift = 0, trackAim = false, actors = { P.Actor() }, light = P.Light(), background = "charcoal",
         distance = 6, height = 1.1, fov = 35, yaw = 0, pitch = 0, roll = 0 }
 end
-function P.Defaults() return { version = 4, scene = P.Scene(), saved = {}, lights = {}, outfits = {} } end
+function P.Defaults() return { version = 5, scene = P.Scene(), saved = {}, lights = {}, outfits = {} } end
 function P.ValidActor(a)
     local fields = { unit = true, animation = true, variation = true, spellKit = true, outfit = true, paused = true, sheathed = true, hideWeapons = true, transmog = true, hideHead = true, hideCloak = true }
     for k in pairs(P.ActorRanges) do fields[k] = true end
@@ -45,8 +46,8 @@ end
 function P.ValidLight(l) return V.Fields(l, P.LightRanges) and ranges(l, P.LightRanges) end
 function P.ValidScene(s)
     if not V.Fields(s, { version = true, actors = true, light = true, background = true, distance = true, height = true,
-        fov = true, yaw = true, pitch = true, roll = true })
-        or s.version ~= 4 or not P.ValidLight(s.light) or type(s.actors) ~= "table"
+        fov = true, yaw = true, pitch = true, roll = true, trackSide = true, trackLift = true, trackAim = true })
+        or s.version ~= 5 or type(s.trackAim) ~= "boolean" or not P.ValidLight(s.light) or type(s.actors) ~= "table"
         or not ranges(s, P.CameraRanges) then return false end
     if s.background ~= "world" and not P.Colors[s.background] then return false end
     for slot, a in pairs(s.actors) do if not V.Finite(slot) or slot % 1 ~= 0 or slot < 1 or slot > 3 or not P.ValidActor(a) then return false end end
@@ -60,7 +61,7 @@ local function bank(data, validate)
     return true
 end
 function P.Validate(p)
-    return V.Fields(p, { version = true, scene = true, saved = true, lights = true, outfits = true }) and p.version == 4
+    return V.Fields(p, { version = true, scene = true, saved = true, lights = true, outfits = true }) and p.version == 5
         and P.ValidScene(p.scene) and bank(p.saved, P.ValidScene) and bank(p.lights, P.ValidLight) and bank(p.outfits, P.ValidOutfit)
 end
 function P.Save(bankValue, name, value, validator)
@@ -82,9 +83,9 @@ function P.ValidOutfit(outfit)
 end
 function P.Worn(value) return type(value)=="table" or type(value)=="number" and value>0 end
 function P.Upgrade(data)
-    if type(data)~="table" or data.version~=1 and data.version~=2 and data.version~=3 then return end
+    if type(data)~="table" or data.version~=1 and data.version~=2 and data.version~=3 and data.version~=4 then return end
     local function scene(s)
-        if type(s)~="table" or s.version~=1 and s.version~=2 and s.version~=3 then return end
+        if type(s)~="table" or s.version~=1 and s.version~=2 and s.version~=3 and s.version~=4 then return end
         if s.version < 3 then
             for _, actor in pairs(type(s.actors) == "table" and s.actors or {}) do
                 if type(actor) == "table" then
@@ -94,10 +95,11 @@ function P.Upgrade(data)
                 end
             end
         end
-        s.yaw, s.pitch, s.roll = 0, 0, 0
-        s.version=4
+        if s.version < 4 then s.yaw, s.pitch, s.roll = 0, 0, 0 end
+        s.trackSide, s.trackLift, s.trackAim = 0, 0, false
+        s.version=5
     end
     scene(data.scene); for _,s in pairs(type(data.saved)=="table" and data.saved or {}) do scene(s) end
     if data.outfits==nil and data.version < 3 then data.outfits={} end
-    data.version=4
+    data.version=5
 end

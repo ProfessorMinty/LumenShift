@@ -59,8 +59,8 @@ function U.New(runtime, composition)
         end) }
     end
     local groups={
-        camera=pages({"Position","Framing","Visibility"},"cameraPage"),
-        stageCamera=pages({"Position","Lens","Framing","Visibility"},"cameraPage"),
+        camera=pages({"Position","Track","Framing","Visibility"},"cameraPage"),
+        stageCamera=pages({"Position","Track","Lens","Framing","Visibility"},"cameraPage"),
         actors=pages({"Cast","Transform","Poses","Outfits","Effects"},"actorTab"),
         worldPose=pages({"All emotes","Favorites"},"worldPoseTab"),
         stageLight=pages({"Rig","Direction","Color","Presets"},"lightPage"),
@@ -254,6 +254,12 @@ function U.New(runtime, composition)
                 y = at
                 liveSlider(spec.key, spec.label, 0, spec.maximum, spec.step, value, nil, spec.image)
             end)
+        elseif self.tab == "Frame" and self.cameraPage == "Track" then
+            y = ns.PhotoAdvancedUI.WorldTrack(runtime, penv, content, y, self, function(range, value, at)
+                y = at
+                liveSlider("test_cameraOverShoulder", "Side offset", range.min, range.max, range.step, value, "")
+                return y
+            end)
         elseif self.tab == "Frame" and self.cameraPage == "Position" then
             y = ns.PhotoAdvancedUI.Position(runtime, penv, content, y, self)
             local range = ns.Framing.Range(runtime.reader); local seen = ns.ReadOnly.Read(runtime.reader, "cameraFov")
@@ -347,7 +353,7 @@ function U.New(runtime, composition)
             or self.RefreshWorldPose and self.RefreshWorldPose()
         if self.tab == "Frame" then
             local motion=runtime.cameraActions.status
-            extra=(self.cameraPage=="Position" or motion=="CAMERA_STOP_FAILED") and motion~="READY" and ns.Product.Message(motion) or nil
+            extra=(self.cameraPage=="Position" or self.cameraPage=="Track" or motion=="CAMERA_STOP_FAILED") and motion~="READY" and ns.Product.Message(motion) or nil
         elseif self.RefreshCaptureTimer then extra = self.captureHint
         elseif self.tab == "Capture" and self.capturePage == "Output" and runtime.output.error then extra = ns.Product.Message(runtime.output.error)
         elseif self.tab == "Capture" then extra = ""

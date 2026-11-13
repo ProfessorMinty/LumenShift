@@ -20,7 +20,7 @@ function U.Build(runtime, env, parent, tab, ui, startY)
         end
     elseif tab == "Light" then
         y = ns.StageLightUI.Build(runtime, env, parent, ui)
-    elseif tab == "Frame" and (ui.cameraPage=="Position" or ui.cameraPage=="Lens") then
+    elseif tab == "Frame" and (ui.cameraPage=="Position" or ui.cameraPage=="Track" or ui.cameraPage=="Lens") then
         y=ns.StageLayout.Lens(runtime,env,parent,ui,y)
     elseif tab == "Frame" then
         section("BACKDROP")

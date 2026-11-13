@@ -78,7 +78,7 @@ return function(make, eq, test)
         local f=fixture(); assert(f.r.camera.EditNames("npcs",true)); f.flush(); assert(f.p.TrySource(1,502)); f.flush()
         assert(f.p.SaveOutfit("Exact source")); local old=f.ns.Value.Copy(f.r.db)
         old.schemaVersion=18; old.camera.nameGroups.focused=nil; old.onboarding.completed=true
-        local db,why=f.ns.Store.Open(old); eq(why,"MIGRATED_18_TO_22"); eq(db.camera.nameGroups.focused,false)
+        local db,why=f.ns.Store.Open(old); eq(why,"MIGRATED_18_TO_23"); eq(db.camera.nameGroups.focused,false)
         eq(db.camera.nameGroups.npcs,true); eq(db.onboarding.completed,true)
         eq(db.camera.portrait.outfits["Exact source"][1].sourceID,502)
         eq(db.camera.journal.entries.UnitNameFriendlySpecialNPCName.originalRaw,"1"); eq(old.camera.nameGroups.focused,nil)
