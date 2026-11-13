@@ -1,0 +1,87 @@
+## Interface: 16001
+## Title: LumenShift
+## Notes: Visual modes, optional effects and diagnostics. Button-based setup and controls; no startup writes.
+## Author: Northern Lights Labs
+## Version: 0.2.0-beta.36
+## SavedVariables: LumenShiftDB
+## X-Website: https://github.com/ProfessorMinty/LumenShift
+## X-LumenShift-Phase: INTERACTIVE_DIAGNOSTIC_DEVELOPMENT
+
+Core/Namespace.lua
+Core/Build.lua
+Core/Value.lua
+Core/Optics.lua
+Core/PhotoConfig.lua
+Core/PortraitLibrary.lua
+Core/PortraitConfig.lua
+Core/PortraitWardrobe.lua
+Core/TransmogCollection.lua
+Core/Portrait.lua
+Core/PhotoTools.lua
+Core/PhotoOutput.lua
+Core/PhotoComposition.lua
+Core/CameraActions.lua
+Core/CaptureSequence.lua
+Core/PhotoCompatibility.lua
+Core/ReadOnly.lua
+Core/Log.lua
+Core/Compatibility.lua
+Core/Catalog.lua
+Core/StudioConfig.lua
+Core/Profiles.lua
+Core/Baseline.lua
+Core/NativeGraphics.lua
+Core/Store.lua
+Core/ExperimentPolicy.lua
+Core/Framing.lua
+Core/NamePolicy.lua
+Core/Planner.lua
+Core/Recovery.lua
+Core/QualityTrial.lua
+Core/WriteBoundary.lua
+Core/Quality.lua
+Core/Modes.lua
+Core/Product.lua
+Core/Camera.lua
+Core/PhotoEditor.lua
+Core/PhotoPreview.lua
+Core/Performance.lua
+Core/Controller.lua
+Core/Diagnostics.lua
+Core/Report.lua
+UI/Widgets.lua
+UI/Keyboard.lua
+UI/Optics.lua
+UI/Graphics.lua
+UI/Camera.lua
+UI/Composition.lua
+UI/PhotoStyle.lua
+UI/WorldLight.lua
+UI/WorldPose.lua
+UI/PhotoCapture.lua
+UI/SavedLibrary.lua
+UI/WorldSaved.lua
+UI/StageSaved.lua
+UI/StageLayout.lua
+UI/StageLight.lua
+UI/PhotoEditor.lua
+UI/PortraitBackend.lua
+UI/OutfitPicker.lua
+UI/StageOutfits.lua
+UI/PortraitLibrary.lua
+UI/TransmogCollection.lua
+UI/PortraitControls.lua
+UI/PhotoTools.lua
+UI/PhotoAdvanced.lua
+UI/PhotoEffects.lua
+UI/DiagnosticWindow.lua
+UI/Calibration.lua
+UI/Presentation.lua
+UI/Audio.lua
+UI/Radial.lua
+UI/Presets.lua
+UI/Studio.lua
+UI/Setup.lua
+UI/Reset.lua
+UI/EntryPoints.lua
+Core/Bootstrap.lua

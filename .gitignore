@@ -25,3 +25,8 @@ build/
 # Local research/test captures (add curated sanitized examples explicitly when approved)
 local-test-data/
 local-screenshots/
+
+# Development-only Python runner environments
+__pycache__/
+*.pyc
+.venv/

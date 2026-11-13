@@ -1,0 +1,14 @@
+<Bindings>
+    <Binding name="LUMENSHIFT_TOGGLE" header="LUMENSHIFT" category="ADDONS">
+        if LumenShift_ToggleNightVision then LumenShift_ToggleNightVision() end
+    </Binding>
+    <Binding name="LUMENSHIFT_WHEEL" header="LUMENSHIFT" category="ADDONS">
+        if LumenShift_OpenWheel then LumenShift_OpenWheel() end
+    </Binding>
+    <Binding name="LUMENSHIFT_STUDIO" header="LUMENSHIFT" category="ADDONS">
+        if LumenShift_OpenStudio then LumenShift_OpenStudio() end
+    </Binding>
+    <Binding name="LUMENSHIFT_CAMERA" header="LUMENSHIFT" category="ADDONS">
+        if LumenShift_ToggleCamera then LumenShift_ToggleCamera() end
+    </Binding>
+</Bindings>

@@ -1,0 +1,430 @@
+local _, ns = ...
+local D, V = {}, ns.Value
+ns.Report = D
+function D.Number(value)
+    if V.Finite(value) then return tostring(value) end
+    if V.Number(value) then return value end
+    return value == nil and "unavailable" or "REDACTED_UNEXPECTED_VALUE"
+end
+local function bool(v) return v == true and "yes" or v == false and "no" or "unknown" end
+local function safe(value) return ns.Log.Code(value or "UNKNOWN") end
+local function nameCheck(item, key)
+    local reason = ns.Planner.ObservationError(item, key)
+    if reason then return reason end
+    local bounds, code = ns.NamePolicy.Bounds(key, item.raw)
+    return bounds and "OK" or code
+end
+local function call(reader, fn, ...)
+    local result, code = ns.ReadOnly.Call(reader, fn, ...)
+    if not result then return nil, code end
+    return result
+end
+function D.Environment(runtime)
+    local reader, result = runtime.reader, {}
+    local env = reader.env
+    local identity = ns.Compatibility.Inspect(reader)
+    result.identity = identity
+    local pixels, why = call(reader, env.GetPhysicalScreenSize)
+    result.resolution = pixels and pixels.n == 2 and V.Finite(pixels[1]) and V.Finite(pixels[2])
+        and (D.Number(pixels[1]) .. "x" .. D.Number(pixels[2])) or "unavailable:" .. (why or "UNEXPECTED_RESOLUTION")
+    for _, method in ipairs({ "GetWidth", "GetHeight", "GetEffectiveScale" }) do
+        local values, code = call(reader, env.UIParent and env.UIParent[method], env.UIParent)
+        result[method] = values and values.n == 1 and V.Finite(values[1]) and D.Number(values[1]) or "unavailable:" .. (code or "UNEXPECTED_UI_RESULT")
+    end
+    local renderer = ns.ReadOnly.Read(reader, "gxapi")
+    local token = renderer.raw and string.lower(renderer.raw)
+    local known = { d3d11 = true, d3d12 = true, metal = true, vulkan = true, opengl = true, d3d11legacy = true }
+    result.renderer = renderer.code == "OK" and known[token] and token or "unavailable:" .. (renderer.raw and "UNRECOGNIZED_RENDERER_REDACTED" or renderer.code)
+    result.apis = ns.ReadOnly.Capabilities(reader)
+    for _, name in ipairs({ "GetBuildInfo", "GetTime", "GetServerTime", "GetPhysicalScreenSize", "InCombatLockdown", "PlaySoundFile", "StopSound", "CreateFrame", "ReloadUI", "SetUIVisibility", "GetGraphicsCVarValueForQualityLevel" }) do
+        result.apis[name] = type(env[name]) == "function"
+    end
+    result.apis.C_Timer_After = type(env.C_Timer) == "table" and type(env.C_Timer.After) == "function"
+    result.apis.Settings_canvas = type(env.Settings) == "table" and type(env.Settings.RegisterCanvasLayoutCategory) == "function"
+    result.apis.IsGraphicsSettingValueSupported = type(env.IsGraphicsSettingValueSupported) == "function"
+    for _, name in ipairs({ "IsLinearEnabledOnStart", "IsSecondaryLightingSupported", "IsPBRWaterSupported", "IsOutlineModeSupported", "IsSpellVisualDensitySystemSupported" }) do
+        local video = env.C_VideoOptions
+        result.apis[name] = type(video) == "table" and type(video[name]) == "function"
+    end
+    local combat, code = call(reader, env.InCombatLockdown)
+    result.combat = combat and combat.n == 1 and type(combat[1]) == "boolean" and bool(combat[1]) or "unknown:" .. (code or "UNEXPECTED_COMBAT_RESULT")
+    return result
+end
+function D.Run(runtime, reason)
+    local results = {}
+    local function add(id, status, detail) results[#results + 1] = { id = id, status = status, detail = detail } end
+    local environment = D.Environment(runtime)
+    add("client-identity", not environment.identity.signature and "BLOCKED" or environment.identity.warning and "WARN" or "PASS", environment.identity.status)
+    add("saved-data", runtime.db and "PASS" or "BLOCKED", runtime.storeStatus)
+    add("configuration", runtime.db and ns.Profiles.Validate(runtime.db.config) and "PASS" or "FAIL", "strict-data-validation-no-import-execution")
+    add("recovery-data", runtime.db and ns.Store.ValidateJournal(runtime.db.journal)
+        and ns.ExperimentPolicy.Validate(runtime.db.experiments) and ns.NamePolicy.Validate(runtime.db.camera) and ns.NativeGraphics.Validate(runtime.db.graphics) and "PASS" or "BLOCKED", "schema-and-structure-only-not-disk-durability")
+    add("native-setter", runtime.engine and runtime.engine.Status().setterAvailable and "PASS" or "BLOCKED", "availability-only-no-call")
+    for _, name in ipairs({ "ReadOnly", "Catalog", "Planner", "Recovery", "WriteBoundary", "StudioConfig", "ExperimentPolicy", "Product", "Diagnostics", "Report", "DiagnosticWindow", "Setup", "EntryPoints" }) do
+        add("module-" .. name, type(ns[name]) == "table" and "PASS" or "FAIL", type(ns[name]) == "table" and "loaded" or "MISSING_MODULE")
+    end
+    add("Studio", runtime.ui and runtime.ui.window and "PASS" or "BLOCKED", runtime.ui and "initialized-not-render-certified" or "UI_UNAVAILABLE")
+    add("radial", runtime.ui and runtime.ui.radial and "PASS" or "BLOCKED", "initialization-only-input-acceptance-not-tested")
+    for _, name in ipairs({ "GetCVar", "GetCVarDefault", "GetCVarInfo", "C_Timer_After" }) do
+        add(name, environment.apis[name] and "PASS" or "BLOCKED", environment.apis[name] and "function-present" or "API_UNAVAILABLE")
+    end
+    for _, key in ipairs(ns.Catalog.WatchKeys()) do
+        local item = ns.ReadOnly.Read(runtime.reader, key)
+        add("read-" .. key, item.code == "OK" and "PASS" or "BLOCKED", item.code)
+        if ns.ExperimentPolicy.Known(key) then
+            local bounds, code = ns.ExperimentPolicy.Bounds(key, item.raw)
+            local ready = ns.Planner.SafeObservation(item) and bounds ~= nil
+            add("calibration-preflight-" .. key, ready and "PASS" or "BLOCKED",
+                ready and "observation-and-test-policy-only-no-write" or item.code ~= "OK" and item.code or code or "RESTRICTED_OR_UNVERIFIED_FLAGS")
+        end
+    end
+    local native = runtime.log and runtime.log.native
+    for _, key in ipairs(ns.NamePolicy.AllKeys) do
+        local item = ns.ReadOnly.Read(runtime.reader, key)
+        add("read-" .. key, item.code == "OK" and "PASS" or "BLOCKED", item.code)
+        local code = nameCheck(item, key)
+        add("name-preflight-" .. key, code == "OK" and "PASS" or "BLOCKED", code)
+    end
+    add("native-writes", native and native.rejected > 0 and "WARN" or native and native.accepted > 0 and "PASS" or "NOT TESTED",
+        native and native.attempts > 0 and ("Session setter calls=" .. native.attempts .. "; accepted=" .. native.accepted
+            .. "; rejected=" .. native.rejected .. "; verified Brightness transitions=" .. native.verified .. "; restorations=" .. native.restored)
+        or "No native write recorded in this login. Diagnostic scans do not write.")
+    add("visible-effects", "NOT TESTED", "Readbacks do not measure the rendered scene")
+    add("texture-decoding", "NOT TESTED", "No arbitrary asset filesystem inspection API used; inspect visible icons")
+    add("audio-playback", "NOT TESTED", "Use explicit Audio previews; no automatic playback")
+    add("input-and-custom-UI", "NOT TESTED", "Interact with Studio and wheel; no synthetic clicks or key assignment")
+    add("disk-persistence", "NOT TESTED", "No immediate durable-save guarantee; no automatic reload or crash test")
+    add("unobserved-dependencies", "NOT TESTED", "Named watch list is not complete engine dependency enumeration")
+    runtime.checks, runtime.environment = results, environment
+    ns.Log.Record(runtime.reader, "diagnostics", "read-only-checks", "INFO", "COMPLETE", { count = #results, detail = reason or "user" })
+    return results
+end
+local function eventLine(event)
+    local parts = { "#" .. event.sequence, event.time and string.format("t=%.3f", event.time) or "time=unavailable",
+        event.severity, event.subsystem .. "." .. event.operation, event.result }
+    for _, key in ipairs(V.Keys(event.data)) do parts[#parts + 1] = key .. "=" .. tostring(event.data[key]) end
+    return table.concat(parts, " | ")
+end
+function D.Build(runtime)
+    local env = D.Environment(runtime)
+    local identity = env.identity
+    local version = identity.version and identity.version:match("^%d+%.%d+%.%d+$") and identity.version or "unavailable"
+    local build = identity.build and identity.build:match("^%d+$") and identity.build or "unavailable"
+    local date = identity.date
+    if not date or not (date:match("^%a%a%a%s+%d%d?%s+%d%d%d%d$") or date:match("^%d%d%d%d%-%d%d%-%d%d$")) then date = "unavailable:UNRECOGNIZED_DATE_FORMAT" end
+    local log = runtime.log
+    local lines = { "LUMENSHIFT COMPLETE DIAGNOSTIC REPORT", "Format: 1 | privacy: numeric/allowlisted data only",
+        "Addon: " .. ns.version .. " | build: " .. safe(ns.build), "Session: " .. (log and log.session or "unavailable"),
+        "Session observations. The report reads settings; mode and Apply buttons change them.",
+        "Excluded: character/account identifiers, chat, paths, credentials, preset names and raw native error text.",
+        "", "1. ENVIRONMENT", "Client: " .. version .. " build " .. build .. " date " .. date .. " interface " .. D.Number(identity.interface),
+        "Compatibility: " .. safe(identity.status), ns.Compatibility.Explain(identity), ns.Diagnostics.ControlStatus(runtime),
+        "Physical resolution: " .. env.resolution,
+        "UI units: " .. env.GetWidth .. " x " .. env.GetHeight .. " | effective scale: " .. env.GetEffectiveScale,
+        "Renderer (gxapi): " .. env.renderer .. " | combat: " .. env.combat,
+        "SavedVariables: " .. safe(runtime.storeStatus) .. " | supported schema=" .. ns.schemaVersion .. " | immediately durable: no", "", "2. CAPABILITIES" }
+    for _, name in ipairs(V.Keys(env.apis)) do lines[#lines + 1] = name .. "=" .. bool(env.apis[name]) end
+    lines[#lines + 1] = "3. CURRENT GRAPHICS VALUES (snapshot; defaults are not captured originals)"
+    for _, key in ipairs(ns.Catalog.WatchKeys()) do
+        local item = ns.ReadOnly.Read(runtime.reader, key)
+        local original = runtime.db and (runtime.db.journal.entries[key] or runtime.db.experiments.journal.entries[key])
+        lines[#lines + 1] = key .. ": current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] original=" .. D.Number(original and original.originalRaw)
+            .. " requested=" .. D.Number(original and original.intendedRaw) .. " default=" .. D.Number(item.defaultRaw) .. " [" .. safe(item.defaultCode or item.code) .. "]"
+        if item.flags then
+            lines[#lines + 1] = "  flags secure=" .. bool(item.flags.secure) .. " readOnly=" .. bool(item.flags.readOnly) .. " locked=" .. bool(item.flags.locked)
+                .. " serverAccount=" .. bool(item.flags.serverAccount) .. " serverCharacter=" .. bool(item.flags.serverCharacter)
+        else lines[#lines + 1] = "  flags unavailable: " .. safe(item.flagsCode or item.code) end
+        if ns.ExperimentPolicy.Known(key) then
+            local bounds, reason = ns.ExperimentPolicy.Bounds(key, item.raw)
+            lines[#lines + 1] = bounds and ("  experimental test policy: " .. bounds.min .. ".." .. bounds.max
+                .. " step=" .. bounds.step .. " basis=" .. bounds.basis)
+                or ("  test policy unavailable: " .. safe(reason))
+            local certificates = runtime.lab and runtime.lab.certificates[key]
+            lines[#lines + 1] = "  session-tested targets: " .. (certificates and table.concat(V.Keys(certificates), ", ")
+                or "none; optional test has not run") .. " | native visual effect unverified"
+        end
+        local latest = log and log.latest[key]
+        if latest then
+            local details = {}
+            for _, field in ipairs(V.Keys(latest)) do details[#details + 1] = field .. "=" .. tostring(latest[field]) end
+            lines[#lines + 1] = "  last-event: " .. table.concat(details, "; ")
+        end
+    end
+    lines[#lines + 1] = "EXTRA GRAPHICS OBSERVATIONS (research candidates; not connected to Apply controls)"
+    for _, key in ipairs(ns.Catalog.ResearchKeys()) do
+        local item = ns.ReadOnly.Read(runtime.reader, key)
+        lines[#lines + 1] = key .. " current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] default="
+            .. D.Number(item.defaultRaw) .. " [" .. safe(item.defaultCode or item.code) .. "] secure=" .. bool(item.flags and item.flags.secure)
+            .. " readOnly=" .. bool(item.flags and item.flags.readOnly) .. " locked=" .. bool(item.flags and item.flags.locked)
+    end
+    lines[#lines + 1] = "4. ACTIVE CONFIGURATION (preset names excluded)"
+    local db = runtime.db
+    if db then
+        for _, key in ipairs(ns.NamePolicy.AllKeys) do
+            local item, original = ns.ReadOnly.Read(runtime.reader, key), db.camera.journal.entries[key]
+            lines[#lines + 1] = key .. " current=" .. D.Number(item.raw) .. " [" .. safe(item.code) .. "] original=" .. D.Number(original and original.originalRaw)
+                .. " secure=" .. bool(item.flags and item.flags.secure) .. " readOnly=" .. bool(item.flags and item.flags.readOnly)
+                .. " locked=" .. bool(item.flags and item.flags.locked)
+                .. " serverAccount=" .. bool(item.flags and item.flags.serverAccount)
+                .. " serverCharacter=" .. bool(item.flags and item.flags.serverCharacter)
+                .. " flags=" .. safe(item.flagsCode) .. " nameCheck=" .. safe(nameCheck(item, key))
+                .. " cameraReturn=" .. D.Number(db.camera.nameReturn and db.camera.nameReturn.targets[key])
+        end
+        lines[#lines + 1] = "Camera: active=" .. bool(runtime.camera and runtime.camera.active) .. " interfaceVisible=" .. bool(runtime.camera and runtime.camera.Visible())
+            .. " namesReturnPending=" .. bool(db.camera.nameReturn ~= nil)
+            .. " hideNamesWithUI=" .. bool(db.camera.hideWithUI) .. " keepEffects=" .. bool(db.camera.keepEffects)
+            .. " lastError=" .. safe(runtime.camera and runtime.camera.error or "none")
+        local fov = ns.ReadOnly.Read(runtime.reader, "cameraFov")
+        local framing = db.camera.framing.journal.entries.cameraFov
+        local bounds = ns.Framing.Range(runtime.reader)
+        lines[#lines + 1] = "cameraFov current=" .. D.Number(fov.raw) .. " original=" .. D.Number(framing and framing.originalRaw)
+            .. " state=" .. safe(framing and framing.state or "unowned") .. " nativeMin=" .. D.Number(bounds and bounds.min)
+            .. " nativeMax=" .. D.Number(bounds and bounds.max) .. " secure=" .. bool(fov.flags and fov.flags.secure)
+            .. " readOnly=" .. bool(fov.flags and fov.flags.readOnly) .. " locked=" .. bool(fov.flags and fov.flags.locked)
+        lines[#lines + 1] = "Camera guides thirds=" .. bool(db.camera.thirds) .. " aspect=" .. safe(db.camera.aspect)
+            .. " capture=" .. safe(runtime.composition and runtime.composition.status or "unavailable")
+            .. " controlsHidden=" .. bool(runtime.composition and runtime.composition.controlsHidden)
+            .. " keyboard=" .. bool(runtime.composition and runtime.composition.keyboard and runtime.composition.keyboard.enabled)
+            .. " photoRequested=" .. bool(db.camera.photoEnabled) .. " photoLevel=" .. D.Number(db.camera.photoLevel)
+        local seq, pose, compat = runtime.captureSequence, runtime.photoTools, runtime.photoCompatibility
+        lines[#lines + 1] = "Photo tools: emoteAPI=" .. bool(pose and pose.Available()) .. " pose=" .. safe(pose and pose.status)
+            .. " sequence=" .. safe(seq and seq.state) .. " active=" .. bool(seq and seq.active)
+            .. " completed=" .. D.Number(seq and seq.completed) .. " total=" .. D.Number(seq and seq.total)
+            .. " coexistence=" .. safe(compat and compat.state)
+        for _, group in ipairs(ns.NamePolicy.Groups) do
+            lines[#lines + 1] = "photo hide group " .. group.id .. "=" .. bool(db.camera.nameGroups[group.id])
+        end
+        local namesResult = runtime.camera and runtime.camera.nameResult
+        lines[#lines + 1] = "Photo name operation: requested=" .. bool(namesResult ~= nil)
+            .. " pending=" .. bool(namesResult and namesResult.pending) .. " readbackOK=" .. bool(namesResult and namesResult.ok)
+            .. " reason=" .. safe(namesResult and namesResult.code or "none")
+            .. " unavailable=" .. D.Number(runtime.camera and #(runtime.camera.unavailableNames or {}))
+        for _, key in ipairs(ns.Framing.AllKeys) do
+            if key ~= "cameraFov" then
+                local item = ns.ReadOnly.Read(runtime.reader, key); local record = db.camera.framing.journal.entries[key]
+                local capable, why = ns.Framing.Capability(runtime.reader, key)
+                lines[#lines + 1] = "photo framing " .. key .. " current=" .. D.Number(item.raw) .. " original=" .. D.Number(record and record.originalRaw)
+                    .. " supported=" .. bool(capable) .. " reason=" .. safe(why or "none") .. " state=" .. safe(record and record.state or "unowned")
+            end
+        end
+        local stage = runtime.portrait
+        local loaded = 0
+        for _, slot in pairs(stage and stage.slots or {}) do if slot.front then loaded = loaded + 1 end end
+        lines[#lines + 1] = "Portrait stage: active=" .. bool(stage and stage.active) .. " backend=" .. safe(stage and stage.backend.kind or "not-created")
+            .. " loading=" .. bool(stage and stage.busy) .. " actors=" .. loaded .. " savedScenes=" .. #ns.Value.Keys(db.camera.portrait.saved)
+            .. " savedOutfits=" .. #ns.Value.Keys(db.camera.portrait.outfits) .. " combatStudio=" .. bool(db.camera.keepInCombat) .. " combatEffects=" .. bool(db.camera.effectsInCombat)
+            .. " savedLights=" .. #ns.Value.Keys(db.camera.portrait.lights) .. " loadFailures=" .. #ns.Value.Keys(stage and stage.failures or {})
+            .. " layerCapture=" .. bool(stage and stage.layerCapture ~= nil)
+        local collection = stage and stage.collection
+        lines[#lines + 1] = "Transmog browser: categories=" .. #(collection and collection.categories or {})
+            .. " appearances=" .. #(collection and collection.rows or {}) .. " sets=" .. #(collection and collection.sets or {})
+            .. " category=" .. D.Number(collection and collection.category) .. " loading=" .. bool(collection and collection.busy)
+            .. " complete=" .. bool(collection and collection.loaded)
+        local actions, zoom = runtime.cameraActions, db.camera.composition.zoom
+        lines[#lines + 1] = "Photo movement: zoom=" .. D.Number(actions and actions.ReadZoom()) .. " original=" .. D.Number(zoom and zoom.original)
+            .. " expected=" .. D.Number(zoom and zoom.expected) .. " state=" .. safe(zoom and zoom.state or "unowned")
+            .. " busy=" .. bool(actions and actions.busy) .. " orbit=" .. safe(actions and actions.orbit or "none")
+            .. " savedCompositions=" .. #ns.Value.Keys(db.camera.composition.saved)
+        for _, group in ipairs({ "aa", "jpeg" }) do
+            local record = db.camera.output.records[group]
+            lines[#lines + 1] = "Photo output " .. group .. " state=" .. safe(record and record.state or "unowned") .. " error=" .. safe(record and record.error or "none")
+            for _, key in ipairs(ns.PhotoOutput.Groups[group]) do
+                local item = ns.ReadOnly.Read(runtime.reader, key)
+                local function raw(value)
+                    if key == "MSAAQuality" then
+                        local index, coverage = ns.PhotoOutput.Sample(value)
+                        return index and tostring(index) .. "," .. tostring(coverage) or "unavailable"
+                    end
+                    return D.Number(value)
+                end
+                lines[#lines + 1] = "photo output " .. key .. " current=" .. raw(item.raw) .. " original=" .. raw(record and record.original[key])
+                    .. " expected=" .. raw(record and record.expected[key]) .. " secure=" .. bool(item.flags and item.flags.secure)
+                    .. " readOnly=" .. bool(item.flags and item.flags.readOnly) .. " locked=" .. bool(item.flags and item.flags.locked)
+            end
+        end
+        local photoSession = db.camera.editor.session
+        local preview = runtime.photoPreview
+        lines[#lines + 1] = "Photo live preview: state=" .. safe(preview and preview.status or "unavailable")
+            .. " pendingControls=" .. D.Number(preview and #preview.order) .. " busy=" .. bool(preview and preview.busy)
+            .. " error=" .. safe(preview and preview.error or "none")
+        lines[#lines + 1] = "Photo editor: active=" .. bool(runtime.photoEditor and runtime.photoEditor.active)
+            .. " before=" .. bool(runtime.photoEditor and runtime.photoEditor.before)
+            .. " session=" .. safe(photoSession and photoSession.state or "none")
+            .. " effects=" .. bool(runtime.photoEffects and runtime.photoEffects.root and runtime.photoEffects.root:IsShown())
+        for _, key in ipairs(ns.PhotoConfig.Order) do
+            lines[#lines + 1] = "photo look " .. key .. "=" .. D.Number(db.camera.editor.look[key])
+        end
+        for _, key in ipairs(ns.Value.Keys(photoSession and photoSession.before or {})) do
+            lines[#lines + 1] = "photo lighting " .. key .. " return=" .. D.Number(photoSession.before[key])
+                .. " edited=" .. D.Number(photoSession.after[key]) .. " expected=" .. D.Number(photoSession.expected[key])
+                .. " current=" .. D.Number(ns.ReadOnly.Read(runtime.reader, key).raw)
+        end
+        for _, bank in ipairs(ns.NativeGraphics.Banks) do
+            local record = db.camera.photo.records[bank]
+            lines[#lines + 1] = "photo graphics " .. bank .. " state=" .. safe(record and record.state or "unowned")
+                .. " source-client=" .. safe(record and record.signature) .. " error=" .. safe(record and record.error or "none")
+            if record then
+                for _, key in ipairs(ns.Value.Keys(record.original)) do
+                    lines[#lines + 1] = "photo " .. key .. " original=" .. D.Number(record.original[key])
+                        .. " expected=" .. D.Number(record.expected[key]) .. " current=" .. D.Number(ns.ReadOnly.Read(runtime.reader, key).raw)
+                end
+            end
+        end
+        if runtime.performance then
+            lines[#lines + 1] = "FPS observation state=" .. safe(runtime.performance.status) .. " samples=session-only; not frame-time percentiles"
+            for index, sample in ipairs(runtime.performance.results) do
+                lines[#lines + 1] = "FPS sample " .. index .. " userScene=" .. safe(sample.scene) .. " priority=" .. safe(sample.priority)
+                    .. " build=" .. safe(sample.signature) .. " elapsed=" .. D.Number(sample.elapsed) .. " requestedWindow=" .. sample.window
+                    .. " readings=" .. sample.count .. " combatReadings=" .. sample.combatSamples .. " combatUnknown=" .. sample.combatUnknown
+                    .. " mean=" .. D.Number(sample.mean) .. " min=" .. D.Number(sample.low) .. " max=" .. D.Number(sample.high)
+                for _, bank in ipairs(ns.NativeGraphics.Banks) do
+                    local choice = sample.requested and sample.requested[bank]
+                    lines[#lines + 1] = "sample requested " .. bank .. "=" .. safe(choice and choice.source) .. " level=" .. D.Number(choice and choice.level)
+                end
+                for _, key in ipairs(ns.Value.Keys(sample.effective)) do
+                    lines[#lines + 1] = "sample observed " .. key .. "=" .. D.Number(sample.effective[key])
+                end
+            end
+            lines[#lines + 1] = "FPS: scene label is user-selected; workload/viewpoint matching, GPU limits, power and future raid performance are unobserved."
+        end
+        local config = db.config
+        local effective, sources = ns.Optics.Resolve(db.optics.visual, db.optics.quality, db.optics.reference)
+        for _, key in ipairs(ns.Optics.Keys) do
+            lines[#lines + 1] = "optical " .. key .. " visual=" .. D.Number(db.optics.visual[key])
+                .. " quality=" .. D.Number(db.optics.quality[key]) .. " reference=" .. D.Number(db.optics.reference[key])
+                .. " effective-request=" .. D.Number(effective and effective[key])
+                .. " source=" .. safe(sources and sources[key] or "inherited-current") .. " original-record=experiments.journal"
+        end
+        local comparison = db.optics.comparison
+        lines[#lines + 1] = "comparison=" .. safe(comparison and comparison.state or "inactive")
+        if comparison then
+            for _, key in ipairs(V.Keys(comparison.before)) do
+                lines[#lines + 1] = "compare " .. key .. " before=" .. D.Number(comparison.before[key]) .. " after=" .. D.Number(comparison.after[key])
+                    .. " last-observed=" .. D.Number(comparison.expected[key])
+            end
+        end
+        lines[#lines + 1] = "visual-operation=" .. safe(runtime.product and runtime.product.state)
+            .. " effects=" .. safe(runtime.presentation and runtime.presentation.Status())
+        lines[#lines + 1] = "active visual presentation=" .. safe(runtime.product and runtime.product.active)
+            .. " | last verified quality selection=" .. safe(runtime.lab and runtime.lab.activeProfile)
+        lines[#lines + 1] = "mode-selection=explicit-user-action; saved-enable-flag=" .. bool(config.studio.enabled)
+            .. " effects=" .. bool(config.studio.effects) .. " audio=" .. bool(config.preferences.sound) .. " reducedMotion=" .. bool(config.preferences.reducedMotion)
+        lines[#lines + 1] = "setup wizard completed=" .. bool(db.onboarding.completed)
+        lines[#lines + 1] = "visual baseline source=" .. safe(db.baseline.source) .. " chosen=" .. bool(db.baseline.chosen)
+            .. " Brightness=" .. D.Number(db.baseline.values.Brightness) .. " Contrast=" .. D.Number(db.baseline.values.Contrast)
+            .. " captured-client=" .. safe(db.baseline.signature) .. " applied-this-session=" .. bool(runtime.product and runtime.product.baselineVerified)
+        lines[#lines + 1] = "return optics enabled=" .. bool(db.baseline.includeOptics) .. "; contact-depth trial: method/effect unverified"
+        for _, key in ipairs(ns.Optics.Keys) do lines[#lines + 1] = "return " .. key .. "=" .. D.Number(db.baseline.values[key]) end
+        for _, id in ipairs(ns.StudioConfig.Order) do
+            local mode = config.studio.modes[id]
+            if id == "natural" then
+                lines[#lines + 1] = "natural (legacy id): " .. ns.Baseline.Label(db.baseline) .. " uses the selected baseline above; no tint or vignette"
+            else lines[#lines + 1] = id .. ": brightness=" .. D.Number(mode.brightness) .. " contrast=" .. D.Number(mode.contrast)
+                .. " contrastEnabled=" .. bool(mode.useContrast) .. " tint=" .. bool(mode.tintEnabled) .. " opacity=" .. D.Number(mode.opacity)
+                .. " vignette=" .. D.Number(mode.vignette) .. " letterbox=" .. D.Number(mode.letterbox)
+                .. " brightnessMode=" .. safe(mode.brightnessMode) .. " lightStyleIntensity=" .. D.Number(mode.intensity)
+                .. " sharpening=" .. safe(mode.sharpening) .. " detail=" .. D.Number(mode.detail)
+                .. " bloomOverride=" .. bool(mode.useBloom) .. " bloom=" .. D.Number(mode.bloom) .. " styling=" .. safe(mode.styling)
+            end
+        end
+        lines[#lines + 1] = "personal preset count=" .. #V.Keys(config.studio.presets)
+        for _, id in ipairs({ "balanced", "vista", "performance" }) do
+            local targets = {}; for _, key in ipairs(V.Keys(db.experiments.profiles[id])) do targets[#targets + 1] = key .. "=" .. D.Number(db.experiments.profiles[id][key]) end
+            lines[#lines + 1] = "quality " .. id .. ": " .. (#targets > 0 and table.concat(targets, ", ") or "built-in bounded recipe")
+        end
+    else lines[#lines + 1] = "BLOCKED: quarantined saved data preserved, not exported" end
+    lines[#lines + 1] = "5. TRANSACTIONS AND RECOVERY"
+    for label, engine in pairs({ Brightness = runtime.engine, Experiments = runtime.lab, QualityTrial = runtime.tierTrial,
+        Names = runtime.names, Framing = runtime.framing, NativeGraphics = runtime.graphics, PhotoGraphics = runtime.photo }) do
+        local status = engine.Status()
+        lines[#lines + 1] = label .. ": state=" .. safe(status.state) .. " operation=" .. safe(status.operation) .. " error=" .. safe(status.error or "none")
+            .. " original=" .. D.Number(status.original) .. " preview=" .. safe(status.token or "none")
+        if status.preview then lines[#lines + 1] = "PREVIEW Brightness original=" .. D.Number(status.preview.original)
+            .. " snapshot=" .. D.Number(status.preview.current) .. " target=" .. D.Number(status.preview.target) end
+    end
+    if db then
+        for _, journal in ipairs({ db.journal, db.experiments.journal, db.camera.journal, db.camera.framing.journal }) do
+            for _, key in ipairs(V.Keys(journal.entries)) do
+                local item = journal.entries[key]
+                lines[#lines + 1] = "recovery " .. (ns.Catalog.Get(key) and key or "UNKNOWN_KEY_REDACTED") .. " original=" .. D.Number(item.originalRaw)
+                    .. " lastVerified=" .. D.Number(item.lastVerifiedRaw) .. " intended=" .. D.Number(item.intendedRaw) .. " state=" .. safe(item.state)
+                    .. " source-client=" .. safe(item.signature) .. " failure=" .. safe(item.failure or "none")
+            end
+        end
+        for _, bank in ipairs(ns.NativeGraphics.Banks) do
+            local choice, record = db.graphics.choices[bank], db.graphics.records[bank]
+            local captured, missing = ns.NativeGraphics.Snapshot(runtime.reader, bank)
+            lines[#lines + 1] = "native graphics " .. bank .. " selected=" .. choice.source .. " level=" .. choice.level
+                .. " current=" .. ns.NativeGraphics.Current(runtime.reader, bank) .. " available-capture=" .. #V.Keys(captured) .. " unavailable=" .. #missing
+            for _, key in ipairs(missing) do lines[#lines + 1] = "uncaptured " .. key end
+            if record then
+                lines[#lines + 1] = bank .. " record=" .. safe(record.state) .. " source-client=" .. safe(record.signature) .. " error=" .. safe(record.error or "none")
+                for _, key in ipairs(V.Keys(record.original)) do
+                    lines[#lines + 1] = bank .. " captured " .. key .. " original=" .. D.Number(record.original[key])
+                        .. " expected=" .. D.Number(record.expected[key]) .. " current=" .. D.Number(captured[key])
+                end
+            end
+        end
+        for _, key in ipairs(V.Keys(db.graphics.sideEffects)) do
+            local pair = db.graphics.sideEffects[key]
+            lines[#lines + 1] = "native-graphics watched change " .. key .. " before=" .. D.Number(pair.before) .. " after=" .. D.Number(pair.after)
+        end
+        for _, key in ipairs(V.Keys(db.camera.photo.sideEffects)) do
+            local pair = db.camera.photo.sideEffects[key]
+            lines[#lines + 1] = "photo-graphics watched change " .. key .. " before=" .. D.Number(pair.before) .. " after=" .. D.Number(pair.after)
+        end
+        for _, key in ipairs(V.Keys(db.experiments.sideEffects)) do
+            local item = db.experiments.sideEffects[key]
+            lines[#lines + 1] = (item.before == item.after and "Watched original " or "UNRESOLVED watched change ") .. key .. " before=" .. D.Number(item.before) .. " after=" .. D.Number(item.after) .. " (not automatically overwritten)"
+        end
+    end
+    if runtime.lab and runtime.lab.preview then for _, line in ipairs(runtime.lab.preview.lines) do lines[#lines + 1] = "PREVIEW: " .. line end end
+    lines[#lines + 1] = "6. DIAGNOSTIC CHECKS (refreshed on export; this scan applies no settings)"
+    if not runtime.checks then lines[#lines + 1] = "NOT TESTED: Run Diagnostics has not completed" end
+    local counts = { PASS = 0, WARN = 0, FAIL = 0, BLOCKED = 0, ["NOT TESTED"] = 0 }
+    for _, check in ipairs(runtime.checks or {}) do
+        counts[check.status] = counts[check.status] + 1
+        lines[#lines + 1] = check.status .. " | " .. check.id .. " | " .. check.detail
+    end
+    lines[#lines + 1] = "7. FEATURE AVAILABILITY"
+    lines[#lines + 1] = "Six visual modes: click a mode to apply; no acknowledgement or non-75 unlock. Source-range Brightness, no startup writes."
+    lines[#lines + 1] = "Contrast and named quality: direct bounded Apply or optional Test & Restore. Previous calibration is not an unlock requirement."
+    lines[#lines + 1] = "Quality profiles: bounded built-in recipes or saved custom target sets, rechecked on Apply. No measured FPS promises."
+    lines[#lines + 1] = "Shadow/light/water: native enum and hardware-checked round-trip trials; also available through experimental native graphics banks."
+    for _, key in ipairs(ns.QualityTrial.Order) do
+        local supported = {}
+        for index in ipairs(ns.QualityTrial.Definition(key).choices) do
+            local ready = ns.QualityTrial.Support(runtime.reader, key, index - 1)
+            if ready then supported[#supported + 1] = tostring(index - 1) end
+        end
+        lines[#lines + 1] = key .. " supported trial levels=" .. (#supported > 0 and table.concat(supported, ",") or "none or capability unavailable")
+    end
+    lines[#lines + 1] = "Camera: standalone World Photo and Portrait Stage; native photo controls, bounded movement, staged models, model lighting and capture."
+    lines[#lines + 1] = "Native graphics banks: Keep Current, per-key WoW defaults or native 1-10 recipes; explicit Apply and captured Restore. Startup never applies them. Unknown native dependencies remain a live test limitation. HDR and renderer stay in the game settings."
+    lines[#lines + 1] = "Readback does not establish visible effect, universal safe range, or absence of unobserved dependent changes. Session test history is observational, not permission."
+    lines[#lines + 1] = "Addon-owned handlers only. Pre-bootstrap syntax/load failures and unrelated game/addon errors may prevent or lie outside this report."
+    lines[#lines + 1] = "8. RECENT WARNINGS / ERRORS (last 32, may overlap history)"
+    for _, event in ipairs(log and log.issues or {}) do lines[#lines + 1] = eventLine(event) end
+    lines[#lines + 1] = "9. CHRONOLOGICAL SESSION HISTORY (last 240; dropped=" .. (log and log.dropped or 0) .. "; slider edits coalesced=" .. (log and log.coalesced or 0) .. ")"
+    for _, event in ipairs(log and log.History() or {}) do lines[#lines + 1] = eventLine(event) end
+    lines[#lines + 1] = "10. SUMMARY"
+    lines[#lines + 1] = "Diagnostic checks: PASS=" .. counts.PASS .. " WARN=" .. counts.WARN .. " FAIL=" .. counts.FAIL .. " BLOCKED=" .. counts.BLOCKED .. " NOT TESTED=" .. counts["NOT TESTED"]
+    lines[#lines + 1] = "Session events: WARN=" .. (log and log.counts.WARN or 0) .. " ERROR=" .. (log and log.counts.ERROR or 0)
+    lines[#lines + 1] = "If recovery records or watched changes remain, preserve this report and resolve them before uninstalling."
+    lines[#lines + 1] = "END LUMENSHIFT REPORT"
+    return table.concat(lines, "\n")
+end
+function D.Export(runtime)
+    ns.Log.Record(runtime.reader, "diagnostics", "export", "INFO", "USER_REQUEST")
+    local ok, text = pcall(function()
+        D.Run(runtime, "export-read-only")
+        return D.Build(runtime)
+    end)
+    if not ok then
+        ns.Log.Record(runtime.reader, "diagnostics", "export", "ERROR", "REPORT_GENERATION_FAILED")
+        text = "LUMENSHIFT REPORT GENERATION FAILED\nAddon " .. ns.version .. " build " .. safe(ns.build)
+            .. "\nSaved recovery data was not cleared. No graphics write was requested.\nNative error details withheld for privacy."
+    end
+    if #text > 120000 then text = text:sub(1, 119800) .. "\nREPORT SIZE LIMIT REACHED; some history omitted. END REPORT" end
+    return text
+end

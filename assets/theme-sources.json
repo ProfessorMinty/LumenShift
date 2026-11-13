@@ -1,0 +1,166 @@
+{
+  "observed": "2026-11-07",
+  "source_packs_not_distributed": true,
+  "third_party": [
+    {
+      "file": "Media/ui-modes.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Visible--eye-eyeball-open-view-visual-visible-iris-retina-vision-sight-optics-watch-observe-pupil.svg",
+      "source_sha256": "9530b7740d43980d075d48586a3706d75bdfa3ff423ab6d8d516f2a01d14b4ff",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-quality.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Images Photography/Landscape Setting--lanscape-horizontal-design-composition-hillside-valley-meadow-forest-desert-Rectangle-shape-geometry-rounded-corners-outline-frame-card-border-template-edges-simple.svg",
+      "source_sha256": "cc46185d3c855a1683c5d241eed0ac090147c610b22156e9f1c3b2665f5394d2",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-camera.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Images Photography/Camera 1--camera-photo-picture-photography-image-photos-pictures-snapshot-lens-aperture-device-shutter-capture.svg",
+      "source_sha256": "ca79adaa2328d026f1e0f42b82946a1a05ccccd2607eaaa760c0d3457b05a081",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-effects.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Color Palette--color-palette-hue-tones-shades-tints-chromatic-Venn-diagram-intersection-set-theory-logic-mathematics-overlapping-circles-relationships-overlap-sets-logical-relations.svg",
+      "source_sha256": "06d6d193b78893bec22381414833074a6866e7a919a600bbd07d57e3a4e2c52c",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-audio.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Entertainment/Volume Level High--speaker-high-volume-control-audio-music-entertainment-sound-player-volume control-amplify-speakericon-audiocontrol-voice-listen-mute.svg",
+      "source_sha256": "8d921647a00a73302d304191add910b88a7ab242d1e51f2394998580ec94111a",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-presets.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Layers 1--layers-layer-pile-stack-design-overlay-abstract-geometric-squares-isometric-floating-simplicity-stacked-3D-levels-structure-geometry-organization-arrangement-platform-grid.svg",
+      "source_sha256": "ff5947aee14bad6f829f5498fbdeb37ea2fb6e9f6fa512220a6977add6a382f6",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-accessibility.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/User Circle Single--circle-user-human-person-single-geometric-profile-avatar-contact-account-identity-generic-portrait.svg",
+      "source_sha256": "2a9a9e96aba8e4f4696bc954014c8de39091ee5d84d8184719e0399252de84b6",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-diagnostics.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Wave Signal--heart-line-beat-square-graph-stats-stat-signal-pulse-wave-rhythm-health-cardiogram-EKG-monitoring-frequency-biosignal.-waveform-audio-sound-sinewave-oscillation.svg",
+      "source_sha256": "af813d59ce08130923ca7eed76acb0f167968a0b12cb8c327c4aeeb5e13bf643",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-advanced.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Vertical Slider Square--adjustment-adjust-controls-fader-vertical-settings-slider-square-setting-Settings-knobs-interface-sound-mixer-audio-volume-balance-equalizer-sliders-music.svg",
+      "source_sha256": "390c852d1bab7af273eaf257d536779d88a416d6ffd82fd032ce5fe3f75521f3",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-settings.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Cog--work-loading-cog-gear-settings-machine-setting-cogwheel-options-configuration-machinery-mechanical-technology-engineering-sprocket-tool-adjustment-preference-control-system.svg",
+      "source_sha256": "6f2727eac06b51eb8fc507d47ee4d91f4efea6318e004f34f45581c939b716ae",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-close.tga",
+      "source": "Core_Essential_UI_Icons/core-solid-free/Interface Essential/Delete 1--remove-delete-x-close-cross-button-multiply-math-Cross-intersection-diagonal-overlay-negative-remove.-Cancel-Delete-Remove-Close-Exit-Clear-No-Xmark-Reject-Deny.svg",
+      "source_sha256": "cb1eb62e22b71ba8347700343d010a7cf5fb33bf8e1b4a79e1688777cd78fcbf",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/ui-export.tga",
+      "source": "Core_Essential_UI_Icons/core-line-free/Interface Essential/Download File--download-file-arrow-data-upload-down-server-transfer-common-document-save-storage-digital-PDF-sheet.svg",
+      "source_sha256": "121e51b95282b71a0b2721a99af8e18bce44b1e6739b89681f85213bc537622f",
+      "creator": "Streamline",
+      "license": "CC BY 4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "changes": "Original paths recolored white, padded and rasterized to 64x64. Runtime applies silver/teal tint."
+    },
+    {
+      "file": "Media/panel-steel.tga",
+      "source": "Steel Mesh Gradient Background.png",
+      "source_sha256": "001058516a7cd14d01c33b0fbf13770f57f26ee4f17c081654d172459895336a",
+      "creator": "Craftwork Studio",
+      "license": "Craftwork Commercial License",
+      "license_url": "https://craftwork.design/license",
+      "changes": "Aspect-preserving 512x512 runtime texture export. Composition, cropping and opacity are applied by the addon UI."
+    },
+    {
+      "file": "Media/panel-midnight.tga",
+      "source": "Midnight Mesh Gradient.png",
+      "source_sha256": "4e00dd0818a72c3da776015465d5e23d12fd5accdf3e632501ff6422f4ec1cf6",
+      "creator": "Craftwork Studio",
+      "license": "Craftwork Commercial License",
+      "license_url": "https://craftwork.design/license",
+      "changes": "Aspect-preserving 512x512 runtime texture export. Composition, cropping and opacity are applied by the addon UI."
+    },
+    {
+      "file": "Media/light-sweep.tga",
+      "source": "lumenloops_v1/Package/Accents/png/1x/teal/6.png",
+      "source_sha256": "80638fe865e938ad64e4e77f7f22eabf8418ff60ac586f788781541b3ba4f77f",
+      "creator": "Jon Lehman",
+      "license": "Craftwork Commercial License",
+      "license_url": "https://craftwork.design/license",
+      "changes": "Aspect-preserving 512x512 runtime texture export. Composition, cropping and opacity are applied by the addon UI."
+    },
+    {
+      "file": "Media/light-halo.tga",
+      "source": "lumenloops_v1/Package/Accents/png/1x/teal/8.png",
+      "source_sha256": "924de1eb4a2f1edb51c869bfb1c2ae5ab0051dc5ef73956bd394d4b9e5a2039f",
+      "creator": "Jon Lehman",
+      "license": "Craftwork Commercial License",
+      "license_url": "https://craftwork.design/license",
+      "changes": "Aspect-preserving 512x512 runtime texture export. Composition, cropping and opacity are applied by the addon UI."
+    }
+  ],
+  "original_ui_geometry": [
+    "Media/wheel-base.tga",
+    "Media/switch-track.tga",
+    "Media/switch-knob.tga",
+    "Media/wheel-sector-1.tga",
+    "Media/wheel-sector-2.tga",
+    "Media/wheel-sector-3.tga",
+    "Media/wheel-sector-4.tga",
+    "Media/wheel-sector-5.tga",
+    "Media/wheel-sector-6.tga"
+  ],
+  "tools": {
+    "Pillow": "13.0.0",
+    "resvg-py": "0.5.0"
+  },
+  "missing_requested_pack": "Fractal Haze was not present in the supplied directory."
+}

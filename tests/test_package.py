@@ -1,0 +1,125 @@
+"""Development build validation; no game or external application access."""
+import importlib.util
+import io
+import json
+import re
+import struct
+import unittest
+import wave
+import zipfile
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("package", ROOT / "tools/package.py")
+package = importlib.util.module_from_spec(spec); spec.loader.exec_module(package)
+
+
+class PackageTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.payload, cls.version = package.working_payload()
+        cls.data = package.build(cls.payload, cls.version, "0" * 40)
+
+    def test_repeatable_bytes_and_single_install_root(self):
+        self.assertEqual(self.data, package.build(dict(reversed(list(self.payload.items()))), self.version, "0" * 40))
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            self.assertTrue(all(name.startswith("LumenShift/") for name in archive.namelist()))
+            self.assertIn("LumenShift/Core/Bootstrap.lua", archive.namelist())
+            self.assertIn("LumenShift/ASSET-LICENSE.md", archive.namelist())
+
+    def test_source_commit_and_all_content_hashes(self):
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            info = json.loads(archive.read("LumenShift/BUILD.json"))
+            self.assertEqual(info["source_commit"], "0" * 40)
+            for name, sha in info["files"].items():
+                self.assertEqual(sha, package.digest(archive.read("LumenShift/" + name)))
+
+    def test_bundled_guide_links_resolve_to_recorded_source(self):
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            guide = archive.read("LumenShift/README.md").decode("utf-8")
+            links = re.findall(r"\]\(([^)]+)\)", guide)
+            self.assertTrue(links)
+            self.assertTrue(all(":" in link or link.startswith("#") for link in links))
+            self.assertIn("/blob/" + "0" * 40 + "/docs/46-BETA2-POLISH-AND-AUDIT.md", guide)
+            for link in links:
+                marker = "/blob/" + "0" * 40 + "/"
+                if marker in link:
+                    self.assertTrue((ROOT / link.split(marker, 1)[1].split("#", 1)[0]).is_file())
+
+    def test_manifest_policy_and_observed_identities_follow_runtime(self):
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            info = json.loads(archive.read("LumenShift/BUILD.json"))
+            self.assertEqual(info["observed_identities"], ["1.60.1:70790:16001", "1.60.1:70840:16001", "1.60.1:70862:16001"])
+            self.assertFalse(info["production_admission"])
+            self.assertEqual(info["experimental_client_policy"]["mismatch_action"], "warn")
+            self.assertEqual(info["experimental_client_policy"]["reference_version"], "1.60.1")
+            self.assertEqual(info["experimental_client_policy"]["reference_interface"], 16001)
+            self.assertEqual(info["experimental_client_policy"]["reference_minimum_build"], 70790)
+        changed = dict(self.payload)
+        changed["Core/Compatibility.lua"] = changed["Core/Compatibility.lua"].replace(b'    ["1.60.1:70840:16001"] = true,\n', b'')
+        data = package.build(changed, self.version, "0" * 40)
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            self.assertEqual(json.loads(archive.read("LumenShift/BUILD.json"))["observed_identities"], ["1.60.1:70790:16001", "1.60.1:70862:16001"])
+
+    def test_manifest_refuses_missing_or_inconsistent_family_policy(self):
+        for old, new in ((b"local policy =", b"local other ="), (b"minimumBuild = 70790", b"minimumBuild = 70862"), (b'mismatchAction = "warn"', b'mismatchAction = "block"')):
+            changed = dict(self.payload)
+            changed["Core/Compatibility.lua"] = changed["Core/Compatibility.lua"].replace(old, new)
+            with self.assertRaises(AssertionError): package.build(changed, self.version, "0" * 40)
+
+    def test_runtime_report_build_matches_manifest_without_mutating_source(self):
+        original = dict(self.payload)
+        commit = "abcdef0123" * 4
+        data = package.build(self.payload, self.version, commit)
+        self.assertEqual(self.payload, original)
+        with zipfile.ZipFile(io.BytesIO(data)) as archive:
+            info = json.loads(archive.read("LumenShift/BUILD.json"))
+            self.assertEqual(info["source_commit"], commit)
+            self.assertEqual(archive.read("LumenShift/Core/Build.lua"),
+                             ('local _, ns = ...\nns.build = "' + commit + '"\n').encode("ascii"))
+
+    def test_unsafe_or_case_colliding_paths_refused(self):
+        for name in ("../outside", "/absolute", "C:/path", "Core\\bad", "core/Bootstrap.lua"):
+            with self.assertRaises(AssertionError):
+                package.build(dict(self.payload, **{name: b"bad"}), self.version, "0" * 40)
+
+    def test_asset_tga_headers_and_bounded_audio(self):
+        for name, data in self.payload.items():
+            if name.endswith(".tga"):
+                self.assertEqual(data[2], 2); self.assertEqual(data[16:18], b"\x20\x28")
+                width, height = struct.unpack_from("<HH", data, 12)
+                self.assertEqual(len(data), 18 + width * height * 4)
+            if name.endswith(".wav"):
+                with wave.open(io.BytesIO(data)) as sound:
+                    self.assertEqual((sound.getnchannels(), sound.getsampwidth(), sound.getframerate()), (1, 2, 22050))
+                    self.assertAlmostEqual(sound.getnframes() / sound.getframerate(), .32)
+                    frames = sound.readframes(sound.getnframes())
+                    self.assertLess(max(abs(n) for n in struct.unpack("<" + "h" * (len(frames) // 2), frames)), 32767)
+
+    def test_missing_or_changed_archive_members_refused(self):
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            expected = {name[len("LumenShift/"):]: archive.read(name) for name in archive.namelist()}
+        expected.pop("Core/Bootstrap.lua")
+        with self.assertRaises(AssertionError): package.validate(self.data, expected)
+        expected["Core/Bootstrap.lua"] = b"changed"
+        with self.assertRaises(AssertionError): package.validate(self.data, expected)
+
+    def test_third_party_artwork_keeps_notices_and_source_mapping(self):
+        sources = json.loads(self.payload['ASSET-SOURCES.json'])
+        notices = self.payload['THIRD-PARTY-NOTICES.md'].decode('utf-8')
+        with zipfile.ZipFile(io.BytesIO(self.data)) as archive:
+            self.assertIn('CC BY', json.loads(archive.read('LumenShift/BUILD.json'))['creative_asset_license'])
+        self.assertIn('Streamline', notices); self.assertIn('Jon Lehman', notices)
+        self.assertIn('Craftwork Studio', notices)
+        self.assertEqual(len(sources['third_party']), 16)
+        for item in sources['third_party']:
+            self.assertIn(item['file'], self.payload)
+            self.assertRegex(item['source_sha256'], r'^[0-9a-f]{64}$')
+            self.assertTrue(item['license_url'].startswith('https://'))
+        self.assertTrue(sources['source_packs_not_distributed'])
+        self.assertFalse(any(name.endswith(('.svg', '.fig', '.mp4', '.webm')) for name in self.payload))
+        # Bound decoded texture storage; full-resolution source packs must not leak into a build.
+        self.assertLess(sum(len(data) for name, data in self.payload.items() if name.endswith('.tga')), 8 * 1024 * 1024)
+
+
+if __name__ == "__main__": unittest.main()

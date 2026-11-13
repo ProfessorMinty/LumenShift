@@ -1,0 +1,225 @@
+local _, ns = ...
+local U, W, V = {}, ns.Widgets, ns.Value; ns.PhotoAdvancedUI = U
+local function report(ui, ok, reason)
+    ui.notice = nil
+    if not ok then ui.notice = ns.Product.Message(reason or "OPTION_UNAVAILABLE") end
+    ui.Refresh()
+end
+local function bindOrbit(runtime, ui, button, direction)
+    local actions = runtime.cameraActions
+    W.Script(button, "OnMouseDown", function(_, which)
+        if which == "LeftButton" then report(ui, actions.Orbit(direction, ui.precision)) end
+    end)
+    local function stop()
+        if actions.orbit == direction then
+            actions.StopOrbit(direction)
+            ui.status:SetText(ns.Product.Message(actions.status))
+        end
+    end
+    W.Script(button, "OnMouseUp", stop)
+    W.Script(button, "OnHide", stop)
+    W.Script(button, "OnLeave", stop)
+    local available = actions.HasMovement(direction)
+    if not available or runtime.db.config.preferences.reducedMotion then button:Disable() end
+    return available
+end
+function U.Position(runtime, env, parent, y, ui)
+    local actions = runtime.cameraActions
+    local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
+    text("Hold a direction to move. Release to stop.", 24)
+    W.Art(parent,"look-neutral",0,y,188,92,.45,"BORDER")
+    W.Rule(parent,0,y-46,188,W.colors.muted,1)
+    local vertical=W.Texture(parent,"ARTWORK")
+    vertical:SetPoint("TOPLEFT",parent,"TOPLEFT",93,y);vertical:SetSize(1,92);vertical:SetColorTexture(.65,.78,.77,.6)
+    local buttons = {
+        { "up", "Tilt up", 53, 0 }, { "left", "Orbit left", 0, -32 },
+        { "right", "Orbit right", 104, -32 }, { "down", "Tilt down", 53, -64 },
+    }
+    local missing = false
+    for _, item in ipairs(buttons) do
+        local direction = item[1]
+        local button = W.Button(env, parent, item[2], item[3], y + item[4], 84, function() end)
+        button:SetHeight(27)
+        if not bindOrbit(runtime, ui, button, direction) then missing = true end
+    end
+    local zoom = actions.ReadZoom()
+    W.Text(parent,zoom and ("Distance  "..string.format("%.2f",zoom)) or "Zoom unavailable",198,y,110,12,W.colors.muted)
+    for i, item in ipairs({ { "Closer", -1 }, { "Farther", 1 } }) do
+        local delta = item[2]
+        local b = W.Button(env, parent, item[1], 198, y-22-(i-1)*36, 110, function() report(ui, actions.Step(ui.precision and delta*.25 or delta)) end)
+        if not zoom then b:Disable() end
+    end
+    y=y-102
+    if runtime.db.config.preferences.reducedMotion then text("Reduced motion is on.", 24)
+    elseif missing then text("Dimmed directions are unavailable on this client.", 26) end
+    W.Toggle(env,parent,"Precision movement",0,y,310,function() return ui.precision end,
+        function(value) ui.precision=value end,"Slow the orbit and take smaller distance steps."); y=y-36
+    local original = runtime.db.camera.composition.zoom
+    if original then
+        W.Button(env, parent, "Return zoom", 0, y, 150, function() report(ui, actions.Restore()) end, "Return to distance "..string.format("%.2f", original.original))
+        W.Button(env, parent, "Keep current zoom", 160, y, 150, function() report(ui, actions.ForgetZoom()) end)
+        y = y - 38
+    end
+    return y
+end
+function U.WorldTrack(runtime, env, parent, y, ui, sideSlider)
+    local actions, key = runtime.cameraActions, "test_cameraOverShoulder"
+    W.Text(parent,"Move sideways with shoulder offset. For high and low shots, hold a vertical orbit. The world camera follows an arc around you.",0,y,310,12,W.colors.muted)
+    y = y - 58
+    local item = ns.ReadOnly.Read(runtime.reader,key)
+    local range = ns.Framing.Bounds(key,item.raw,runtime.reader)
+    local supported, why = ns.Framing.Capability(runtime.reader,key)
+    if supported and range then
+        y = sideSlider(range,V.Number(item.raw),y)
+    elseif range and why == "CAMERA_COMFORT_SETTING_ENABLED" then
+        local enable = W.Button(env,parent,"Enable photo framing",0,y,310,function()
+            local ok, code = runtime.camera.UsePhotoFraming(function(done,reason) report(ui,done,reason) end)
+            if not ok then report(ui,nil,code) end
+        end,"Temporarily pause WoW camera comfort settings for this visit.")
+        ns.PhotoStyle.Enable(enable,not ns.Framing.ReadComfort(runtime.reader).error and not runtime.framing.busy)
+        y = y - 38
+    else
+        W.Text(parent,"Side offset unavailable on this client.",0,y,310,12,W.colors.muted)
+        y = y - 30
+    end
+    for i, axis in ipairs({{"up","Tilt up"},{"down","Tilt down"}}) do
+        local b=W.Button(env,parent,axis[2],(i-1)*158,y,152,function() end)
+        bindOrbit(runtime,ui,b,axis[1])
+    end
+    y=y-38
+    W.Toggle(env,parent,"Precision movement",0,y,310,function() return ui.precision end,
+        function(value) ui.precision=value end,"Slow the vertical orbit and take smaller distance steps.")
+    y=y-38
+    for i, choice in ipairs({{"Closer",-1},{"Farther",1}}) do
+        local delta=choice[2]
+        local b=W.Button(env,parent,choice[1],(i-1)*158,y,152,function()
+            report(ui,actions.Step(ui.precision and delta*.25 or delta))
+        end)
+        ns.PhotoStyle.Enable(b,actions.ReadZoom()~=nil and not actions.busy)
+    end
+    return y-38
+end
+
+function U.Frame(runtime, env, parent, y, ui, liveSlider)
+    local preview,framing=runtime.photoPreview,ns.Framing
+    local function text(label,height,color)
+        W.Text(parent,label,0,y,310,12,color or W.colors.muted); y=y-height
+    end
+    local observed,ranges,blocked={},{},false
+    for _,key in ipairs(framing.PreferredKeys) do
+        local item=ns.ReadOnly.Read(runtime.reader,key)
+        observed[key]=V.Number(item.raw)
+        local bounds=framing.Bounds(key,item.raw,runtime.reader)
+        local ok,why=framing.Capability(runtime.reader,key)
+        if ok then ranges[key]=bounds
+        elseif bounds and why=="CAMERA_COMFORT_SETTING_ENABLED" then blocked=true end
+    end
+    ns.CameraUI.FramingPreference(runtime,env,parent,0,y,310)
+    y=y-40
+    local entries=runtime.db.camera.framing.journal.entries
+    if blocked then
+        local state=framing.ReadComfort(runtime.reader)
+        text("Active WoW account preferences",24,W.colors.text)
+        local labels={CameraKeepCharacterCentered="Keep character centered",CameraReduceUnexpectedMovement="Reduce unexpected camera movement"}
+        for _,key in ipairs(state.enabled) do text(labels[key],22,W.colors.accent) end
+        text("Pause these preferences to adjust shoulder offset and footroom. Exit Camera Mode or restore framing to return to your settings.",54)
+        local enable=W.Button(env,parent,"Enable photo framing",0,y,310,function()
+            local ok,why=runtime.camera.UsePhotoFraming(function(done,reason) report(ui,done,reason) end)
+            if not ok then report(ui,nil,why) end
+        end,nil,"primary")
+        ns.PhotoStyle.Enable(enable,not state.error and not runtime.framing.busy)
+        y=y-38
+        if state.error then text(ns.Product.Message(state.error),40) end
+    else
+        local function slider(key,label)
+            local range=ranges[key]
+            if range then y=liveSlider(key,label,range.min,range.max,range.step,observed[key],y)
+            else text(label.." unavailable on this client.",28) end
+        end
+        slider("test_cameraOverShoulder","Shoulder offset")
+        if ranges.test_cameraDynamicPitch then
+            W.Toggle(env,parent,"Dynamic framing",0,y,310,function() return observed.test_cameraDynamicPitch==1 end,
+                function(v) preview.Begin(); local ok,why=preview.Queue("test_cameraDynamicPitch",v and 1 or 0); report(ui,ok,why) end)
+            y=y-42
+        else text("Dynamic framing unavailable on this client.",28) end
+        slider("test_cameraDynamicPitchBaseFovPad","Footroom")
+        local hint=""
+        if entries.CameraKeepCharacterCentered or entries.CameraReduceUnexpectedMovement then hint="Camera preferences paused. " end
+        if ranges.test_cameraDynamicPitchBaseFovPad and observed.test_cameraDynamicPitch~=1 then
+            hint=hint.."Turn on Dynamic framing to adjust footroom."
+        end
+        if hint~="" then text(hint,36) end
+    end
+    local restore=W.Button(env,parent,"Restore all framing",0,y,blocked and 310 or 152,function()
+        preview.Finish(function()
+            local ok,why=runtime.camera.RestoreFraming(function(done,code) report(ui,done,code) end,true)
+            if not ok then report(ui,ok,why) end
+            return ok,why
+        end)
+    end)
+    if not blocked then
+        W.Button(env,parent,"Save current values",158,y,152,function()
+            preview.Finish(function()
+                local ok, why = runtime.camera.SaveCurrentFraming()
+                ui.notice = ok and "Photo framing saved." or ns.Product.Message(why)
+                ui.Refresh()
+            end)
+        end,"Remember all three displayed values. Enable framing on entry to reuse them.")
+    end
+    ns.PhotoStyle.Enable(restore,not runtime.framing.busy and (next(entries)~=nil or preview.Pending()))
+    return y-38
+end
+function U.Capture(runtime, env, parent, y, ui)
+    local output, reader = runtime.output, runtime.reader
+    local function text(label, height) W.Text(parent, label, 0, y, 310, 12, W.colors.muted); y = y - height end
+    y = ns.StageLayout.Choices(env, parent, y, {"JPEG","Antialiasing","Shadows"}, ui.outputPage, function(page)
+        ui.outputPage=page; ui.notice=nil; ui.Build(true)
+    end)
+    if ui.outputPage=="JPEG" then
+        local seen, format = ns.ReadOnly.Read(reader, "screenshotQuality"), ns.ReadOnly.Read(reader, "screenshotFormat")
+        if format.code == "OK" and format.raw == "jpeg" and ns.PhotoOutput.Safe(seen, "screenshotQuality") then
+            ui.jpeg = ui.jpeg or V.Number(seen.raw)
+            W.Slider(env, parent, "JPEG quality", 0, y, 1, 10, 1, function() return ui.jpeg end, function(v) ui.jpeg = v; return true end, nil, 310); y = y - 70
+            W.Button(env, parent, "Apply JPEG quality", 0, y, 150, function() report(ui, output.Apply("jpeg", { screenshotQuality = tostring(ui.jpeg) })) end)
+            W.Button(env, parent, "Restore JPEG quality", 160, y, 150, function() report(ui, output.Restore("jpeg")) end); y = y - 44
+            text("Higher JPEG quality reduces compression. Exit restores your previous setting.", 74)
+        else text("JPEG quality is unavailable or WoW is using a different output format. Capture still works; the format is unchanged.", 74) end
+    elseif ui.outputPage=="Antialiasing" then
+        local observed = ns.PhotoOutput.Read(reader, "aa"); local safe = true
+        for _, key in ipairs(ns.PhotoOutput.Groups.aa) do if not ns.PhotoOutput.Safe(observed[key], key) then safe = false end end
+        if safe then
+            local image, samples = ns.PhotoOutput.Options(reader)
+            ui.aa = ui.aa or { ffxAntiAliasingMode = observed.ffxAntiAliasingMode.raw, MSAAQuality = observed.MSAAQuality.raw, MSAAAlphaTest = observed.MSAAAlphaTest.raw }
+            local function choice(key, label, options)
+                local current, index = "Current", 0
+                for i, opt in ipairs(options) do if ns.PhotoOutput.Equal(key, tostring(opt.value), ui.aa[key]) then current, index = opt.label, i end end
+                local inline = key == "ffxAntiAliasingMode"
+                W.Text(parent, label, 0, y - (inline and 6 or 0), inline and 150 or 310, 12, W.colors.muted)
+                if not inline then y = y - 24 end
+                W.Button(env, parent, current .. "  >", inline and 156 or 0, y, inline and 154 or 310, function()
+                    ui.aa[key] = tostring(options[index % #options + 1].value); ui.Build()
+                end); y = y - 44
+            end
+            choice("ffxAntiAliasingMode", "Image antialiasing", image); choice("MSAAQuality", "Multisample antialiasing", samples)
+            W.Toggle(env, parent, "Alpha-tested edges", 0, y, 310, function() return V.Number(ui.aa.MSAAAlphaTest) == 1 end,
+                function(v) ui.aa.MSAAAlphaTest = v and "1" or "0" end); y = y - 46
+            W.Button(env, parent, "Apply antialiasing", 0, y, 150, function() report(ui, output.Apply("aa", V.Copy(ui.aa))) end)
+            W.Button(env, parent, "Restore antialiasing", 160, y, 150, function() report(ui, output.Restore("aa")) end); y = y - 44
+            text("Higher sample counts can reduce frame rate. Exit restores your previous settings.", 48)
+        else text("Native AA values are unavailable or restricted here. Other photo controls remain available.", 60) end
+    elseif ui.outputPage=="Shadows" then
+        local count = 0
+        for level = 0, 3 do
+            local value = level
+            if ns.NativeGraphics.RaySupport(reader, value) then
+                W.Button(env, parent, ({ "Off", "Fair", "Good", "High" })[value + 1], count % 2 * 160, y - math.floor(count / 2) * 40, 150,
+                    function() report(ui, runtime.photo.ApplyRay(value, function(ok, why) report(ui, ok, why) end)) end); count = count + 1
+            end
+        end
+        if count > 0 then y = y - math.ceil(count / 2) * 40 - 8
+            W.Button(env, parent, "Restore photo quality", 0, y, 310, function() report(ui, runtime.photo.RestorePhoto(function(ok, why) report(ui, ok, why) end)) end); y = y - 44
+            text("These levels are available on your renderer. Exit restores your previous photo quality.", 68)
+        else text("Ray-traced shadows are unavailable on this renderer. No graphics restart or renderer change is attempted.", 68) end
+    end
+    return y
+end

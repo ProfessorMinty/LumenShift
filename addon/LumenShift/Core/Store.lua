@@ -1,0 +1,185 @@
+local _, ns = ...
+local S, V = {}, ns.Value
+ns.Store = S
+local states = { pending = true, owned = true, conflict = true, failed = true }
+local recordFields = { originalRaw = true, lastVerifiedRaw = true, intendedRaw = true,
+    layer = true, epoch = true, state = true, descriptorVersion = true, signature = true,
+    failure = true }
+
+function S.EmptyJournal() return { entries = {}, nextEpoch = 1 } end
+function S.ValidateJournal(journal)
+    if not V.Fields(journal, { entries = true, nextEpoch = true })
+        or type(journal.entries) ~= "table" or not V.Finite(journal.nextEpoch)
+        or journal.nextEpoch < 1 or journal.nextEpoch % 1 ~= 0 then return false end
+    local count = 0
+    for key, record in pairs(journal.entries) do
+        count = count + 1
+        -- Unknown historical keys are preserved as inert recovery data, never admitted.
+        if count > 64 or not V.Raw(key) or not key:match("^[%w_]+$")
+            or not V.Fields(record, recordFields) or not V.Raw(record.originalRaw)
+            or not V.Raw(record.lastVerifiedRaw) or not V.Raw(record.intendedRaw)
+            or (record.layer ~= "visual" and record.layer ~= "quality" and record.layer ~= "camera")
+            or not states[record.state] or not V.Finite(record.epoch) or record.epoch < 1
+            or record.epoch % 1 ~= 0 or record.epoch >= journal.nextEpoch
+            or not V.Finite(record.descriptorVersion) or record.descriptorVersion < 1
+            or not V.Raw(record.signature)
+            or (record.failure ~= nil and not V.Raw(record.failure)) then return false end
+    end
+    return true
+end
+
+function S.Open(raw)
+    if raw == nil then
+        return { schemaVersion = ns.schemaVersion, addonVersion = ns.version,
+            config = ns.Profiles.Defaults(), journal = S.EmptyJournal(), experiments = ns.ExperimentPolicy.Defaults(),
+            onboarding = { completed = false }, camera = ns.NamePolicy.Defaults(), baseline = ns.Baseline.Defaults(),
+            graphics = ns.NativeGraphics.Defaults(), optics = ns.Optics.Defaults() }, "NEW"
+    end
+    local data = V.Copy(raw)
+    if not data or type(data) ~= "table" then return nil, "QUARANTINED_DATA" end
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 1 and data.schemaVersion <= 9 then
+        if type(data.baseline) == "table" and data.baseline.includeOptics == nil then data.baseline.includeOptics = false end
+        local studio = type(data.config) == "table" and data.config.studio
+        if type(studio) == "table" then
+            for _, m in pairs(type(studio.modes) == "table" and studio.modes or {}) do ns.StudioConfig.UpgradeMode(m) end
+            for _, p in pairs(type(studio.presets) == "table" and studio.presets or {}) do
+                if type(p) == "table" then ns.StudioConfig.UpgradeMode(p.settings) end
+            end
+        end
+    end
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 7
+        and type(data.camera) == "table" and data.camera.keepEffects == nil then data.camera.keepEffects = true end
+    if type(data.schemaVersion) == "number" and data.schemaVersion <= 10 and type(data.camera) == "table" then
+        ns.NamePolicy.Upgrade(data.camera)
+    end
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 16
+        and type(data.camera) == "table" then ns.NamePolicy.UpgradeTools(data.camera) end
+    if type(data.schemaVersion) == "number" and data.schemaVersion <= 22 and type(data.camera) == "table" then
+        ns.PortraitConfig.Upgrade(data.camera.portrait)
+    end
+    local migrated = false
+    if type(data.schemaVersion) == "number" and data.schemaVersion >= 5 and data.schemaVersion <= 12
+        and type(data.camera) == "table" and data.camera.editor == nil then data.camera.editor = ns.PhotoConfig.Defaults() end
+    if data.schemaVersion == 1 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.ValidateLegacy(data.config)
+            or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
+        data.config.studio = ns.StudioConfig.Defaults()
+        data.schemaVersion, migrated = 2, "MIGRATED_1_TO_6"
+    end
+    if data.schemaVersion == 2 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) then return nil, "QUARANTINED_SCHEMA" end
+        data.experiments = ns.ExperimentPolicy.Defaults()
+        data.schemaVersion, migrated = 3, migrated or "MIGRATED_2_TO_6"
+    end
+    if data.schemaVersion == 3 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) then return nil, "QUARANTINED_SCHEMA" end
+        data.onboarding = { completed = false }
+        data.schemaVersion, migrated = 4, migrated or "MIGRATED_3_TO_6"
+    end
+    if data.schemaVersion == 4 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments)
+            or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
+        data.camera = ns.NamePolicy.Defaults()
+        data.schemaVersion, migrated = 5, migrated or "MIGRATED_4_TO_6"
+    end
+    if data.schemaVersion == 5 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) or not ns.NamePolicy.Validate(data.camera)
+            or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
+        data.baseline = ns.Baseline.Defaults()
+        data.schemaVersion, migrated = 6, migrated or "MIGRATED_5_TO_6"
+    end
+    if data.schemaVersion == 6 then
+        if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true })
+            or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+            or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) or not ns.NamePolicy.Validate(data.camera) or not ns.Baseline.Validate(data.baseline)
+            or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
+        data.graphics = ns.NativeGraphics.Defaults()
+        data.schemaVersion, migrated = 7, migrated and migrated:gsub("_TO_6$", "_TO_7") or "MIGRATED_6_TO_7"
+    end
+    if data.schemaVersion == 7 then
+        data.schemaVersion, migrated = 8, migrated and migrated:gsub("_TO_7$", "_TO_8") or "MIGRATED_7_TO_8"
+    end
+    if data.schemaVersion == 8 then
+        if not ns.ExperimentPolicy.Validate(data.experiments) then return nil, "QUARANTINED_SCHEMA" end
+        data.optics = data.optics or ns.Optics.Migrate(data.experiments.journal)
+        data.schemaVersion, migrated = 9, migrated and migrated:gsub("_TO_8$", "_TO_9") or "MIGRATED_8_TO_9"
+    end
+    if data.schemaVersion == 9 then
+        if type(data.optics) == "table" and data.optics.reference == nil then data.optics.reference = {} end
+        data.schemaVersion, migrated = 10, migrated and migrated:gsub("_TO_9$", "_TO_10") or "MIGRATED_9_TO_10"
+    end
+    if data.schemaVersion == 10 then
+        data.schemaVersion, migrated = 11, migrated and migrated:gsub("_TO_10$", "_TO_11") or "MIGRATED_10_TO_11"
+    end
+    if data.schemaVersion == 11 then
+        -- No Camera-session intent can be inferred from older manual name records.
+        data.schemaVersion, migrated = 12, migrated and migrated:gsub("_TO_11$", "_TO_12") or "MIGRATED_11_TO_12"
+    end
+    if data.schemaVersion == 12 then
+        data.schemaVersion, migrated = 13, migrated and migrated:gsub("_TO_12$", "_TO_13") or "MIGRATED_12_TO_13"
+    end
+    if data.schemaVersion == 13 then
+        data.schemaVersion, migrated = 14, migrated and migrated:gsub("_TO_13$", "_TO_14") or "MIGRATED_13_TO_14"
+    end
+    if data.schemaVersion == 14 then
+        if type(data.camera) == "table" then ns.PhotoConfig.Upgrade(data.camera.editor) end
+        data.schemaVersion, migrated = 15, migrated and migrated:gsub("_TO_14$", "_TO_15") or "MIGRATED_14_TO_15"
+    end
+    if data.schemaVersion == 15 then
+        data.schemaVersion, migrated = 16, migrated and migrated:gsub("_TO_15$", "_TO_16") or "MIGRATED_15_TO_16"
+    end
+    if data.schemaVersion == 16 then
+        data.schemaVersion, migrated = 17, migrated and migrated:gsub("_TO_16$", "_TO_17") or "MIGRATED_16_TO_17"
+    end
+    if data.schemaVersion == 17 then
+        data.schemaVersion, migrated = 18, migrated and migrated:gsub("_TO_17$", "_TO_18") or "MIGRATED_17_TO_18"
+    end
+    if data.schemaVersion == 18 then
+        if type(data.camera) == "table" and type(data.camera.nameGroups) == "table" and data.camera.nameGroups.focused == nil then
+            data.camera.nameGroups.focused = false
+        end
+        data.schemaVersion, migrated = 19, migrated and migrated:gsub("_TO_18$", "_TO_19") or "MIGRATED_18_TO_19"
+    end
+    if data.schemaVersion == 19 then
+        data.schemaVersion, migrated = 20, migrated and migrated:gsub("_TO_19$", "_TO_20") or "MIGRATED_19_TO_20"
+    end
+    if data.schemaVersion == 20 then
+        -- Prior visits and recovery records are not an opt-in to future visits.
+        if type(data.camera)=="table" then data.camera.photoFramingOnEntry=false end
+        data.schemaVersion, migrated = 21, migrated and migrated:gsub("_TO_20$", "_TO_21") or "MIGRATED_20_TO_21"
+    end
+    if data.schemaVersion == 21 then
+        -- Existing recovery entries describe a visit, not a chosen photo setup.
+        if type(data.camera) == "table" then data.camera.preferredFraming = {} end
+        data.schemaVersion, migrated = 22, migrated and migrated:gsub("_TO_21$", "_TO_22") or "MIGRATED_21_TO_22"
+    end
+    if data.schemaVersion == 22 then
+        data.schemaVersion, migrated = 23, migrated and migrated:gsub("_TO_22$", "_TO_23") or "MIGRATED_22_TO_23"
+    end
+    if data.schemaVersion ~= ns.schemaVersion then
+        return nil, "UNSUPPORTED_SCHEMA"
+    end
+    if not V.Fields(data, { schemaVersion = true, addonVersion = true, config = true, journal = true, experiments = true, onboarding = true, camera = true, baseline = true, graphics = true, optics = true })
+        or not V.Raw(data.addonVersion) or not ns.Profiles.Validate(data.config)
+        or not S.ValidateJournal(data.journal) or not ns.ExperimentPolicy.Validate(data.experiments) or not ns.NamePolicy.Validate(data.camera) or not ns.Baseline.Validate(data.baseline)
+        or not ns.NativeGraphics.Validate(data.graphics) or not ns.Optics.Validate(data.optics)
+        or not V.Fields(data.onboarding, { completed = true }) or type(data.onboarding.completed) ~= "boolean" then return nil, "QUARANTINED_SCHEMA" end
+    -- One-time setup refresh for the old completed-wizard generations. Keep every
+    -- preference and journal; only the old completion marker is superseded.
+    if data.onboarding.completed and (data.addonVersion:match("^0%.2%.0%-dev%.[1-5]$")
+        or data.addonVersion == "0.2.0-beta.1") then
+        data.onboarding.completed = false
+        migrated = migrated or "SETUP_REFRESH_REQUIRED"
+    end
+    data.addonVersion = ns.version
+    return data, migrated or "VALIDATED_COPY"
+end
